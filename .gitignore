@@ -46,8 +46,9 @@ captures/
 
 # ==========================================
 # Staged Sync Batches for AI Studio -> GitHub
-# Batch 2: Assets, Resources, Data, Domain, DI, Security, Sync
-# (UI and Utils will be enabled in Batches 3 & 4)
+# Batch 3: Utils, Components, Dialogs, Helpers, Delegates, Theme (148 files)
+# (Screens, ViewModels, and root UI files remain ignored for subsequent batches)
 # ==========================================
-app/src/main/java/com/serviseyem/ui/
-app/src/main/java/com/serviseyem/utils/
+app/src/main/java/com/serviseyem/ui/screens/
+app/src/main/java/com/serviseyem/ui/viewmodels/
+app/src/main/java/com/serviseyem/ui/*.kt
