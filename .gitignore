@@ -43,14 +43,3 @@ Thumbs.db
 captures/
 .externalNativeBuild/
 .cxx/
-
-# ==========================================
-# Staged Sync Batches for AI Studio -> GitHub
-# Batch 4: UI ViewModels, Core UI, Home, Map, Chat, Bookings, Notifications, Urgent (~151 files)
-# (Admin, Dashboard, Register, Entities, Owner will be enabled in Batch 5)
-# ==========================================
-app/src/main/java/com/serviseyem/ui/screens/admin/
-app/src/main/java/com/serviseyem/ui/screens/dashboard/
-app/src/main/java/com/serviseyem/ui/screens/register/
-app/src/main/java/com/serviseyem/ui/screens/entities/
-app/src/main/java/com/serviseyem/ui/screens/owner/
