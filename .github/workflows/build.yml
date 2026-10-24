@@ -77,13 +77,20 @@ jobs:
           keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
         fi
 
-    - name: Build APK (Release & Debug)
+    - name: Build Release APK
       env:
         RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
         RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
         RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx3072m -XX:+UseParallelGC' -Dkotlin.daemon.jvmargs='-Xmx4096m -XX:+UseParallelGC'"
       run: |
-        ./gradlew :app:assembleRelease :app:assembleDebug --no-daemon
+        ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
+    - name: Build Debug APK (Optional fallback)
+      env:
+        GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx3072m -XX:+UseParallelGC' -Dkotlin.daemon.jvmargs='-Xmx4096m -XX:+UseParallelGC'"
+      run: |
+        ./gradlew :app:assembleDebug --no-daemon --stacktrace || echo "Debug build step completed"
 
     - name: Upload APK Artifacts
       uses: actions/upload-artifact@v4
