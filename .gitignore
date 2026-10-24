@@ -1,0 +1,53 @@
+# ==========================================
+# Android & AI Studio Master GitIgnore
+# ==========================================
+
+# Built application files & artifacts
+*.apk
+*.aab
+*.ap_
+*.dex
+app-debug.apk
+
+# Gradle build cache & intermediate files
+.gradle/
+build/
+app/build/
+**/build/
+.kotlin/
+.build-outputs/
+
+# AI Studio workspace cache & temporary user assets
+.aistudio/
+public/
+clean_and_copy.sh
+
+# Keystore & Signing files (DO NOT COMMIT SECRETS)
+*.keystore
+*.jks
+*.base64
+my-release-key.jks
+debug.keystore
+
+# Local configuration & environment variables
+local.properties
+.env
+.env.*
+!.env.example
+
+# IDE files (Android Studio / IntelliJ / Eclipse)
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+captures/
+.externalNativeBuild/
+.cxx/
+
+# ==========================================
+# Staged Sync Batches for AI Studio -> GitHub
+# (Temporarily ignoring batches 2, 3, 4 so Batch 1 syncs smoothly without exceeding GitHub limits)
+# ==========================================
+app/src/main/assets/
+app/src/main/res/
+app/src/main/java/

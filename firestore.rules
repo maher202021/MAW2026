@@ -1,0 +1,311 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnerOrAdmin() {
+      return isSignedIn() && (
+        request.auth.token.role in ['SUPER_ADMIN', 'MAIN_ADMIN', 'OWNER', 'ADMIN', 'owner', 'admin']
+      );
+    }
+
+    function isStaff() {
+      return isSignedIn() && (
+        request.auth.token.role in ['SUPER_ADMIN', 'MAIN_ADMIN', 'OWNER', 'ADMIN', 'SUPERVISOR', 'owner', 'admin', 'supervisor']
+      );
+    }
+
+    // 1. المتاجر ومزودي الخدمات والعقارات والمنتجات والعروض والأقسام والمدن والبانرات
+    match /stores/{d} {
+      allow read: if true;
+      allow create, delete: if isStaff();
+      allow update: if isSignedIn()
+                  && (resource.data.ownerId == request.auth.uid
+                      || isStaff());
+    }
+    match /providers/{d} {
+      allow read: if true;
+      allow create, delete: if isStaff();
+      allow update: if (isSignedIn()
+                  && (resource.data.phone == request.auth.uid
+                      || resource.data.id == request.auth.uid
+                      || (('ownerId' in resource.data) && resource.data.ownerId == request.auth.uid)
+                      || isStaff()))
+                  || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'numReviews']);
+    }
+    match /properties/{d} {
+      allow read: if true;
+      allow create, delete: if isStaff();
+      allow update: if isSignedIn()
+                  && (resource.data.ownerId == request.auth.uid
+                      || isStaff());
+    }
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isSignedIn() && (
+        isStaff() ||
+        request.resource.data.ownerId == request.auth.uid ||
+        request.resource.data.storeId == request.auth.uid
+      );
+      allow update, delete: if isSignedIn()
+                  && (resource.data.storeId == request.auth.uid
+                      || resource.data.ownerId == request.auth.uid
+                      || isStaff());
+    }
+    match /categories/{d} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /cities/{d} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /banners/{d} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /offers/{d} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn()
+                  && (resource.data.entityId == request.auth.uid
+                      || isStaff());
+    }
+    match /custom_profile_tabs/{d} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // 2. طلبات الانضمام المعلقة والوظائف
+    match /join_requests/{d} {
+      allow read: if isStaff() || (isSignedIn() && (resource.data.uid == request.auth.uid || resource.data.userId == request.auth.uid));
+      allow create: if isSignedIn();
+      allow update, delete: if isStaff();
+    }
+    match /pending_providers/{d} {
+      allow read: if isStaff() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update, delete: if isStaff();
+    }
+    match /jobs/{d} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isStaff() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+    }
+
+    // 3. مستخدمي الإدارة والمالك والمشرفين (ممنوع القراءة والكتابة والوصول السحابي المباشر منعاً تاماً)
+    match /admin_users/{d} { allow read, write: if false; }
+    match /admins/{d} { allow read, write: if false; }
+    match /supervisors/{d} { allow read, write: if false; }
+
+    // 4. المستخدمين المسجلين (حماية تصعيد الصلاحيات)
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isStaff());
+      allow create: if isSignedIn() && (
+        isStaff() || (
+          request.auth.uid == userId &&
+          (!('role' in request.resource.data) || !(request.resource.data.role in ['ADMIN', 'OWNER', 'SUPER_ADMIN', 'MAIN_ADMIN', 'admin', 'owner']))
+        )
+      );
+      allow update: if isSignedIn() && (
+        isStaff() || (
+          request.auth.uid == userId &&
+          (!('role' in request.resource.data) || request.resource.data.role == resource.data.role) &&
+          !(request.resource.data.role in ['ADMIN', 'OWNER', 'SUPER_ADMIN', 'MAIN_ADMIN', 'admin', 'owner'])
+        )
+      );
+      allow delete: if isStaff();
+    }
+    match /registered_users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isStaff());
+      allow create: if isSignedIn() && (
+        isStaff() || (
+          request.auth.uid == userId &&
+          (!('role' in request.resource.data) || !(request.resource.data.role in ['ADMIN', 'OWNER', 'SUPER_ADMIN', 'MAIN_ADMIN', 'admin', 'owner']))
+        )
+      );
+      allow update, delete: if isStaff();
+    }
+
+    // 5. الإعدادات العامة (قراءة عامة للجميع للمزامنة الشاملة، وتعديل للإدارة والمالك فقط)
+    match /settings/{d} {
+      allow read: if true;
+      allow write: if isStaff() || isOwnerOrAdmin();
+    }
+
+    // 6. استعادة الحسابات وكلمات المرور
+    match /password_resets/{d} {
+      allow read, update, delete: if isStaff();
+      allow create: if isSignedIn();
+    }
+    match /password_recovery_requests/{d} {
+      allow read, update, delete: if isStaff();
+      allow create: if isSignedIn();
+    }
+    match /account_recovery_requests/{d} {
+      allow read, update, delete: if isStaff();
+      allow create: if isSignedIn();
+    }
+
+    // 7. الحجوزات والطلبات والمواعيد والمحافظ والإشعارات
+    match /bookings/{bookingId} {
+      allow read: if isSignedIn() && (
+        isStaff() ||
+        resource.data.clientId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid ||
+        resource.data.customerPhone == request.auth.uid ||
+        resource.data.providerPhone == request.auth.uid
+      );
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
+        isStaff() ||
+        resource.data.clientId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid
+      );
+    }
+    match /instant_requests/{d} {
+      allow read, write: if isSignedIn();
+    }
+    match /urgent_requests/{d} {
+      allow read, write: if isSignedIn();
+    }
+    match /service_requests/{d} {
+      allow read, write: if isSignedIn();
+    }
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (
+        isStaff() ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.customerPhone == request.auth.uid ||
+        resource.data.storeId == request.auth.uid
+      );
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
+        isStaff() ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.storeId == request.auth.uid
+      );
+    }
+    match /store_orders/{orderId} {
+      allow read: if isSignedIn() && (
+        isStaff() ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.customerPhone == request.auth.uid ||
+        resource.data.storeId == request.auth.uid
+      );
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
+        isStaff() ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.storeId == request.auth.uid
+      );
+    }
+    match /appointments/{d} {
+      allow read, write: if isSignedIn();
+    }
+    match /medical_appointments/{d} {
+      allow read, write: if isSignedIn();
+    }
+    match /notifications/{notifId} {
+      allow read: if isSignedIn();
+      allow create: if isStaff();
+      allow update: if isSignedIn() && (
+        isStaff() || resource.data.targetValue == request.auth.uid
+      );
+      allow delete: if isStaff() || (
+        isSignedIn() && resource.data.targetValue == request.auth.uid
+      );
+    }
+    match /payments/{d} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if isStaff() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+    match /wallets/{d} {
+      allow read: if isSignedIn();
+      allow write: if isStaff() || (isSignedIn() && d == request.auth.uid);
+    }
+    match /wallet_transactions/{txId} {
+      allow read: if isSignedIn() && (
+        isStaff() ||
+        resource.data.walletId == request.auth.uid ||
+        resource.data.userId == request.auth.uid
+      );
+      allow create: if isSignedIn();
+      allow update, delete: if isStaff();
+    }
+    match /transactions/{d} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if isStaff();
+    }
+
+    // 8. المحادثات والرسائل والتواجد
+    match /chat_channels/{channelId} {
+      allow read: if isSignedIn() && (
+        isStaff() || request.auth.uid in resource.data.participants
+      );
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        isStaff() || request.auth.uid in resource.data.participants
+      );
+      allow delete: if isStaff();
+      
+      match /messages/{msgId} {
+        allow read: if isSignedIn() && (
+          isStaff() ||
+          request.auth.uid in get(/databases/$(db)/documents/chat_channels/$(channelId)).data.participants
+        );
+        allow create: if isSignedIn() && (
+          request.auth.uid in get(/databases/$(db)/documents/chat_channels/$(channelId)).data.participants
+        );
+        allow update, delete: if isStaff();
+      }
+    }
+    match /chat_rooms/{roomId} {
+      allow read, write: if isSignedIn();
+      match /messages/{msgId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+    match /chats/{chatId} {
+      allow read, write: if isSignedIn() && (request.auth.uid in resource.data.participants || isStaff());
+      match /messages/{msgId} {
+        allow read, write: if isSignedIn() && (
+          request.auth.uid in get(/databases/$(db)/documents/chats/$(chatId)).data.participants || isStaff()
+        );
+      }
+    }
+    match /presence/{d} {
+      allow read, write: if isSignedIn();
+    }
+
+    // 9. التقييمات والمراجعات وسجلات النظام
+    match /reviews/{d} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+    match /ratings/{d} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isSignedIn()
+                && (resource.data.userId == request.auth.uid
+                    || isOwnerOrAdmin());
+    }
+    match /audit_logs/{d} {
+      allow read, write: if isStaff();
+    }
+    match /admin_logs/{d} {
+      allow read, write: if isStaff();
+    }
+    match /system_logs/{d} {
+      allow read, write: if isStaff();
+    }
+
+    // 10. الحظر والرفض الافتراضي العام لجميع المجموعات الأخرى (Deny by default)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

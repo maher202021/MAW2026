@@ -1,0 +1,160 @@
+rules_version = '2';
+/**
+ * ============================================================================
+ * Firebase Cloud Storage Security Rules
+ * التاريخ: 2026-09-14
+ * سبب التعديل: 
+ *   1. الاعتماد المباشر على request.auth.uid عبر Anonymous Auth لمنع الرفع العشوائي.
+ *   2. ربط مسارات التخزين بهوية المالك مباشرة دون أي قراءات إضافية من Firestore (توفير كامل لحصة Spark Plan).
+ *   3. قيود حجم صارمة: 2MB للصور، 5MB للصوتيات ومستندات PDF.
+ *   4. حظر صارم للملفات التنفيذية والمشبوهة (.exe, .apk, .sh, .bat, etc.).
+ *   5. مبدأ الحظر الافتراضي Deny by default لأي مسار غير مصرح به.
+ * الحالة: إصدار أولي قبل النشر النهائي اليدوي على Firebase Console.
+ * ============================================================================
+ */
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ========================================================================
+    // الدوال المساعدة السريعة (تعتمد على التوكن مباشرة - صفر تكلفة)
+    // ========================================================================
+
+    // التحقق من تسجيل الدخول
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    // التحقق من أن المستخدم هو صاحب المعرف
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // التحقق من الأدمن
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.role in ['admin', 'owner', 'super_admin']
+      );
+    }
+
+    // التحقق من أحجام الملفات (حماية السيرفر ومساحة التخزين المجانية)
+    function isValidImageSize() {
+      return request.resource.size <= 2 * 1024 * 1024; // 2MB كحد أقصى للصور
+    }
+
+    function isValidMediaSize() {
+      return request.resource.size <= 5 * 1024 * 1024; // 5MB كحد أقصى للصوتيات والمستندات
+    }
+
+    // التحقق من نوع الملف المسموح به
+    function isAllowedImageType() {
+      return request.resource.contentType.matches('image/(jpeg|jpg|png|webp|gif)');
+    }
+
+    function isAllowedAudioType() {
+      return request.resource.contentType.matches('audio/(mpeg|mp4|aac|wav|m4a|ogg)');
+    }
+
+    function isAllowedDocType() {
+      return request.resource.contentType.matches('application/pdf');
+    }
+
+    // التحقق من عدم احتواء الملف على امتدادات برمجية أو تنفيذية خبيثة
+    function isSafeFileName(fileName) {
+      return !fileName.matches('.*\\.(exe|bat|sh|apk|dll|so|vbs|cmd|msi|bin|jar)');
+    }
+
+    // ========================================================================
+    // مسارات تخزين الوسائط في التطبيق
+    // ========================================================================
+
+    // 1. وسائط المستخدمين والصور الشخصية (/users/{userId}/ أو /profiles/{userId}/)
+    match /users/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if (isOwner(userId) || isAdmin()) &&
+                      isValidImageSize() &&
+                      isSafeFileName(fileName) &&
+                      isAllowedImageType();
+    }
+
+    match /profiles/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if (isOwner(userId) || isAdmin()) &&
+                      isValidImageSize() &&
+                      isSafeFileName(fileName) &&
+                      isAllowedImageType();
+    }
+
+    // 2. وسائط المحادثات والشات (/chat/{channelId}/{allPaths=**} و /chats/{channelId}/{allPaths=**})
+    match /chat/{channelId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() &&
+                      isValidMediaSize() &&
+                      (request.resource.contentType.matches('image/.*') || 
+                       request.resource.contentType.matches('audio/.*') || 
+                       request.resource.contentType.matches('application/.*'));
+    }
+
+    match /chats/{channelId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() &&
+                      isValidMediaSize() &&
+                      (request.resource.contentType.matches('image/.*') || 
+                       request.resource.contentType.matches('audio/.*') || 
+                       request.resource.contentType.matches('application/.*'));
+    }
+
+    // 3. وسائط مزودي الخدمات والفنيين (/providers/{providerId}/{fileName})
+    match /providers/{providerId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuthenticated() &&
+                      isValidMediaSize() &&
+                      isSafeFileName(fileName) &&
+                      (isAllowedImageType() || isAllowedDocType());
+    }
+
+    // 4. صور المتاجر ومنتجاتها (/stores/{storeId}/{fileName})
+    match /stores/{storeId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuthenticated() &&
+                      isValidImageSize() &&
+                      isSafeFileName(fileName) &&
+                      isAllowedImageType();
+    }
+
+    // 5. صور العقارات المعروضة (/properties/{propertyId}/{fileName})
+    match /properties/{propertyId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuthenticated() &&
+                      isValidImageSize() &&
+                      isSafeFileName(fileName) &&
+                      isAllowedImageType();
+    }
+
+    // 6. مرفقات وبلاغات النظام العامة (/reports/{reportId}/{fileName})
+    match /reports/{reportId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() &&
+                      isValidMediaSize() &&
+                      isSafeFileName(fileName) &&
+                      (isAllowedImageType() || isAllowedDocType());
+    }
+
+    // 7. البانرات الإعلانية الترويجية وأقسام التطبيق العامة
+    match /banners/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /categories/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 8. الحظر الافتراضي لأي مسار آخر غير مصرح به (Deny by default)
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

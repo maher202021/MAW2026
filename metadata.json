@@ -1,0 +1,6 @@
+{
+  "name": "كل خدمات اليمن",
+  "description": "دليل الخدمات والصيانة والتسجيل الشامل لمقدمي الخدمات في اليمن بخصائص المساعد الذكي الصوتي وبوابة المشرفين",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
