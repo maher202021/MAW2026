@@ -1,4 +1,4 @@
-name: Build Release APK
+name: Build Android APK
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    name: Build & Generate APK
     runs-on: ubuntu-latest
 
     steps:
@@ -22,12 +23,10 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    - name: Ensure Gradle Wrapper 9.3.1
-      run: |
-        gradle wrapper --gradle-version 9.3.1
-        chmod +x gradlew
+    - name: Grant Execute Permission to Gradlew
+      run: chmod +x gradlew
 
-    - name: Create google-services.json
+    - name: Ensure google-services.json
       run: |
         mkdir -p app
         cat << 'EOF' > app/google-services.json
@@ -67,26 +66,28 @@ jobs:
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       run: |
         if [ -n "$KEYSTORE_BASE64" ]; then
-          echo "Decoding user release keystore from secrets..."
+          echo "Decoding release keystore from GitHub Secret..."
           echo "$KEYSTORE_BASE64" | base64 -d > my-release-key.jks
         elif [ -f debug.keystore.base64 ]; then
           echo "Decoding debug.keystore.base64..."
           base64 -d debug.keystore.base64 > debug.keystore
         fi
         if [ ! -f debug.keystore ] && [ ! -f my-release-key.jks ]; then
-          echo "Generating fallback keystore..."
+          echo "Generating fallback debug keystore..."
           keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
         fi
 
-    - name: Build Release APK
+    - name: Build APK (Release & Debug)
       env:
         RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
         RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
         RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-      run: ./gradlew :app:assembleRelease --no-daemon
+      run: |
+        ./gradlew :app:assembleRelease :app:assembleDebug --no-daemon
 
-    - name: Upload APK Artifact
+    - name: Upload APK Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: app-apk
-        path: app/build/outputs/apk/release/*.apk
+        name: Serviseyem-APK
+        path: app/build/outputs/apk/**/*.apk
+        if-no-files-found: error
