@@ -86,15 +86,10 @@ jobs:
       run: |
         ./gradlew :app:assembleRelease --no-daemon --stacktrace
 
-    - name: Build Debug APK (Optional fallback)
-      env:
-        GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx3072m -XX:+UseParallelGC' -Dkotlin.daemon.jvmargs='-Xmx4096m -XX:+UseParallelGC'"
-      run: |
-        ./gradlew :app:assembleDebug --no-daemon --stacktrace || echo "Debug build step completed"
-
-    - name: Upload APK Artifacts
+    - name: Upload Release APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Serviseyem-APK
-        path: app/build/outputs/apk/**/*.apk
+        name: Serviseyem-Release-APK
+        path: app/build/outputs/apk/release/*.apk
         if-no-files-found: error
+
