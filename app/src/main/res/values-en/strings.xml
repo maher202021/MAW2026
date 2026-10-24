@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- APP INFO -->
+    <!-- [FIX-CRITICAL] تم إزالة app_name المكرر — القيمة في strings.xml الأساسي -->
+    <string name="app_description">The comprehensive app for services, bookings, technicians, stores, and properties in Yemen</string>
+    <string name="app_version_format">Version %1$s</string>
+
+    <!-- Legacy Compatibility Strings -->
+    <string name="home_tab">Home</string>
+    <string name="stores_tab">Stores</string>
+    <string name="real_estate_tab">Properties</string>
+    <string name="favorites_tab">Favorites</string>
+    <string name="profile_tab">Profile</string>
+
+    <!-- GENERAL ACTIONS -->
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_confirm">Confirm</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_close">Close</string>
+    <string name="action_back">Back</string>
+    <string name="action_next">Next</string>
+    <string name="action_previous">Previous</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_search">Search</string>
+    <string name="action_filter">Filter</string>
+    <string name="action_sort">Sort</string>
+    <string name="action_share">Share</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_send">Send</string>
+    <string name="action_call">Call</string>
+    <string name="action_chat">Chat</string>
+    <string name="action_apply">Apply</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_more">More</string>
+    <string name="action_see_all">See All</string>
+    <string name="action_load_more">Load More</string>
+    <string name="action_ok">OK</string>
+    <string name="action_yes">Yes</string>
+    <string name="action_no">No</string>
+    <string name="action_upload">Upload</string>
+    <string name="action_download">Download</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_skip">Skip</string>
+    <string name="action_done">Done</string>
+    <string name="action_choose">Choose</string>
+    <string name="action_add">Add</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_view">View</string>
+    <string name="action_details">Details</string>
+    <string name="action_submit">Submit</string>
+    <string name="action_login">Login</string>
+    <string name="action_logout">Logout</string>
+    <string name="action_register">Register</string>
+    <string name="action_save_changes">Save Changes</string>
+
+    <!-- NAVIGATION -->
+    <string name="nav_home">Home</string>
+    <string name="nav_stores">Stores</string>
+    <string name="nav_restaurants">Restaurants</string>
+    <string name="nav_medical">Medical Centers</string>
+    <string name="nav_properties">Properties</string>
+    <string name="nav_jobs">Jobs</string>
+    <string name="nav_favorites">Favorites</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_notifications">Notifications</string>
+    <string name="nav_chats">Chats</string>
+    <string name="nav_map">Map</string>
+    <string name="nav_bookings">Bookings</string>
+    <string name="nav_urgent_requests">Urgent Requests</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_about">About</string>
+    <string name="nav_help">Help</string>
+
+    <!-- SEARCH -->
+    <string name="search_placeholder">Search for services, technicians, stores, or properties…</string>
+    <string name="search_hint_provider">Search for a technician or professional</string>
+    <string name="search_hint_store">Search for a store or product</string>
+    <string name="search_hint_property">Search for a property or apartment</string>
+    <string name="search_hint_job">Search for a job</string>
+    <string name="search_no_results">No results found for your search</string>
+    <string name="search_try_different">Try different keywords</string>
+    <string name="search_recent">Recent Searches</string>
+    <string name="search_clear_history">Clear History</string>
+
+    <!-- AUTHENTICATION -->
+    <string name="auth_login_title">Login</string>
+    <string name="auth_register_title">Create New Account</string>
+    <string name="auth_phone_label">Phone Number</string>
+    <string name="auth_phone_hint">Example: 771234567</string>
+    <string name="auth_password_label">Password</string>
+    <string name="auth_password_confirm_label">Confirm Password</string>
+    <string name="auth_name_label">Full Name</string>
+    <string name="auth_city_label">City</string>
+    <string name="auth_forgot_password">Forgot Password?</string>
+    <string name="auth_restore_account">Restore Previous Account</string>
+    <string name="auth_have_account">Already have an account?</string>
+    <string name="auth_no_account">Don\'t have an account?</string>
+    <string name="auth_agree_terms">I agree to</string>
+    <string name="auth_terms_link">Terms &amp; Conditions</string>
+    <string name="auth_privacy_link">Privacy Policy</string>
+    <string name="auth_error_invalid_phone">Invalid phone number</string>
+    <string name="auth_error_invalid_password">Password must be at least 6 characters</string>
+    <string name="auth_error_password_mismatch">Passwords don\'t match</string>
+    <string name="auth_error_empty_name">Please enter your full name</string>
+
+    <!-- REGISTRATION -->
+    <string name="register_type_client">Regular User</string>
+    <string name="register_type_provider">Technician / Professional</string>
+    <string name="register_type_store">Store / Showroom</string>
+    <string name="register_type_restaurant">Restaurant / Café</string>
+    <string name="register_type_medical">Medical Center / Clinic</string>
+    <string name="register_type_property">Property / Land</string>
+    <string name="register_type_job">Job / Position</string>
+    <string name="register_select_type">Select Account Type</string>
+
+    <!-- BOOKINGS -->
+    <string name="booking_create_title">New Booking</string>
+    <string name="booking_number">Booking Number</string>
+    <string name="booking_date">Date</string>
+    <string name="booking_time">Time</string>
+    <string name="booking_address">Address</string>
+    <string name="booking_service_type">Service Type</string>
+    <string name="booking_notes">Additional Notes</string>
+    <string name="booking_confirm">Confirm Booking</string>
+    <string name="booking_cancel">Cancel Booking</string>
+    <string name="booking_status_pending">Pending</string>
+    <string name="booking_status_accepted">Accepted</string>
+    <string name="booking_status_rejected">Rejected</string>
+    <string name="booking_status_in_progress">In Progress</string>
+    <string name="booking_status_completed">Completed</string>
+    <string name="booking_status_cancelled">Cancelled</string>
+
+    <!-- CHAT -->
+    <string name="chat_input_hint">Type your message…</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_attach_image">Attach Image</string>
+    <string name="chat_attach_file">Attach File</string>
+    <string name="chat_attach_location">Share Location</string>
+    <string name="chat_record_voice">Voice Recording</string>
+    <string name="chat_recording">Recording…</string>
+    <string name="chat_typing">Typing…</string>
+    <string name="chat_online">Online</string>
+    <string name="chat_offline">Offline</string>
+    <string name="chat_last_seen">Last seen %1$s</string>
+    <string name="chat_delete_message">Delete Message</string>
+    <string name="chat_delete_for_me">Delete for Me</string>
+    <string name="chat_delete_for_all">Delete for Everyone</string>
+    <string name="chat_reply">Reply</string>
+    <string name="chat_edit">Edit</string>
+    <string name="chat_edited">Edited</string>
+    <string name="chat_no_messages">No messages yet</string>
+    <string name="chat_start_conversation">Start the conversation</string>
+
+    <!-- NOTIFICATIONS -->
+    <string name="notifications_center">Notification Center</string>
+    <string name="notifications_empty_all">No notifications available</string>
+    <string name="notifications_empty_unread">No unread notifications</string>
+    <string name="notifications_empty_read">No read notifications</string>
+    <string name="notifications_empty_important">No important notifications</string>
+    <string name="notifications_mark_all_read">Mark All as Read</string>
+    <string name="notifications_clear_all">Clear All</string>
+    <string name="notifications_tab_all">All</string>
+    <string name="notifications_tab_unread">Unread</string>
+    <string name="notifications_tab_read">Read</string>
+    <string name="notifications_tab_important">Important</string>
+
+    <!-- MAP & LOCATION -->
+    <string name="map_title">Services Map</string>
+    <string name="map_radar_mode">Radar Mode</string>
+    <string name="map_normal_mode">Normal Mode</string>
+    <string name="map_my_location">My Location</string>
+    <string name="map_distance_format">%1$s km</string>
+    <string name="map_eta_walking">~%1$d min walk</string>
+    <string name="map_eta_driving">~%1$d min drive</string>
+    <string name="map_no_providers_nearby">No providers nearby</string>
+
+    <!-- FAVORITES -->
+    <string name="favorites_title">Favorites</string>
+    <string name="favorites_empty">No items in favorites</string>
+    <string name="favorites_empty_hint">Tap the heart ❤️ to add items here</string>
+    <string name="favorites_added">Added to Favorites</string>
+    <string name="favorites_removed">Removed from Favorites</string>
+
+    <!-- ERRORS -->
+    <string name="error_general">An error occurred, please try again later</string>
+    <string name="error_network">No internet connection</string>
+    <string name="error_timeout">Connection timeout</string>
+    <string name="error_server">Server error, please try again later</string>
+    <string name="error_unauthorized">You don\'t have permission for this action</string>
+    <string name="error_not_found">Requested item not found</string>
+    <string name="error_unknown">Unknown error occurred</string>
+    <string name="error_permission_denied">Permission denied</string>
+    <string name="error_field_required">This field is required</string>
+    <string name="error_invalid_email">Invalid email</string>
+    <string name="error_file_too_large">File is too large</string>
+    <string name="error_upload_failed">Upload failed</string>
+    <string name="error_download_failed">Download failed</string>
+
+    <!-- SUCCESS MESSAGES -->
+    <string name="success_saved">Saved successfully</string>
+    <string name="success_deleted">Deleted successfully</string>
+    <string name="success_updated">Updated successfully</string>
+    <string name="success_sent">Sent successfully</string>
+    <string name="success_copied">Copied to clipboard</string>
+    <string name="success_uploaded">Uploaded successfully</string>
+
+    <!-- CONFIRMATIONS -->
+    <string name="confirm_delete_title">Confirm Delete</string>
+    <string name="confirm_delete_message">Are you sure you want to delete? This action cannot be undone.</string>
+    <string name="confirm_cancel_title">Confirm Cancel</string>
+    <string name="confirm_cancel_message">Are you sure you want to cancel?</string>
+    <string name="confirm_logout_title">Confirm Logout</string>
+    <string name="confirm_logout_message">Are you sure you want to logout?</string>
+    <string name="confirm_discard_changes">Discard unsaved changes?</string>
+
+    <!-- EMPTY STATES -->
+    <string name="empty_no_data">No data available</string>
+    <string name="empty_no_results">No results found</string>
+    <string name="empty_no_items">No items available</string>
+    <string name="empty_no_bookings">No bookings</string>
+    <string name="empty_no_products">No products</string>
+    <string name="empty_no_messages">No messages</string>
+    <string name="empty_no_notifications">No notifications</string>
+    <string name="empty_no_favorites">No favorites</string>
+    <string name="empty_no_reviews">No reviews</string>
+    <string name="empty_no_offers">No offers</string>
+
+    <!-- SETTINGS -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_privacy">Privacy &amp; Security</string>
+    <string name="settings_change_password">Change Password</string>
+    <string name="settings_delete_account">Delete Account</string>
+    <string name="settings_about">About</string>
+    <string name="settings_terms">Terms &amp; Conditions</string>
+    <string name="settings_contact">Contact Us</string>
+    <string name="settings_rate_app">Rate App</string>
+    <string name="settings_share_app">Share App</string>
+    <string name="settings_help">Help &amp; Support</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_system">System Default</string>
+
+    <!-- PERMISSIONS -->
+    <string name="permission_location_title">Location Permission</string>
+    <string name="permission_location_message">We need your location to show nearby services</string>
+    <string name="permission_camera_title">Camera Permission</string>
+    <string name="permission_camera_message">We need the camera to take photos</string>
+    <string name="permission_microphone_title">Microphone Permission</string>
+    <string name="permission_microphone_message">We need the microphone to record voice messages</string>
+    <string name="permission_notifications_title">Notifications Permission</string>
+    <string name="permission_notifications_message">We need to send notifications to keep you updated</string>
+    <string name="permission_grant">Grant Permission</string>
+    <string name="permission_denied">Permission denied</string>
+
+    <!-- TIME & DATES -->
+    <string name="time_now">Now</string>
+    <string name="time_moments_ago">Moments ago</string>
+    <string name="time_minutes_ago">%1$d minutes ago</string>
+    <string name="time_hours_ago">%1$d hours ago</string>
+    <string name="time_yesterday">Yesterday</string>
+    <string name="time_days_ago">%1$d days ago</string>
+    <string name="date_today">Today</string>
+    <string name="date_tomorrow">Tomorrow</string>
+    <string name="date_this_week">This Week</string>
+
+    <!-- CURRENCY -->
+    <string name="currency_yer">Yemeni Rial</string>
+    <string name="currency_sar">Saudi Riyal</string>
+    <string name="currency_usd">US Dollar</string>
+    <string name="currency_format_yer">%1$s YER</string>
+    <string name="currency_format_sar">%1$s SAR</string>
+    <string name="currency_format_usd">$%1$s</string>
+
+    <!-- ACCESSIBILITY -->
+    <string name="content_desc_banner">Service banner image</string>
+    <string name="content_desc_category_icon">Category icon</string>
+    <string name="content_desc_provider_avatar">Provider avatar</string>
+    <string name="content_desc_back">Back button</string>
+    <string name="content_desc_close">Close window</string>
+    <string name="content_desc_search">Search button</string>
+    <string name="content_desc_filter">Filter button</string>
+    <string name="content_desc_menu">Menu options</string>
+    <string name="content_desc_favorite">Add to Favorites</string>
+    <string name="content_desc_share">Share</string>
+    <string name="content_desc_call">Call phone</string>
+    <string name="content_desc_chat">Open chat</string>
+    <string name="content_desc_edit">Edit</string>
+    <string name="content_desc_delete">Delete</string>
+    <string name="content_desc_settings">Settings</string>
+    <string name="content_desc_camera">Open Camera</string>
+    <string name="content_desc_gallery">Open Gallery</string>
+    <string name="content_desc_mic">Voice Recording</string>
+    <string name="content_desc_send">Send</string>
+
+    <!-- ABOUT -->
+    <string name="about_title">About</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_developer">Developer</string>
+    <string name="about_contact_email">Email</string>
+    <string name="about_contact_phone">Phone</string>
+    <string name="about_website">Website</string>
+    <string name="about_copyright">© %1$d All rights reserved</string>
+
+</resources>

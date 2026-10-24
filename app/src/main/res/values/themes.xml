@@ -1,0 +1,21 @@
+<resources>
+    <!-- [FIX-MEDIUM] إضافة خصائص YemenTheme مع الحفاظ على parent الأصلي
+         ⚠️ لا تغيّر parent: المشروع لا يحتوي MaterialComponents أو AppCompat -->
+    <style name="Theme.AlYemenServices" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="ysColorPrimary">#00E5FF</item>
+        <item name="ysColorSecondary">#00B4D8</item>
+        <item name="ysColorAccent">#10B981</item>
+        <item name="ysColorBackground">#0F172A</item>
+        <item name="ysColorSurface">#1E293B</item>
+        <item name="ysColorBorder">#334155</item>
+        <item name="ysColorTextPrimary">#FFFFFF</item>
+        <item name="ysColorTextSecondary">#94A3B8</item>
+        <item name="ysColorSuccess">#10B981</item>
+        <item name="ysColorWarning">#F59E0B</item>
+        <item name="ysColorError">#EC4899</item>
+        <item name="android:statusBarColor">#0F172A</item>
+        <item name="android:navigationBarColor">#0F172A</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

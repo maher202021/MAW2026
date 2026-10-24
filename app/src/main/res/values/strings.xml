@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- APP INFO -->
+    <string name="app_name">كل خدمات اليمن</string>
+    <string name="app_description">التطبيق الشامل للخدمات والحجوزات والفنيين والمتاجر والعقارات في اليمن</string>
+    <string name="app_version_format">الإصدار %1$s</string>
+
+    <string name="location_permission_granted">تم منح إذن الموقع</string>
+    <string name="location_permission_denied">تم رفض إذن الموقع</string>
+    <string name="location_fetched_successfully">تم جلب الإحداثيات بنجاح</string>
+
+    <!-- Legacy Compatibility Strings -->
+    <string name="home_tab">الرئيسية</string>
+    <string name="stores_tab">المتاجر</string>
+    <string name="real_estate_tab">العقارات</string>
+    <string name="favorites_tab">المفضلة</string>
+    <string name="profile_tab">حسابي</string>
+
+    <!-- GENERAL ACTIONS -->
+    <string name="action_save">حفظ</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="action_confirm">تأكيد</string>
+    <string name="action_delete">حذف</string>
+    <string name="action_edit">تعديل</string>
+    <string name="action_close">إغلاق</string>
+    <string name="action_back">رجوع</string>
+    <string name="action_next">التالي</string>
+    <string name="action_previous">السابق</string>
+    <string name="action_retry">إعادة المحاولة</string>
+    <string name="action_refresh">تحديث</string>
+    <string name="action_search">بحث</string>
+    <string name="action_filter">تصفية</string>
+    <string name="action_sort">ترتيب</string>
+    <string name="action_share">مشاركة</string>
+    <string name="action_copy">نسخ</string>
+    <string name="action_send">إرسال</string>
+    <string name="action_call">اتصال</string>
+    <string name="action_chat">محادثة</string>
+    <string name="action_apply">تطبيق</string>
+    <string name="action_reset">إعادة ضبط</string>
+    <string name="action_more">المزيد</string>
+    <string name="action_see_all">عرض الكل</string>
+    <string name="action_load_more">تحميل المزيد</string>
+    <string name="action_ok">حسناً</string>
+    <string name="action_yes">نعم</string>
+    <string name="action_no">لا</string>
+    <string name="action_upload">رفع</string>
+    <string name="action_download">تحميل</string>
+    <string name="action_continue">متابعة</string>
+    <string name="action_skip">تخطي</string>
+    <string name="action_done">تم</string>
+    <string name="action_choose">اختيار</string>
+    <string name="action_add">إضافة</string>
+    <string name="action_remove">إزالة</string>
+    <string name="action_view">عرض</string>
+    <string name="action_details">التفاصيل</string>
+    <string name="action_submit">إرسال</string>
+    <string name="action_login">تسجيل الدخول</string>
+    <string name="action_logout">تسجيل الخروج</string>
+    <string name="action_register">إنشاء حساب</string>
+    <string name="action_save_changes">حفظ التغييرات</string>
+
+    <!-- NAVIGATION -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_stores">المتاجر</string>
+    <string name="nav_restaurants">المطاعم</string>
+    <string name="nav_medical">المراكز الطبية</string>
+    <string name="nav_properties">العقارات</string>
+    <string name="nav_jobs">الوظائف</string>
+    <string name="nav_favorites">المفضلة</string>
+    <string name="nav_profile">حسابي</string>
+    <string name="nav_notifications">الإشعارات</string>
+    <string name="nav_chats">المحادثات</string>
+    <string name="nav_map">الخريطة</string>
+    <string name="nav_bookings">الحجوزات</string>
+    <string name="nav_urgent_requests">الطلبات العاجلة</string>
+    <string name="nav_settings">الإعدادات</string>
+    <string name="nav_about">عن التطبيق</string>
+    <string name="nav_help">المساعدة</string>
+
+    <!-- SEARCH -->
+    <string name="search_placeholder">ابحث عن خدمات، فنيين، متاجر، أو عقارات…</string>
+    <string name="search_hint_provider">ابحث عن فني أو مهني</string>
+    <string name="search_hint_store">ابحث عن متجر أو منتج</string>
+    <string name="search_hint_property">ابحث عن عقار أو شقة</string>
+    <string name="search_hint_job">ابحث عن وظيفة</string>
+    <string name="search_no_results">لم يتم العثور على نتائج للبحث</string>
+    <string name="search_try_different">جرب كلمات بحث أخرى</string>
+    <string name="search_recent">عمليات البحث الأخيرة</string>
+    <string name="search_clear_history">مسح السجل</string>
+
+    <!-- AUTHENTICATION -->
+    <string name="auth_login_title">تسجيل الدخول</string>
+    <string name="auth_register_title">إنشاء حساب جديد</string>
+    <string name="auth_phone_label">رقم الهاتف</string>
+    <string name="auth_phone_hint">مثال: 771234567</string>
+    <string name="auth_password_label">كلمة المرور</string>
+    <string name="auth_password_confirm_label">تأكيد كلمة المرور</string>
+    <string name="auth_name_label">الاسم الكامل</string>
+    <string name="auth_city_label">المدينة</string>
+    <string name="auth_forgot_password">نسيت كلمة المرور؟</string>
+    <string name="auth_restore_account">استعادة حساب سابق</string>
+    <string name="auth_have_account">لديك حساب بالفعل؟</string>
+    <string name="auth_no_account">ليس لديك حساب؟</string>
+    <string name="auth_agree_terms">أوافق على</string>
+    <string name="auth_terms_link">الشروط والأحكام</string>
+    <string name="auth_privacy_link">سياسة الخصوصية</string>
+    <string name="auth_error_invalid_phone">رقم هاتف غير صحيح</string>
+    <string name="auth_error_invalid_password">يجب أن تكون كلمة المرور 6 خانات على الأقل</string>
+    <string name="auth_error_password_mismatch">كلمتا المرور غير متطابقتين</string>
+    <string name="auth_error_empty_name">يرجى إدخال اسمك الكامل</string>
+
+    <!-- REGISTRATION -->
+    <string name="register_type_client">مستخدم عادي</string>
+    <string name="register_type_provider">فني / مهني</string>
+    <string name="register_type_store">متجر / معرض</string>
+    <string name="register_type_restaurant">مطعم / كافيه</string>
+    <string name="register_type_medical">مركز طبي / عيادة</string>
+    <string name="register_type_property">عقار / أرض</string>
+    <string name="register_type_job">وظيفة / شاغر</string>
+    <string name="register_select_type">اختر نوع الحساب</string>
+
+    <!-- BOOKINGS -->
+    <string name="booking_create_title">حجز جديد</string>
+    <string name="booking_number">رقم الحجز</string>
+    <string name="booking_date">التاريخ</string>
+    <string name="booking_time">الوقت</string>
+    <string name="booking_address">العنوان</string>
+    <string name="booking_service_type">نوع الخدمة</string>
+    <string name="booking_notes">ملاحظات إضافية</string>
+    <string name="booking_confirm">تأكيد الحجز</string>
+    <string name="booking_cancel">إلغاء الحجز</string>
+    <string name="booking_status_pending">قيد الانتظار</string>
+    <string name="booking_status_accepted">مقبول</string>
+    <string name="booking_status_rejected">مرفوض</string>
+    <string name="booking_status_in_progress">قيد التنفيذ</string>
+    <string name="booking_status_completed">مكتمل</string>
+    <string name="booking_status_cancelled">ملغي</string>
+
+    <!-- CHAT -->
+    <string name="chat_input_hint">اكتب رسالتك…</string>
+    <string name="chat_send">إرسال</string>
+    <string name="chat_attach_image">إرفاق صورة</string>
+    <string name="chat_attach_file">إرفاق ملف</string>
+    <string name="chat_attach_location">مشاركة الموقع</string>
+    <string name="chat_record_voice">تسجيل صوتي</string>
+    <string name="chat_recording">جاري التسجيل…</string>
+    <string name="chat_typing">يكتب الآن…</string>
+    <string name="chat_online">متصل الآن</string>
+    <string name="chat_offline">غير متصل</string>
+    <string name="chat_last_seen">آخر ظهور %1$s</string>
+    <string name="chat_delete_message">حذف الرسالة</string>
+    <string name="chat_delete_for_me">حذف لدي فقط</string>
+    <string name="chat_delete_for_all">حذف للجميع</string>
+    <string name="chat_reply">رد</string>
+    <string name="chat_edit">تعديل</string>
+    <string name="chat_edited">تم التعديل</string>
+    <string name="chat_no_messages">لا توجد رسائل حتى الآن</string>
+    <string name="chat_start_conversation">ابدأ المحادثة الآن</string>
+
+    <!-- NOTIFICATIONS -->
+    <string name="notifications_center">مركز الإشعارات</string>
+    <string name="notifications_empty_all">لا توجد إشعارات حالياً</string>
+    <string name="notifications_empty_unread">لا توجد إشعارات غير مقروءة</string>
+    <string name="notifications_empty_read">لا توجد إشعارات مقروءة</string>
+    <string name="notifications_empty_important">لا توجد إشعارات هامة</string>
+    <string name="notifications_mark_all_read">تحديد الكل كمقروء</string>
+    <string name="notifications_clear_all">مسح الكل</string>
+    <string name="notifications_tab_all">الكل</string>
+    <string name="notifications_tab_unread">غير مقروءة</string>
+    <string name="notifications_tab_read">مقروءة</string>
+    <string name="notifications_tab_important">هامة</string>
+
+    <!-- MAP & LOCATION -->
+    <string name="map_title">خريطة الخدمات</string>
+    <string name="map_radar_mode">وضع الرادار</string>
+    <string name="map_normal_mode">الوضع العادي</string>
+    <string name="map_my_location">موقعي الحالي</string>
+    <string name="map_distance_format">%1$s كم</string>
+    <string name="map_eta_walking">~%1$d دقيقة مشياً</string>
+    <string name="map_eta_driving">~%1$d دقيقة قيادة</string>
+    <string name="map_no_providers_nearby">لا يوجد مقدمو خدمات بالقرب منك</string>
+
+    <!-- FAVORITES -->
+    <string name="favorites_title">المفضلة</string>
+    <string name="favorites_empty">لا توجد عناصر في المفضلة</string>
+    <string name="favorites_empty_hint">انقر على أيقونة القلب ❤️ لحفظ العناصر هنا</string>
+    <string name="favorites_added">تمت الإضافة إلى المفضلة</string>
+    <string name="favorites_removed">تمت الإزالة من المفضلة</string>
+
+    <!-- ERRORS -->
+    <string name="error_general">حدث خطأ، يرجى المحاولة لاحقاً</string>
+    <string name="error_network">لا يوجد اتصال بالإنترنت</string>
+    <string name="error_timeout">انتهت مهلة الاتصال</string>
+    <string name="error_server">خطأ في الخادم، يرجى المحاولة لاحقاً</string>
+    <string name="error_unauthorized">ليس لديك صلاحية لتنفيذ هذا الإجراء</string>
+    <string name="error_not_found">العنصر المطلوب غير موجود</string>
+    <string name="error_unknown">حدث خطأ غير معروف</string>
+    <string name="error_permission_denied">تم رفض الإذن</string>
+    <string name="error_field_required">هذا الحقل مطلوب</string>
+    <string name="error_invalid_email">البريد الإلكتروني غير صحيح</string>
+    <string name="error_file_too_large">حجم الملف كبير جداً</string>
+    <string name="error_upload_failed">فشل الرفع</string>
+    <string name="error_download_failed">فشل التحميل</string>
+
+    <!-- SUCCESS MESSAGES -->
+    <string name="success_saved">تم الحفظ بنجاح</string>
+    <string name="success_deleted">تم الحذف بنجاح</string>
+    <string name="success_updated">تم التحديث بنجاح</string>
+    <string name="success_sent">تم الإرسال بنجاح</string>
+    <string name="success_copied">تم النسخ إلى الحافظة</string>
+    <string name="success_uploaded">تم الرفع بنجاح</string>
+
+    <!-- CONFIRMATIONS -->
+    <string name="confirm_delete_title">تأكيد الحذف</string>
+    <string name="confirm_delete_message">هل أنت متأكد من الحذف؟ لا يمكن التراجع عن هذا الإجراء.</string>
+    <string name="confirm_cancel_title">تأكيد الإلغاء</string>
+    <string name="confirm_cancel_message">هل أنت متأكد من الإلغاء؟</string>
+    <string name="confirm_logout_title">تأكيد تسجيل الخروج</string>
+    <string name="confirm_logout_message">هل أنت متأكد من رغبتك في تسجيل الخروج؟</string>
+    <string name="confirm_discard_changes">تجاهل التغييرات غير المحفوظة؟</string>
+
+    <!-- EMPTY STATES -->
+    <string name="empty_no_data">لا توجد بيانات متاحة</string>
+    <string name="empty_no_results">لا توجد نتائج</string>
+    <string name="empty_no_items">لا توجد عناصر</string>
+    <string name="empty_no_bookings">لا توجد حجوزات</string>
+    <string name="empty_no_products">لا توجد منتجات</string>
+    <string name="empty_no_messages">لا توجد رسائل</string>
+    <string name="empty_no_notifications">لا توجد إشعارات</string>
+    <string name="empty_no_favorites">لا توجد مفضلات</string>
+    <string name="empty_no_reviews">لا توجد تقييمات</string>
+    <string name="empty_no_offers">لا توجد عروض حالياً</string>
+
+    <!-- SETTINGS -->
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_language">اللغة</string>
+    <string name="settings_notifications">الإشعارات</string>
+    <string name="settings_privacy">الخصوصية والأمان</string>
+    <string name="settings_change_password">تغيير كلمة المرور</string>
+    <string name="settings_delete_account">حذف الحساب</string>
+    <string name="settings_about">عن التطبيق</string>
+    <string name="settings_terms">الشروط والأحكام</string>
+    <string name="settings_contact">اتصل بنا</string>
+    <string name="settings_rate_app">تقييم التطبيق</string>
+    <string name="settings_share_app">مشاركة التطبيق</string>
+    <string name="settings_help">المساعدة والدعم</string>
+    <string name="settings_theme">المظهر</string>
+    <string name="settings_theme_dark">الوضع الداكن</string>
+    <string name="settings_theme_light">الوضع الفاتح</string>
+    <string name="settings_theme_system">تلقائي حسب النظام</string>
+
+    <!-- PERMISSIONS -->
+    <string name="permission_location_title">إذن الموقع</string>
+    <string name="permission_location_message">نحتاج إلى موقعك الجغرافي لعرض الخدمات القريبة منك بدقة</string>
+    <string name="permission_camera_title">إذن الكاميرا</string>
+    <string name="permission_camera_message">نحتاج إلى الكاميرا لالتقاط صور المنتجات والخدمات</string>
+    <string name="permission_microphone_title">إذن الميكروفون</string>
+    <string name="permission_microphone_message">نحتاج إلى الميكروفون لتسجيل الرسائل الصوتية</string>
+    <string name="permission_notifications_title">إذن الإشعارات</string>
+    <string name="permission_notifications_message">نحتاج لإرسال إشعارات لتنبيهك بجديد الحجوزات والرسائل</string>
+    <string name="permission_grant">منح الإذن</string>
+    <string name="permission_denied">تم رفض الإذن</string>
+
+    <!-- TIME & DATES -->
+    <string name="time_now">الآن</string>
+    <string name="time_moments_ago">منذ لحظات</string>
+    <string name="time_minutes_ago">منذ %1$d دقيقة</string>
+    <string name="time_hours_ago">منذ %1$d ساعة</string>
+    <string name="time_yesterday">أمس</string>
+    <string name="time_days_ago">منذ %1$d يوم</string>
+    <string name="date_today">اليوم</string>
+    <string name="date_tomorrow">غداً</string>
+    <string name="date_this_week">هذا الأسبوع</string>
+
+    <!-- CURRENCY -->
+    <string name="currency_yer">ريال يمني</string>
+    <string name="currency_sar">ريال سعودي</string>
+    <string name="currency_usd">دولار أمريكي</string>
+    <string name="currency_format_yer">%1$s ر.ي</string>
+    <string name="currency_format_sar">%1$s ر.س</string>
+    <string name="currency_format_usd">$%1$s</string>
+
+    <!-- ACCESSIBILITY -->
+    <string name="content_desc_banner">صورة إعلان الخدمة</string>
+    <string name="content_desc_category_icon">أيقونة التصنيف</string>
+    <string name="content_desc_provider_avatar">صورة مقدم الخدمة</string>
+    <string name="content_desc_back">زر الرجوع</string>
+    <string name="content_desc_close">إغلاق النافذة</string>
+    <string name="content_desc_search">زر البحث</string>
+    <string name="content_desc_filter">زر التصفية</string>
+    <string name="content_desc_menu">خيارات القائمة</string>
+    <string name="content_desc_favorite">إضافة للمفضلة</string>
+    <string name="content_desc_share">مشاركة</string>
+    <string name="content_desc_call">اتصال هاتفي</string>
+    <string name="content_desc_chat">فتح المحادثة</string>
+    <string name="content_desc_edit">تعديل</string>
+    <string name="content_desc_delete">حذف</string>
+    <string name="content_desc_settings">الإعدادات</string>
+    <string name="content_desc_camera">فتح الكاميرا</string>
+    <string name="content_desc_gallery">فتح المعرض</string>
+    <string name="content_desc_mic">تسجيل صوتي</string>
+    <string name="content_desc_send">إرسال</string>
+
+    <!-- ABOUT -->
+    <string name="about_title">عن التطبيق</string>
+    <string name="about_version">الإصدار %1$s</string>
+    <string name="about_developer">المطور</string>
+    <string name="about_contact_email">البريد الإلكتروني</string>
+    <string name="about_contact_phone">رقم الهاتف</string>
+    <string name="about_website">الموقع الإلكتروني</string>
+    <string name="about_copyright">© %1$d جميع الحقوق محفوظة</string>
+</resources>

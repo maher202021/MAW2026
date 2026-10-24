@@ -46,8 +46,8 @@ captures/
 
 # ==========================================
 # Staged Sync Batches for AI Studio -> GitHub
-# (Temporarily ignoring batches 2, 3, 4 so Batch 1 syncs smoothly without exceeding GitHub limits)
+# Batch 2: Assets, Resources, Data, Domain, DI, Security, Sync
+# (UI and Utils will be enabled in Batches 3 & 4)
 # ==========================================
-app/src/main/assets/
-app/src/main/res/
-app/src/main/java/
+app/src/main/java/com/serviseyem/ui/
+app/src/main/java/com/serviseyem/utils/

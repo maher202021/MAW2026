@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- ⚠️ ملاحظة: هذه الـ styles غير مستخدمة حالياً (المشروع Compose 100%)
+         احتُفظ بها كمرجع عند الحاجة إلى XML Layouts مستقبلاً -->
+
+    <!-- Base Widgets inheriting from android:Widget -->
+    <style name="Widget_Yemen" parent="android:Widget" />
+
+    <style name="Widget_Yemen_Button" parent="Widget_Yemen" />
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- BUTTON STYLES                            -->
+    <!-- ═══════════════════════════════════════ -->
+    <style name="Widget_Yemen_Button_Primary" parent="Widget_Yemen_Button">
+        <item name="android:textSize">@dimen/text_lg</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">@dimen/button_height_md</item>
+    </style>
+
+    <style name="Widget_Yemen_Button_Secondary" parent="Widget_Yemen_Button">
+        <item name="android:textSize">@dimen/text_lg</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">@dimen/button_height_md</item>
+    </style>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- CARD STYLES                              -->
+    <!-- ═══════════════════════════════════════ -->
+    <style name="Widget_Yemen_Card" parent="Widget_Yemen">
+    </style>
+
+    <!-- Base Text Appearance inheriting from android:TextAppearance -->
+    <style name="TextAppearance_Yemen" parent="android:TextAppearance" />
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- TEXT STYLES                              -->
+    <!-- ═══════════════════════════════════════ -->
+    <style name="TextAppearance_Yemen_Title" parent="TextAppearance_Yemen">
+        <item name="android:textSize">@dimen/text_xxl</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance_Yemen_Body" parent="TextAppearance_Yemen">
+        <item name="android:textSize">@dimen/text_base</item>
+    </style>
+
+    <style name="TextAppearance_Yemen_Caption" parent="TextAppearance_Yemen">
+        <item name="android:textSize">@dimen/text_sm</item>
+    </style>
+
+</resources>

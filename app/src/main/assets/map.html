@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Vela Map - خريطة الأقمار الصناعية المفتوحة</title>
+    <link rel="stylesheet" href="leaflet.css" />
+    <link rel="stylesheet" href="MarkerCluster.css" />
+    <link rel="stylesheet" href="MarkerCluster.Default.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { width: 100%; height: 100%; background-color: #0F172A; overflow: hidden; }
+        #map { width: 100%; height: 100vh; background-color: #0F172A; }
+        .mode-3d-tilted { transform: rotateX(25deg) scale(1.05); transform-origin: 50% 80%; transition: transform 0.5s ease; }
+        
+        .custom-pin-container { display: flex; flex-direction: column; align-items: center; cursor: pointer; transform: translate(-50%, -100%); }
+        .custom-pin-head { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #ffffff; border: 1.5px solid #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.5); z-index: 10; }
+        .custom-pin-arrow { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid #ffffff; margin-top: -1px; }
+        .custom-pin-label { background: rgba(15, 23, 42, 0.9); color: #ffffff; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-top: 2px; white-space: nowrap; max-width: 100px; overflow: hidden; text-overflow: ellipsis; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+
+        .user-pulse-marker { position: relative; width: 24px; height: 24px; }
+        .user-dot { width: 16px; height: 16px; background: #00E5FF; border: 3px solid #ffffff; border-radius: 50%; position: absolute; top: 4px; left: 4px; box-shadow: 0 0 12px #00E5FF; z-index: 5; }
+        .user-pulse { width: 40px; height: 40px; background: rgba(0, 229, 255, 0.45); border-radius: 50%; position: absolute; top: -8px; left: -8px; animation: userPulsing 2.2s infinite ease-out; z-index: 1; }
+        @keyframes userPulsing { 0% { transform: scale(0.5); opacity: 0.9; } 100% { transform: scale(1.8); opacity: 0; } }
+        
+        .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="leaflet.js"></script>
+    <script src="leaflet.markercluster.js"></script>
+    <script>
+        var map;
+        var currentTileLayer;
+        var markerClusterGroup;
+        var userMarker = null;
+        var userAccuracyCircle = null;
+        var userLat = 15.3694;
+        var userLng = 44.1910;
+
+        var tileProviders = {
+            'google_satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
+            'osm': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }),
+            'navigation': L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', { maxZoom: 19 }),
+            'streets': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 })
+        };
+
+        function initMap() {
+            try {
+                map = L.map('map', {
+                    center: [userLat, userLng],
+                    zoom: 13,
+                    zoomControl: false,
+                    attributionControl: false
+                });
+
+                // Default to satellite as requested
+                currentTileLayer = tileProviders['google_satellite'].addTo(map);
+                
+                // Fallback for tiles
+                currentTileLayer.on('tileerror', function() {
+                    map.removeLayer(currentTileLayer);
+                    currentTileLayer = tileProviders['osm'].addTo(map);
+                });
+
+                markerClusterGroup = L.markerClusterGroup({ maxClusterRadius: 40 });
+                map.addLayer(markerClusterGroup);
+
+                map.on('click', function() {
+                    if (window.AndroidBridge) window.AndroidBridge.onMapClicked();
+                });
+
+                if (window.AndroidBridge) window.AndroidBridge.onMapReady();
+            } catch(e) {
+                document.body.innerHTML = '<div style="color:white; padding:20px;">Map Load Error</div>';
+            }
+        }
+
+        function switchLayer(key) {
+            if (tileProviders[key]) {
+                if (currentTileLayer) map.removeLayer(currentTileLayer);
+                currentTileLayer = tileProviders[key].addTo(map);
+                currentTileLayer.addTo(map);
+            }
+        }
+
+        function setVelaMode(mode) {
+            var el = document.getElementById('map');
+            if (mode === 'VELA_3D') {
+                el.classList.add('mode-3d-tilted');
+                // User wants Vela (3D) over satellite by default
+                switchLayer('google_satellite');
+            } else if (mode === 'AERIAL_OAM') {
+                el.classList.remove('mode-3d-tilted');
+                switchLayer('google_satellite');
+            } else {
+                el.classList.remove('mode-3d-tilted');
+            }
+        }
+
+        function updateUserLocation(lat, lng, acc, pan) {
+            userLat = lat; userLng = lng;
+            var icon = L.divIcon({
+                className: '',
+                html: '<div class="user-pulse-marker"><div class="user-pulse"></div><div class="user-dot"></div></div>',
+                iconSize: [20, 20], iconAnchor: [10, 10]
+            });
+            if (!userMarker) {
+                userMarker = L.marker([lat, lng], { icon: icon, zIndexOffset: 1000 }).addTo(map);
+            } else {
+                userMarker.setLatLng([lat, lng]);
+            }
+            if (pan) map.panTo([lat, lng]);
+        }
+
+        function setMarkers(json) {
+            if (!markerClusterGroup) return;
+            markerClusterGroup.clearLayers();
+            var items = (typeof json === 'string') ? JSON.parse(json) : json;
+            items.forEach(function(item) {
+                var iconHtml = '<div class="custom-pin-container">' +
+                    '<div class="custom-pin-head" style="background-color:'+(item.badgeColor||'#00E5FF')+';">'+(item.emoji||'📍')+'</div>' +
+                    '<div class="custom-pin-arrow" style="border-top-color:'+(item.badgeColor||'#00E5FF')+';"></div>' +
+                    '<div class="custom-pin-label">'+item.name+'</div></div>';
+                var marker = L.marker([item.lat, item.lng], {
+                    icon: L.divIcon({ className:'', html: iconHtml, iconSize:[28,40], iconAnchor:[14,38] })
+                });
+                marker.on('click', function(e) {
+                    L.DomEvent.stopPropagation(e);
+                    if (window.AndroidBridge) window.AndroidBridge.onMarkerClicked(item.id, item.type);
+                });
+                markerClusterGroup.addLayer(marker);
+            });
+        }
+
+        function setCity(n, lat, lng, z) { map.setView([lat, lng], z || 14); }
+        function zoomIn() { map.zoomIn(); }
+        function zoomOut() { map.zoomOut(); }
+        function recenterUser() { map.setView([userLat, userLng], 16); }
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>
