@@ -138,7 +138,12 @@ fun TechnicianDashboard(
                                     targetType = "PROVIDER",
                                     targetName = account.name,
                                     targetPhone = phone,
-                                    onCreated = {}
+                                    onCreated = { channel ->
+                                        channel?.id?.let { chId ->
+                                            viewModel.targetChatChannelId = chId
+                                        }
+                                        viewModel.navigateToScreen(AppScreens.CHAT_DIRECT)
+                                    }
                                 )
                             }
                         )
@@ -163,7 +168,12 @@ fun TechnicianDashboard(
                                     targetType = "PROVIDER",
                                     targetName = account.name,
                                     targetPhone = phone,
-                                    onCreated = {}
+                                    onCreated = { channel ->
+                                        channel?.id?.let { chId ->
+                                            viewModel.targetChatChannelId = chId
+                                        }
+                                        viewModel.navigateToScreen(AppScreens.CHAT_DIRECT)
+                                    }
                                 )
                             }
                         )

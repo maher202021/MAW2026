@@ -294,7 +294,19 @@ fun AppNavigator(
                     job = viewModel.selectedJob,
                     viewModel = viewModel,
                     themeColors = themeColors,
-                    onBackClick = { viewModel.navigateToScreen(AppScreens.USER_BROWSE) }
+                    onBackClick = { viewModel.navigateToScreen(AppScreens.USER_BROWSE) },
+                    onOpenChat = { channelId ->
+                        if (channelId.isNotBlank()) {
+                            viewModel.targetChatChannelId = channelId
+                        }
+                        viewModel.navigateToScreen(AppScreens.CHAT_DIRECT)
+                    },
+                    onRequestBooking = {
+                        viewModel.navigateToScreen(AppScreens.CREATE_BOOKING)
+                    },
+                    onOrderProduct = {
+                        viewModel.navigateToScreen(AppScreens.CREATE_BOOKING)
+                    }
                 )
                 AppScreens.BOOKINGS_VIEW -> BookingsScreenLayout(viewModel = viewModel, themeColors = themeColors)
                 AppScreens.INSTANT_REQUESTS_VIEW -> InstantRequestsScreen(viewModel = viewModel, themeColors = themeColors)
@@ -385,7 +397,67 @@ fun AppNavigator(
                         }
                     }
                 )
-                AppScreens.REGISTER_FORM, AppScreens.JOIN_REQUEST_STATUS, "TECHNICIAN_DASHBOARD", "STORE_DASHBOARD", "RESTAURANT_DASHBOARD", "MEDICAL_DASHBOARD", "PROPERTY_DASHBOARD", "JOB_POSTER_DASHBOARD", "CLIENT_DASHBOARD", "DASHBOARD" -> {
+                "TECHNICIAN_DASHBOARD" -> {
+                    val pId = viewModel.selectedProvider?.id ?: viewModel.currentUserId.value
+                    com.serviseyem.ui.screens.dashboard.UnifiedBusinessProfileDashboard(
+                        accountType = "TECHNICIAN",
+                        providerId = pId,
+                        viewModel = viewModel,
+                        themeColors = themeColors
+                    )
+                }
+                "STORE_DASHBOARD" -> {
+                    val sId = viewModel.selectedStore?.id ?: viewModel.currentUserId.value
+                    com.serviseyem.ui.screens.dashboard.UnifiedBusinessProfileDashboard(
+                        accountType = "STORE",
+                        providerId = sId,
+                        viewModel = viewModel,
+                        themeColors = themeColors
+                    )
+                }
+                "RESTAURANT_DASHBOARD" -> {
+                    val sId = viewModel.selectedStore?.id ?: viewModel.currentUserId.value
+                    com.serviseyem.ui.screens.dashboard.UnifiedBusinessProfileDashboard(
+                        accountType = "RESTAURANT",
+                        providerId = sId,
+                        viewModel = viewModel,
+                        themeColors = themeColors
+                    )
+                }
+                "MEDICAL_DASHBOARD" -> {
+                    val sId = viewModel.selectedStore?.id ?: viewModel.currentUserId.value
+                    com.serviseyem.ui.screens.dashboard.UnifiedBusinessProfileDashboard(
+                        accountType = "MEDICAL",
+                        providerId = sId,
+                        viewModel = viewModel,
+                        themeColors = themeColors
+                    )
+                }
+                "PROPERTY_DASHBOARD" -> {
+                    val propId = viewModel.selectedProperty?.id ?: viewModel.currentUserId.value
+                    com.serviseyem.ui.screens.dashboard.UnifiedBusinessProfileDashboard(
+                        accountType = "REAL_ESTATE",
+                        providerId = propId,
+                        viewModel = viewModel,
+                        themeColors = themeColors
+                    )
+                }
+                "JOB_POSTER_DASHBOARD" -> {
+                    val jId = viewModel.selectedJob?.id ?: viewModel.currentUserId.value
+                    com.serviseyem.ui.screens.dashboard.UnifiedBusinessProfileDashboard(
+                        accountType = "JOB_POSTER",
+                        providerId = jId,
+                        viewModel = viewModel,
+                        themeColors = themeColors
+                    )
+                }
+                "CLIENT_DASHBOARD", "DASHBOARD" -> {
+                    com.serviseyem.ui.screens.dashboard.ClientPersonalAccountDashboard(
+                        viewModel = viewModel,
+                        themeColors = themeColors
+                    )
+                }
+                AppScreens.REGISTER_FORM, AppScreens.JOIN_REQUEST_STATUS -> {
                     RegisterScreen(
                         viewModel = viewModel,
                         themeColors = themeColors,

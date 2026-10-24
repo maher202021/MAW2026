@@ -36,13 +36,13 @@ import com.serviseyem.utils.VisualThemePalette
 fun ClientPersonalAccountDashboard(
     viewModel: MainViewModel,
     themeColors: VisualThemePalette,
-    context: Context,
-    currentUserName: String,
-    currentUserPhone: String,
-    currentUserResidence: String,
-    currentUserId: String,
-    bookings: List<BookingEntity>,
-    onShowRegistrationFormsAnyway: () -> Unit,
+    context: Context = androidx.compose.ui.platform.LocalContext.current,
+    currentUserName: String = viewModel.currentUserName.collectAsState().value,
+    currentUserPhone: String = viewModel.currentUserPhone.collectAsState().value,
+    currentUserResidence: String = viewModel.currentUserResidence.collectAsState().value,
+    currentUserId: String = viewModel.currentUserId.collectAsState().value,
+    bookings: List<BookingEntity> = viewModel.bookings.collectAsState().value,
+    onShowRegistrationFormsAnyway: () -> Unit = { viewModel.navigateToScreen(AppScreens.REGISTER_FORM) },
     onNavigateToSupportChat: () -> Unit = { viewModel.navigateTo("CHAT_SUPPORT") }
 ) {
 

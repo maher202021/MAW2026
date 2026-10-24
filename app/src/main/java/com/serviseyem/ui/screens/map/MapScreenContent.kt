@@ -264,10 +264,14 @@ fun MapScreenContent(
                     )
                 }
             }
+            androidx.activity.compose.BackHandler(enabled = state.currentMapMode == MapMode.AR_VPS) {
+                state.currentMapMode = MapMode.VELA_3D
+            }
 
-            // [تعديل] شارة مصدر الخريطة والنقاط المكتشفة كالصورة المرفقة تماماً
-            Surface(
-                shape = RoundedCornerShape(20.dp),
+            if (state.currentMapMode != MapMode.AR_VPS) {
+                // [تعديل] شارة مصدر الخريطة والنقاط المكتشفة كالصورة المرفقة تماماً
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
                 color = Color(0xFF0F172A).copy(alpha = 0.88f),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155)),
                 modifier = Modifier
@@ -451,13 +455,26 @@ fun MapScreenContent(
                     }
                 },
                 isGpsActive = viewModel.isGpsTrackingActive.collectAsState().value,
-                onDownloadValhallaClick = { showValhallaDialog = true },
+                onDownloadValhallaClick = {
+                    if (com.serviseyem.utils.ValhallaDownloadManager.isDownloaded(context)) {
+                        state.currentMapMode = MapMode.NAVIGATION
+                        state.currentMapLayer = "navigation"
+                        val script = "if (window.switchLayer) { window.switchLayer('navigation'); }"
+                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("🧭 تم فتح شاشة الملاحة الدقيقة (الملف مفعّل ومحفوظ أوفلاين)")
+                        }
+                    } else {
+                        showValhallaDialog = true
+                    }
+                },
                 themeColors = themeColors,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .navigationBarsPadding()
                     .padding(top = 230.dp, end = 12.dp, bottom = if (state.selectedEntity != null) 200.dp else 20.dp)
             )
+            }
 
             // Bottom Sheet for selected item
             state.selectedEntity?.let { entity ->
@@ -568,12 +585,34 @@ fun MapScreenContent(
 
     // 📥 Valhalla Offline Navigation Download Dialog
     if (showValhallaDialog) {
+        val isAlreadyDownloaded = remember(showValhallaDialog) {
+            com.serviseyem.utils.ValhallaDownloadManager.isDownloaded(context)
+        }
+
         AlertDialog(
             onDismissRequest = { if (!isDownloadingValhalla) showValhallaDialog = false },
-            title = { Text("📥 تحميل الملاحة الدقيقة الكاملة (أوفلاين)", fontWeight = FontWeight.Bold, color = Color.White) },
+            title = {
+                Text(
+                    text = if (isAlreadyDownloaded) "🧭 الملاحة الدقيقة (أوفلاين) جاهزة" else "📥 تحميل الملاحة الدقيقة الكاملة (أوفلاين)",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("لتفعيل الملاحة الدقيقة والمسارات التفصيلية داخل شوارع اليمن، يحتاج التطبيق إلى تحميل ملف خرائط أوفلاين (حوالي 25 ميجابايت). يُنصح باستخدام شبكة Wi-Fi.", fontSize = 12.sp, color = Color.LightGray)
+                    if (isAlreadyDownloaded && !isDownloadingValhalla) {
+                        Text(
+                            text = "ملف خرائط ومسارات الملاحة الدقيقة (25 ميجابايت) محفوظ مسبقاً على هذا الهاتف وجاهز للاستخدام أوفلاين دون إنترنت.\n\nيمكنك بدء الملاحة الآن فوراً، أو إعادة تنزيل أحدث ملف خرائط.",
+                            fontSize = 12.sp,
+                            color = Color(0xFFA7F3D0)
+                        )
+                    } else {
+                        Text(
+                            text = "لتفعيل الملاحة الدقيقة والمسارات التفصيلية داخل شوارع اليمن، يحتاج التطبيق إلى تحميل ملف خرائط أوفلاين (حوالي 25 ميجابايت). يُنصح باستخدام شبكة Wi-Fi.",
+                            fontSize = 12.sp,
+                            color = Color.LightGray
+                        )
+                    }
                     
                     if (isDownloadingValhalla) {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -589,32 +628,87 @@ fun MapScreenContent(
             },
             confirmButton = {
                 if (!isDownloadingValhalla) {
-                    Button(
-                        onClick = {
-                            isDownloadingValhalla = true
-                            downloadStatusText = "جاري بدء التحميل..."
-                            coroutineScope.launch {
-                                val prefs = context.getSharedPreferences("valhalla_prefs", android.content.Context.MODE_PRIVATE)
-                                val adminUrl = prefs.getString("valhalla_url", "") ?: ""
-                                val success = com.serviseyem.utils.ValhallaDownloadManager.downloadAndExtractOfflineTiles(context, adminUrl) { prog, msg ->
-                                    downloadProgress = prog
-                                    downloadStatusText = msg
-                                }
-                                isDownloadingValhalla = false
+                    if (isAlreadyDownloaded) {
+                        Button(
+                            onClick = {
+                                state.currentMapMode = MapMode.NAVIGATION
+                                state.currentMapLayer = "navigation"
+                                val script = "if (window.switchLayer) { window.switchLayer('navigation'); }"
+                                webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
                                 showValhallaDialog = false
-                                snackbarHostState.showSnackbar(if (success) "تم تحميل وتفعيل الملاحة الدقيقة بنجاح ✓" else "فشل التحميل، يرجى التحقق من الاتصال")
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
-                    ) {
-                        Text("تحميل الآن", color = Color.Black, fontWeight = FontWeight.Bold)
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("🧭 تم فتح شاشة الملاحة الدقيقة أوفلاين بنجاح")
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                        ) {
+                            Text("بدء الملاحة الآن 🧭", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        Button(
+                            onClick = {
+                                isDownloadingValhalla = true
+                                downloadStatusText = "جاري بدء التحميل..."
+                                coroutineScope.launch {
+                                    val prefs = context.getSharedPreferences("valhalla_prefs", android.content.Context.MODE_PRIVATE)
+                                    val adminUrl = prefs.getString("valhalla_url", "") ?: ""
+                                    val success = com.serviseyem.utils.ValhallaDownloadManager.downloadAndExtractOfflineTiles(context, adminUrl) { prog, msg ->
+                                        downloadProgress = prog
+                                        downloadStatusText = msg
+                                    }
+                                    isDownloadingValhalla = false
+                                    showValhallaDialog = false
+                                    if (success) {
+                                        state.currentMapMode = MapMode.NAVIGATION
+                                        state.currentMapLayer = "navigation"
+                                        val script = "if (window.switchLayer) { window.switchLayer('navigation'); }"
+                                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                                        snackbarHostState.showSnackbar("تم تحميل وحفظ الملاحة بنجاح ✓ تم فتح شاشة الملاحة")
+                                    } else {
+                                        snackbarHostState.showSnackbar("فشل التحميل، يرجى التحقق من الاتصال")
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                        ) {
+                            Text("تحميل الآن", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             },
             dismissButton = {
                 if (!isDownloadingValhalla) {
-                    TextButton(onClick = { showValhallaDialog = false }) {
-                        Text("لاحقاً", color = Color.Gray)
+                    if (isAlreadyDownloaded) {
+                        TextButton(
+                            onClick = {
+                                isDownloadingValhalla = true
+                                downloadStatusText = "جاري إعادة التحميل..."
+                                coroutineScope.launch {
+                                    com.serviseyem.utils.ValhallaDownloadManager.clearOfflineData(context)
+                                    val prefs = context.getSharedPreferences("valhalla_prefs", android.content.Context.MODE_PRIVATE)
+                                    val adminUrl = prefs.getString("valhalla_url", "") ?: ""
+                                    val success = com.serviseyem.utils.ValhallaDownloadManager.downloadAndExtractOfflineTiles(context, adminUrl) { prog, msg ->
+                                        downloadProgress = prog
+                                        downloadStatusText = msg
+                                    }
+                                    isDownloadingValhalla = false
+                                    showValhallaDialog = false
+                                    if (success) {
+                                        state.currentMapMode = MapMode.NAVIGATION
+                                        state.currentMapLayer = "navigation"
+                                        val script = "if (window.switchLayer) { window.switchLayer('navigation'); }"
+                                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                                        snackbarHostState.showSnackbar("تم تحديث وحفظ خرائط الملاحة بنجاح ✓")
+                                    }
+                                }
+                            }
+                        ) {
+                            Text("إعادة التنزيل 🔄", color = Color(0xFF00E5FF), fontSize = 12.sp)
+                        }
+                    } else {
+                        TextButton(onClick = { showValhallaDialog = false }) {
+                            Text("لاحقاً", color = Color.Gray)
+                        }
                     }
                 }
             },

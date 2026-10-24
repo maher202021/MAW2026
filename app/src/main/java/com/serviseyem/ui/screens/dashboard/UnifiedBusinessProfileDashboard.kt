@@ -12,12 +12,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.serviseyem.data.ProviderEntity
+import com.serviseyem.data.StoreEntity
+import com.serviseyem.data.PropertyEntity
 import com.serviseyem.data.UnifiedBusinessAccount
 import com.serviseyem.ui.MainViewModel
 import com.serviseyem.utils.VisualThemePalette
 
 /**
- * 🏢 Dedicated Profile/Dashboard Router delegating to the 6 Specialized Dashboards
+ * 🏢 Dedicated Profile/Dashboard Router delegating to the Specialized Dashboards
  */
 @Composable
 fun UnifiedBusinessProfileDashboard(
@@ -26,24 +29,24 @@ fun UnifiedBusinessProfileDashboard(
     viewModel: MainViewModel,
     themeColors: VisualThemePalette
 ) {
-    val context = LocalContext.current
     val providers by viewModel.providers.collectAsState()
     val stores by viewModel.stores.collectAsState()
     val properties by viewModel.properties.collectAsState()
 
     val cleanId = providerId.trim().replace(" ", "").replace("+", "")
-    val activeProvider = remember(providers, providerId, cleanId) {
-        providers.find { it.id == providerId || it.phone.trim().replace(" ", "").replace("+", "") == cleanId }
+    
+    val activeProvider = remember(providers, providerId, cleanId, viewModel.selectedProvider) {
+        viewModel.selectedProvider ?: providers.find { it.id == providerId || it.phone.trim().replace(" ", "").replace("+", "") == cleanId }
     }
-    val activeStore = remember(stores, providerId, cleanId) {
-        stores.find { s ->
+    val activeStore = remember(stores, providerId, cleanId, viewModel.selectedStore) {
+        viewModel.selectedStore ?: stores.find { s ->
             s.id == providerId || s.ownerId == providerId || 
             s.phone.trim().replace(" ", "").replace("+", "") == cleanId || 
             s.ownerId.trim().replace(" ", "").replace("+", "") == cleanId 
         }
     }
-    val activeProperty = remember(properties, providerId, cleanId) {
-        properties.find { p ->
+    val activeProperty = remember(properties, providerId, cleanId, viewModel.selectedProperty) {
+        viewModel.selectedProperty ?: properties.find { p ->
             p.id == providerId || 
             p.phone.trim().replace(" ", "").replace("+", "") == cleanId || 
             p.ownerId.trim().replace(" ", "").replace("+", "") == cleanId 
@@ -52,79 +55,68 @@ fun UnifiedBusinessProfileDashboard(
 
     when (accountType) {
         "RESTAURANT" -> {
-            if (activeStore != null) {
-                val acc = UnifiedBusinessAccount.fromStore(activeStore, "restaurants")
-                RestaurantDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.cancelOrResetJoinRequest(context) })
-            } else {
-                LoadingOrEmptyDashboard("المطعم")
-            }
+            val store = activeStore ?: StoreEntity(
+                id = providerId.ifBlank { "store_rest" },
+                name = "مطعم ومقهى",
+                phone = viewModel.currentUserPhone.value.ifBlank { "777000000" },
+                sectionId = "restaurants",
+                cityId = "صنعاء"
+            )
+            val acc = UnifiedBusinessAccount.fromStore(store, "restaurants")
+            RestaurantDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.goBack() })
         }
         "MEDICAL" -> {
-            if (activeStore != null) {
-                val acc = UnifiedBusinessAccount.fromStore(activeStore, "medical")
-                MedicalDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.cancelOrResetJoinRequest(context) })
-            } else {
-                LoadingOrEmptyDashboard("المركز الطبي")
-            }
+            val store = activeStore ?: StoreEntity(
+                id = providerId.ifBlank { "med_center" },
+                name = "مركز طبي / عيادة",
+                phone = viewModel.currentUserPhone.value.ifBlank { "777000000" },
+                sectionId = "medical",
+                cityId = "صنعاء"
+            )
+            val acc = UnifiedBusinessAccount.fromStore(store, "medical")
+            MedicalDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.goBack() })
         }
         "STORE" -> {
-            if (activeStore != null) {
-                val acc = UnifiedBusinessAccount.fromStore(activeStore, "stores")
-                StoreDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.cancelOrResetJoinRequest(context) })
-            } else {
-                LoadingOrEmptyDashboard("المتجر")
-            }
+            val store = activeStore ?: StoreEntity(
+                id = providerId.ifBlank { "store_general" },
+                name = "متجر تجاري",
+                phone = viewModel.currentUserPhone.value.ifBlank { "777000000" },
+                sectionId = "stores",
+                cityId = "صنعاء"
+            )
+            val acc = UnifiedBusinessAccount.fromStore(store, "stores")
+            StoreDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.goBack() })
         }
         "REAL_ESTATE" -> {
-            if (activeProperty != null) {
-                val acc = UnifiedBusinessAccount.fromProperty(activeProperty)
-                PropertyDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.cancelOrResetJoinRequest(context) })
-            } else {
-                LoadingOrEmptyDashboard("العقارات")
-            }
+            val prop = activeProperty ?: PropertyEntity(
+                id = providerId.ifBlank { "prop_general" },
+                title = "مكتب عقاري واستثماري",
+                phone = viewModel.currentUserPhone.value.ifBlank { "777000000" },
+                cityId = "صنعاء"
+            )
+            val acc = UnifiedBusinessAccount.fromProperty(prop)
+            PropertyDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.goBack() })
         }
         "JOB_POSTER" -> {
             val acc = UnifiedBusinessAccount(
-                id = providerId,
-                name = activeStore?.name ?: activeProvider?.name ?: "مسؤول التوظيف",
-                phone = activeStore?.phone ?: activeProvider?.phone ?: providerId,
-                cityId = activeStore?.cityId ?: activeProvider?.cityId ?: "",
+                id = providerId.ifBlank { "job_poster_1" },
+                name = activeStore?.name ?: activeProvider?.name ?: "مسؤول التوظيف والفرص",
+                phone = activeStore?.phone ?: activeProvider?.phone ?: viewModel.currentUserPhone.value.ifBlank { "777000000" },
+                cityId = activeStore?.cityId ?: activeProvider?.cityId ?: "صنعاء",
                 businessType = com.serviseyem.data.BusinessType.JOB_POSTER
             )
-            JobPosterDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.cancelOrResetJoinRequest(context) })
+            JobPosterDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.goBack() })
         }
         else -> { // TECHNICIAN or default
-            if (activeProvider != null) {
-                val acc = UnifiedBusinessAccount.fromProvider(activeProvider)
-                TechnicianDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.cancelOrResetJoinRequest(context) })
-            } else if (activeStore != null) {
-                val acc = UnifiedBusinessAccount.fromStore(activeStore, "stores")
-                StoreDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.cancelOrResetJoinRequest(context) })
-            } else {
-                LoadingOrEmptyDashboard("مقدم الخدمة")
-            }
-        }
-    }
-}
-
-@Composable
-private fun LoadingOrEmptyDashboard(title: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF0F172A)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            CircularProgressIndicator(color = Color(0xFF1E88E5))
-            Text(
-                text = "جاري تحميل بيانات $title...",
-                color = Color.White,
-                fontSize = 14.sp
+            val prov = activeProvider ?: ProviderEntity(
+                id = providerId.ifBlank { "tech_provider" },
+                name = "لوحة تحكم الفني",
+                phone = viewModel.currentUserPhone.value.ifBlank { "777000000" },
+                categoryId = "technician",
+                area = "صنعاء"
             )
+            val acc = UnifiedBusinessAccount.fromProvider(prov)
+            TechnicianDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.goBack() })
         }
     }
 }

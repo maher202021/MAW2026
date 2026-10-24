@@ -258,7 +258,18 @@ class MainActivity : ComponentActivity() {
             e.printStackTrace()
         }
 
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = androidx.activity.SystemBarStyle.dark(
+                android.graphics.Color.TRANSPARENT
+            ),
+            navigationBarStyle = androidx.activity.SystemBarStyle.dark(
+                android.graphics.Color.TRANSPARENT
+            )
+        )
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
         setContent {
             val viewModel: MainViewModel = hiltViewModel()
             val context = LocalContext.current

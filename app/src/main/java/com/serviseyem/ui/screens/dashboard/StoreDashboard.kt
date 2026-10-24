@@ -142,7 +142,12 @@ fun StoreDashboard(
                                     targetType = "STORE",
                                     targetName = account.name,
                                     targetPhone = phone,
-                                    onCreated = {}
+                                    onCreated = { channel ->
+                                        channel?.id?.let { chId ->
+                                            viewModel.targetChatChannelId = chId
+                                        }
+                                        viewModel.navigateToScreen(AppScreens.CHAT_DIRECT)
+                                    }
                                 )
                             },
                             onUpdateOrderStatus = { bId, status ->
