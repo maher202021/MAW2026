@@ -417,6 +417,9 @@ fun MapScreenContent(
                 currentLayer = state.currentMapLayer,
                 onSwitchLayer = { layerKey ->
                     state.currentMapLayer = layerKey
+                    if (layerKey == "navigation") {
+                        state.currentMapMode = MapMode.NAVIGATION
+                    }
                     val script = "if (window.switchLayer) { window.switchLayer('$layerKey'); }"
                     webViewRef?.post {
                         webViewRef?.evaluateJavascript(script, null)
@@ -434,9 +437,11 @@ fun MapScreenContent(
                 },
                 onZoomIn = {
                     state.zoomScale = (state.zoomScale * 1.30f).coerceIn(0.25f, 8.0f)
+                    webViewRef?.post { webViewRef?.evaluateJavascript("if (window.zoomIn) { window.zoomIn(); }", null) }
                 },
                 onZoomOut = {
                     state.zoomScale = (state.zoomScale / 1.30f).coerceIn(0.25f, 8.0f)
+                    webViewRef?.post { webViewRef?.evaluateJavascript("if (window.zoomOut) { window.zoomOut(); }", null) }
                 },
                 onRecenterLocation = {
                     state.panOffset = Offset.Zero
@@ -456,15 +461,11 @@ fun MapScreenContent(
                 },
                 isGpsActive = viewModel.isGpsTrackingActive.collectAsState().value,
                 onDownloadValhallaClick = {
-                    if (com.serviseyem.utils.ValhallaDownloadManager.isDownloaded(context)) {
-                        state.currentMapMode = MapMode.NAVIGATION
-                        state.currentMapLayer = "navigation"
-                        val script = "if (window.switchLayer) { window.switchLayer('navigation'); }"
-                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("🧭 تم فتح شاشة الملاحة الدقيقة (الملف مفعّل ومحفوظ أوفلاين)")
-                        }
-                    } else {
+                    state.currentMapMode = MapMode.NAVIGATION
+                    state.currentMapLayer = "navigation"
+                    val script = "if (window.switchLayer) { window.switchLayer('navigation'); }"
+                    webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                    if (!com.serviseyem.utils.ValhallaDownloadManager.isDownloaded(context)) {
                         showValhallaDialog = true
                     }
                 },
@@ -472,8 +473,45 @@ fun MapScreenContent(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .navigationBarsPadding()
-                    .padding(top = 230.dp, end = 12.dp, bottom = if (state.selectedEntity != null) 200.dp else 20.dp)
+                    .padding(top = 230.dp, end = 12.dp, bottom = if (state.selectedEntity != null || state.currentMapMode == MapMode.NAVIGATION) 220.dp else 20.dp)
             )
+            }
+
+            // BackHandler for Navigation mode
+            androidx.activity.compose.BackHandler(enabled = state.currentMapMode == MapMode.NAVIGATION) {
+                state.currentMapMode = MapMode.VELA_3D
+                val script = "if (window.clearRoute) { window.clearRoute(); }"
+                webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+            }
+
+            // 🧭 Dedicated Smart Navigation Panel (Dual: Inter-City Highways & Urban Street Precision)
+            if (state.currentMapMode == MapMode.NAVIGATION) {
+                com.serviseyem.ui.screens.map.components.SmartNavigationPanel(
+                    userLat = safeUserLat,
+                    userLng = safeUserLng,
+                    themeColors = themeColors,
+                    onDrawRouteOnMap = { lat1, lng1, lat2, lng2, destName ->
+                        val escapedName = destName.replace("'", "\\'")
+                        val script = "if (window.drawRoute) { window.drawRoute($lat1, $lng1, $lat2, $lng2, '#00E5FF', '$escapedName'); }"
+                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                    },
+                    onClearRoute = {
+                        val script = "if (window.clearRoute) { window.clearRoute(); }"
+                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                    },
+                    onCloseNavigation = {
+                        state.currentMapMode = MapMode.VELA_3D
+                        state.currentMapLayer = "google_satellite"
+                        val script = "if (window.clearRoute) { window.clearRoute(); } if (window.switchLayer) { window.switchLayer('google_satellite'); }"
+                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                    },
+                    onPromptDownloadOffline = {
+                        showValhallaDialog = true
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                )
             }
 
             // Bottom Sheet for selected item
@@ -548,6 +586,16 @@ fun MapScreenContent(
                     onOpenAleph = { ent ->
                         state.alephSelectedEntity = ent
                         state.isAlephDialogOpen = true
+                    },
+                    onStartNavigation = { targetLat, targetLng, destTitle ->
+                        state.currentMapMode = MapMode.NAVIGATION
+                        state.currentMapLayer = "navigation"
+                        val escapedTitle = destTitle.replace("'", "\\'")
+                        val script = "if (window.switchLayer) { window.switchLayer('navigation'); window.drawRoute($safeUserLat, $safeUserLng, $targetLat, $targetLng, '#00E5FF', '$escapedTitle'); }"
+                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("🧭 بدء الملاحة الداخلية إلى: $destTitle")
+                        }
                     },
                     themeColors = themeColors,
                     modifier = Modifier

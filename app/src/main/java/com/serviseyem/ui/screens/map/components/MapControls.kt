@@ -144,24 +144,31 @@ fun MapControls(
             }
         }
 
-        // 4.5 Navigation Layer Direct Button (طبقة الملاحة)
+        // 4.5 Navigation Toggle Button (زر الملاحة الذكي: اضغط للبدء واضغط مرة أخرى للإيقاف والعودة للأقمار الصناعية)
+        val isNavActive = currentLayer == "navigation"
         Surface(
             shape = CircleShape,
-            color = if (currentLayer == "navigation") Color(0xFF00E5FF).copy(alpha = 0.2f) else Color(0xFF1E293B),
-            border = BorderStroke(1.dp, if (currentLayer == "navigation") Color(0xFF00E5FF) else Color(0xFF334155)),
+            color = if (isNavActive) Color(0xFF00E5FF).copy(alpha = 0.25f) else Color(0xFF1E293B),
+            border = BorderStroke(1.5.dp, if (isNavActive) Color(0xFF00E5FF) else Color(0xFF334155)),
             shadowElevation = 6.dp,
             modifier = Modifier.size(46.dp)
         ) {
             IconButton(
-                onClick = { onSwitchLayer("navigation") },
+                onClick = {
+                    if (isNavActive) {
+                        onSwitchLayer("google_satellite")
+                    } else {
+                        onSwitchLayer("navigation")
+                    }
+                },
                 modifier = Modifier
                     .fillMaxSize()
-                    .testTag("map_navigation_layer_btn")
+                    .testTag("map_navigation_toggle_btn")
             ) {
                 Icon(
                     imageVector = Icons.Default.Navigation,
-                    contentDescription = "طبقة الملاحة",
-                    tint = if (currentLayer == "navigation") Color(0xFF00E5FF) else Color.White,
+                    contentDescription = if (isNavActive) "إيقاف الملاحة والعودة للأقمار الصناعية" else "بدء الملاحة الحية",
+                    tint = if (isNavActive) Color(0xFF00E5FF) else Color.White,
                     modifier = Modifier.size(20.dp)
                 )
             }

@@ -50,6 +50,7 @@ fun MapBottomSheet(
     onOpenDetails: (Any) -> Unit,
     onOpenChat: ((Any) -> Unit)? = null,
     onOpenAleph: ((Any) -> Unit)? = null,
+    onStartNavigation: ((Double, Double, String) -> Unit)? = null,
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
 ) {
@@ -226,27 +227,15 @@ fun MapBottomSheet(
                         Icon(Icons.Default.Share, contentDescription = "مشاركة الموقع", tint = Color(0xFF38BDF8), modifier = Modifier.size(18.dp))
                     }
 
-                    // Google Maps Navigation
+                    // Internal App Navigation
                     IconButton(
                         onClick = {
-                            try {
-                                val uri = Uri.parse("geo:$lat,$lng?q=$lat,$lng($title)")
-                                val mapIntent = Intent(Intent.ACTION_VIEW, uri)
-                                mapIntent.setPackage("com.google.android.apps.maps")
-                                if (mapIntent.resolveActivity(context.packageManager) != null) {
-                                    context.startActivity(mapIntent)
-                                } else {
-                                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng"))
-                                    context.startActivity(browserIntent)
-                                }
-                            } catch (e: Exception) {
-                                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng"))
-                                context.startActivity(browserIntent)
-                            }
+                            onDismiss()
+                            onStartNavigation?.invoke(lat, lng, title)
                         },
-                        modifier = Modifier.size(32.dp).testTag("google_maps_nav_btn")
+                        modifier = Modifier.size(32.dp).testTag("internal_nav_btn")
                     ) {
-                        Icon(Icons.Default.LocationOn, contentDescription = "فتح في خرائط جوجل", tint = Color(0xFF10B981), modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Navigation, contentDescription = "بدء الملاحة في تطبيقنا", tint = Color(0xFF10B981), modifier = Modifier.size(18.dp))
                     }
 
                     // Share Button (زر مشاركة البيانات)
