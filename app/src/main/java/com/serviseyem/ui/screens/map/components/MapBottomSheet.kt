@@ -55,6 +55,7 @@ fun MapBottomSheet(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     // Extract standardized information
     var title by remember { mutableStateOf("") }
@@ -210,6 +211,7 @@ fun MapBottomSheet(
                     // Share Location
                     IconButton(
                         onClick = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                             try {
                                 val mapUrl = "https://www.google.com/maps/search/?api=1&query=$lat,$lng"
                                 val shareText = "📍 $title\n$subtitle\nالموقع على الخريطة:\n$mapUrl"
@@ -230,6 +232,7 @@ fun MapBottomSheet(
                     // Internal App Navigation
                     IconButton(
                         onClick = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                             onDismiss()
                             onStartNavigation?.invoke(lat, lng, title)
                         },
@@ -260,7 +263,10 @@ fun MapBottomSheet(
 
                     // Close Button
                     IconButton(
-                        onClick = onDismiss,
+                        onClick = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onDismiss()
+                        },
                         modifier = Modifier.size(32.dp).testTag("close_bottom_sheet_btn")
                     ) {
                         Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color(0xFF94A3B8), modifier = Modifier.size(20.dp))
@@ -324,6 +330,7 @@ fun MapBottomSheet(
                     if (phone.isNotBlank()) {
                         Button(
                             onClick = {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                                 try {
                                     val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
                                     context.startActivity(intent)
@@ -350,6 +357,7 @@ fun MapBottomSheet(
                         // 2. WhatsApp Action
                         Button(
                             onClick = {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                                 try {
                                     val cleanWaPhone = phone.trim().removePrefix("+").removePrefix("00967").removePrefix("0")
                                     val waUrl = "https://wa.me/967$cleanWaPhone?text=" + Uri.encode("مرحباً، أود الاستفسار بخصوص خدماتكم المعروضة في دليل اليمن: $title")
@@ -378,7 +386,10 @@ fun MapBottomSheet(
 
                     // 3. In-App Chat Action
                     Button(
-                        onClick = { onOpenChat?.invoke(entity) ?: onOpenDetails(entity) },
+                        onClick = { 
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onOpenChat?.invoke(entity) ?: onOpenDetails(entity) 
+                        },
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF475569),
@@ -419,7 +430,10 @@ fun MapBottomSheet(
                     }
 
                     Button(
-                        onClick = { onRequestBooking(entity) },
+                        onClick = { 
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onRequestBooking(entity) 
+                        },
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF10B981),
@@ -438,7 +452,10 @@ fun MapBottomSheet(
 
                     // Details Action
                     Button(
-                        onClick = { onOpenDetails(entity) },
+                        onClick = { 
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onOpenDetails(entity) 
+                        },
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = badgeColor,
@@ -457,7 +474,10 @@ fun MapBottomSheet(
 
                     // Aleph Vision Assistant Action
                     Button(
-                        onClick = { onOpenAleph?.invoke(entity) },
+                        onClick = { 
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onOpenAleph?.invoke(entity) 
+                        },
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF6366F1),

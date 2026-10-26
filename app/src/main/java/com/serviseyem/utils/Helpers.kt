@@ -123,13 +123,13 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
             )
         }
         "EMERALD_YEMEN", "YEMEN_EMERALD" -> {
-            val primary = Color(0xFF0C1628)
-            val secondary = Color(0xFF1E2D4A)
-            val background = Color(0xFF090E17) // Sophisticated modern dark navy background
-            val surface = Color(0xFF111C30) // Sleek dark card surface
+            val primary = Color(0xFF10B981) // Requested Emerald Green
+            val secondary = Color(0xFF047857)
+            val background = Color(0xFF0B0F19) // Requested Dark Modern background
+            val surface = Color(0xFF161C2C) // Sleek dark card surface
             val textPrimary = Color(0xFFFFFFFF) // Crisp high-contrast pure white
             val textSecondary = Color(0xFF94A3B8) // Slate-400
-            val accent = Color(0xFFD4AF37) // Royal Gold
+            val accent = Color(0xFF00F2FE) // Requested Neon Cyan
             val border = Color(0xFF1E2E4A)
             VisualThemePalette(
                 activeId = "EMERALD_YEMEN",
@@ -141,13 +141,13 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
                 textSecondary = textSecondary,
                 accent = accent,
                 border = border,
-                gradientBrush = Brush.verticalGradient(listOf(Color(0xFF111C30), Color(0xFF090E17))),
+                gradientBrush = Brush.verticalGradient(listOf(Color(0xFF161C2C), Color(0xFF0B0F19))),
                 scheme = darkColorScheme(
                     primary = primary,
                     secondary = secondary,
                     background = background,
                     surface = surface,
-                    onPrimary = Color.White,
+                    onPrimary = Color.Black,
                     onSecondary = Color.White,
                     onBackground = Color.White,
                     onSurface = Color.White
@@ -177,16 +177,16 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
             )
         }
         else -> {
-            // Default: Sophisticated modern dark luxury theme (Screenshot 1)
-            val primary = Color(0xFF0C1628)
-            val secondary = Color(0xFF1E2D4A)
-            val background = Color(0xFF090E17)
-            val surface = Color(0xFF111C30)
+            // Default: Dark Modern Theme for Yemen Smart Map
+            val primary = Color(0xFF10B981)
+            val secondary = Color(0xFF047857)
+            val background = Color(0xFF0B0F19)
+            val surface = Color(0xFF161C2C)
             val textPrimary = Color(0xFFFFFFFF)
             val textSecondary = Color(0xFF94A3B8)
-            val accent = Color(0xFFD4AF37)
+            val accent = Color(0xFF00F2FE)
             VisualThemePalette(
-                activeId = "YEMEN_DARK_LUXURY",
+                activeId = "YEMEN_SMART_DARK",
                 primary = primary,
                 secondary = secondary,
                 background = background,
@@ -195,7 +195,7 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
                 textSecondary = textSecondary,
                 accent = accent,
                 border = Color(0xFF1E2E4A),
-                gradientBrush = Brush.verticalGradient(listOf(Color(0xFF111C30), Color(0xFF090E17))),
+                gradientBrush = Brush.verticalGradient(listOf(Color(0xFF161C2C), Color(0xFF0B0F19))),
                 scheme = darkColorScheme(primary = primary, secondary = secondary, background = background, surface = surface)
             )
         }

@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.serviseyem.ui.screens.home
 
 import android.content.Context
@@ -32,6 +33,7 @@ import com.serviseyem.data.CityEntity
 import com.serviseyem.data.JobEntity
 import com.serviseyem.data.PropertyEntity
 import com.serviseyem.data.StoreEntity
+import com.serviseyem.data.CategoryEntity
 import com.serviseyem.ui.screens.home.extensions.isMedicalCenter
 import com.serviseyem.ui.screens.home.extensions.isRestaurantOrCafe
 import com.serviseyem.ui.MainViewModel
@@ -46,6 +48,9 @@ fun FilterPanelDialog(
     cities: List<CityEntity>,
     selectedCityId: String,
     onSelectCity: (String) -> Unit,
+    categories: List<CategoryEntity> = emptyList(),
+    selectedCategoryId: String? = null,
+    onSelectCategory: (String?) -> Unit = {},
     isVipOnly: Boolean,
     onToggleVip: (Boolean) -> Unit,
     isAvailableOnly: Boolean,
@@ -60,39 +65,97 @@ fun FilterPanelDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
-            shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.5.dp, themeColors.accent),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.15f)),
             modifier = Modifier.fillMaxWidth().padding(8.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(18.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("⚙️ تصفية النتائج المتقدمة", fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
+                    Text("⚙️ تصفية وبحث ذكي 🔍", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color.Red)
+                        Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color.White.copy(alpha = 0.6f))
                     }
                 }
+
+                // 1. Categories
+                if (categories.isNotEmpty()) {
+                    Text("الأقسام المتاحة", fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f))
+                    androidx.compose.foundation.layout.FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val isAll = selectedCategoryId.isNullOrEmpty()
+                        FilterChip(
+                            selected = isAll,
+                            onClick = { onSelectCategory(null) },
+                            label = { Text("⭐ كل الأقسام", fontSize = 10.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = themeColors.accent,
+                                selectedLabelColor = Color.Black
+                            )
+                        )
+                        categories.forEach { cat ->
+                            val isSelected = selectedCategoryId == cat.id
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { onSelectCategory(cat.id) },
+                                label = { Text(cat.name, fontSize = 10.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = themeColors.accent,
+                                    selectedLabelColor = Color.Black
+                                )
+                            )
+                        }
+                    }
+                    Divider(color = Color.White.copy(alpha = 0.1f))
+                }
+
+                // 2. Cities
+                Text("الموقع (المحافظة)", fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f))
+                androidx.compose.foundation.layout.FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val cityNames = listOf("صنعاء", "عدن", "تعز", "إب", "الحديدة", "حضرموت", "ذمار", "مأرب", "صعدة", "حجة")
+                    cityNames.forEach { cityName ->
+                        val isSelected = selectedCityId == cityName
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { onSelectCity(cityName) },
+                            label = { Text(cityName, fontSize = 10.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = themeColors.accent,
+                                selectedLabelColor = Color.Black
+                            )
+                        )
+                    }
+                }
+                
+                Divider(color = Color.White.copy(alpha = 0.1f))
 
                 // Neighborhood Input
                 OutlinedTextField(
                     value = neighborhood,
                     onValueChange = onNeighborhoodChange,
-                    label = { Text("الحي / الشارع السكني", fontSize = 11.sp) },
+                    label = { Text("البحث في حي محدد (مثال: حي هايل)", fontSize = 11.sp) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
                         focusedBorderColor = themeColors.accent,
-                        unfocusedBorderColor = Color.Gray
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -103,7 +166,10 @@ fun FilterPanelDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("⭐ الفنيون المميزون فقط (VIP)", fontSize = 11.sp, color = Color.White)
+                    Column {
+                        Text("الفنيون المميزون (VIP)", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("عرض النخبة المعتمدين فقط", fontSize = 10.sp, color = Color.Gray)
+                    }
                     Switch(
                         checked = isVipOnly,
                         onCheckedChange = onToggleVip,
@@ -116,7 +182,10 @@ fun FilterPanelDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("🟢 المتاحون للعمل الآن فقط", fontSize = 11.sp, color = Color.White)
+                    Column {
+                        Text("المتاحون حالياً 🟢", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("عرض من هم في وضع الخدمة الآن", fontSize = 10.sp, color = Color.Gray)
+                    }
                     Switch(
                         checked = isAvailableOnly,
                         onCheckedChange = onToggleAvailable,
@@ -127,10 +196,10 @@ fun FilterPanelDialog(
                 Button(
                     onClick = onDismiss,
                     colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth().height(44.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
                 ) {
-                    Text("تطبيق الفلاتر ✅", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("تطبيق الفلاتر والبحث ✅", color = Color.Black, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
                 }
             }
         }

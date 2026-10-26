@@ -62,6 +62,7 @@ fun RealLeafletMapView(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     var isMapReady by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var hasLoadError by remember { mutableStateOf(false) }
@@ -182,11 +183,13 @@ fun RealLeafletMapView(
 
                             @JavascriptInterface
                             fun onMapClicked() {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                                 onDeselect()
                             }
 
                             @JavascriptInterface
                             fun onMarkerClicked(id: String, type: String) {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                                 when (type.uppercase()) {
                                     "PROVIDER" -> {
                                         nearbyProviders.find { it.id == id }?.let { onProviderSelected(it) }

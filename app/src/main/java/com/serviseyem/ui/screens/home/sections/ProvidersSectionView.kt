@@ -50,71 +50,8 @@ fun ProvidersSectionView(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Categories Horizontal Bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            val isAll = selectedCategoryId.isNullOrEmpty()
-            Surface(
-                onClick = { onCategorySelected(null) },
-                shape = RoundedCornerShape(16.dp),
-                color = if (isAll) Color.White else Color(0xFF131E33),
-                shadowElevation = if (isAll) 3.dp else 1.dp,
-                border = BorderStroke(1.dp, if (isAll) Color.White else Color(0xFF1F2F4E))
-            ) {
-                Text(
-                    "⭐ كل الأقسام",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isAll) Color(0xFF0F172A) else Color.White,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
-                )
-            }
-
-            categories.forEach { cat ->
-                val isSelected = selectedCategoryId == cat.id
-                Surface(
-                    onClick = { onCategorySelected(cat.id) },
-                    shape = RoundedCornerShape(16.dp),
-                    color = if (isSelected) Color.White else Color(0xFF131E33),
-                    shadowElevation = if (isSelected) 3.dp else 1.dp,
-                    border = BorderStroke(1.dp, if (isSelected) Color.White else Color(0xFF1F2F4E))
-                ) {
-                    Text(
-                        text = (if (cat.icon.isBlank()) {
-                            when {
-                                cat.name.contains("سباك") -> "🚰"
-                                cat.name.contains("كهربا") -> "⚡"
-                                cat.name.contains("تكييف") -> "❄️"
-                                cat.name.contains("نجار") -> "🪚"
-                                cat.name.contains("جهاز") || cat.name.contains("غسالة") -> "🧺"
-                                cat.name.contains("طبي") || cat.name.contains("دكتور") -> "🩺"
-                                cat.name.contains("صيدلية") -> "💊"
-                                cat.name.contains("محام") -> "⚖️"
-                                cat.name.contains("هندس") -> "🏗️"
-                                cat.name.contains("نظاف") -> "🧹"
-                                cat.name.contains("دروس") || cat.name.contains("تعليم") -> "📚"
-                                cat.name.contains("نقل") || cat.name.contains("سيارة") -> "🚗"
-                                cat.name.contains("عقار") -> "🏠"
-                                cat.name.contains("محل") -> "🏪"
-                                cat.name.contains("مطعم") -> "🍲"
-                                cat.name.contains("تجميل") -> "✂️"
-                                cat.name.contains("تقني") -> "💻"
-                                else -> "🔧"
-                            }
-                        } else cat.icon) + " " + cat.name,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isSelected) Color(0xFF0F172A) else Color.White,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
-                    )
-                }
-            }
-        }
+        // Categories Horizontal Bar REMOVED for Minimalism
+        // Surface(...) { ... }
 
         // Providers List Section - Direct rendered cards (No skeleton placeholders)
         val limitedProviders = effectiveProviders.take(providersLimit)

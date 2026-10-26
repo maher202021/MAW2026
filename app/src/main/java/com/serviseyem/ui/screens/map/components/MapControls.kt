@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.serviseyem.ui.screens.map.MapMode
 import com.serviseyem.utils.VisualThemePalette
 
 /**
@@ -35,92 +36,108 @@ fun MapControls(
     onRecenterLocation: () -> Unit,
     onDownloadValhallaClick: () -> Unit = {},
     isGpsActive: Boolean,
+    // Vela Modes
+    currentMode: com.serviseyem.ui.screens.map.MapMode,
+    onModeChange: (com.serviseyem.ui.screens.map.MapMode) -> Unit,
+    tiltAngle: Float,
+    onToggleTilt: () -> Unit,
+    onOpenAleph: () -> Unit,
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = Color(0xFF0F172A).copy(alpha = 0.95f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+        shadowElevation = 12.dp,
         modifier = modifier
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .width(54.dp)
+            .padding(vertical = 16.dp)
     ) {
-        // 1. Recenter Location Button (GPS Target)
-        Surface(
-            shape = CircleShape,
-            color = Color(0xFF0F242A),
-            border = BorderStroke(1.5.dp, Color(0xFF10B981)),
-            shadowElevation = 6.dp,
-            modifier = Modifier.size(46.dp)
+        Column(
+            modifier = Modifier
+                .padding(vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // --- Section 1: Navigation & GPS ---
             IconButton(
-                onClick = onRecenterLocation,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("recenter_location_btn")
+                onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    onRecenterLocation()
+                },
+                modifier = Modifier.size(38.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.MyLocation,
-                    contentDescription = "موقعي الحالي",
-                    tint = Color(0xFF10B981),
+                    contentDescription = "موقعي",
+                    tint = if (isGpsActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
                     modifier = Modifier.size(22.dp)
                 )
             }
-        }
 
-        // 2. Zoom In Button (+)
-        Surface(
-            shape = CircleShape,
-            color = Color(0xFF1E293B),
-            border = BorderStroke(1.dp, Color(0xFF334155)),
-            shadowElevation = 6.dp,
-            modifier = Modifier.size(46.dp)
-        ) {
+            val isNavActive = currentLayer == "navigation"
             IconButton(
-                onClick = onZoomIn,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("map_zoom_in_btn")
+                onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    if (isNavActive) onSwitchLayer("google_satellite") else onSwitchLayer("navigation")
+                },
+                modifier = Modifier.size(38.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "تكبير",
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
+                    imageVector = Icons.Default.Navigation,
+                    contentDescription = "ملاحة",
+                    tint = if (isNavActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
                 )
             }
-        }
 
-        // 3. Zoom Out Button (-)
-        Surface(
-            shape = CircleShape,
-            color = Color(0xFF1E293B),
-            border = BorderStroke(1.dp, Color(0xFF334155)),
-            shadowElevation = 6.dp,
-            modifier = Modifier.size(46.dp)
-        ) {
+            Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.width(30.dp))
+
+            // --- Section 2: View Controls (Zoom & Layers) ---
+            IconButton(onClick = {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                onZoomIn()
+            }, modifier = Modifier.size(38.dp)) {
+                Icon(Icons.Default.Add, contentDescription = "+", tint = Color.White)
+            }
+
+            IconButton(onClick = {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                onZoomOut()
+            }, modifier = Modifier.size(38.dp)) {
+                Icon(Icons.Default.Remove, contentDescription = "-", tint = Color.White)
+            }
+
             IconButton(
-                onClick = onZoomOut,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("map_zoom_out_btn")
+                onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    onToggleRadarMode()
+                },
+                modifier = Modifier.size(38.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Remove,
-                    contentDescription = "تصغير",
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
+                    imageVector = if (isRadarMode) Icons.Default.Map else Icons.Default.Explore,
+                    contentDescription = "رادار",
+                    tint = if (isRadarMode) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
                 )
             }
-        }
 
-        // 4. Layer Switcher Button (تبديل الطبقات)
-        Surface(
-            shape = CircleShape,
-            color = Color(0xFF1E293B),
-            border = BorderStroke(1.dp, Color(0xFF334155)),
-            shadowElevation = 6.dp,
-            modifier = Modifier.size(46.dp)
-        ) {
+            IconButton(
+                onClick = onToggleTilt,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ViewInAr,
+                    contentDescription = "ثلاثي الأبعاد",
+                    tint = if (tiltAngle > 0) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
             IconButton(
                 onClick = {
                     val nextLayer = when(currentLayer) {
@@ -131,90 +148,49 @@ fun MapControls(
                     }
                     onSwitchLayer(nextLayer)
                 },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("map_layer_switch_btn")
+                modifier = Modifier.size(38.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Layers,
-                    contentDescription = "تبديل طبقة الخريطة",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
+                Icon(Icons.Default.Layers, contentDescription = "طبقات", tint = Color.White)
             }
-        }
 
-        // 4.5 Navigation Toggle Button (زر الملاحة الذكي: اضغط للبدء واضغط مرة أخرى للإيقاف والعودة للأقمار الصناعية)
-        val isNavActive = currentLayer == "navigation"
-        Surface(
-            shape = CircleShape,
-            color = if (isNavActive) Color(0xFF00E5FF).copy(alpha = 0.25f) else Color(0xFF1E293B),
-            border = BorderStroke(1.5.dp, if (isNavActive) Color(0xFF00E5FF) else Color(0xFF334155)),
-            shadowElevation = 6.dp,
-            modifier = Modifier.size(46.dp)
-        ) {
-            IconButton(
-                onClick = {
-                    if (isNavActive) {
-                        onSwitchLayer("google_satellite")
-                    } else {
-                        onSwitchLayer("navigation")
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("map_navigation_toggle_btn")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Navigation,
-                    contentDescription = if (isNavActive) "إيقاف الملاحة والعودة للأقمار الصناعية" else "بدء الملاحة الحية",
-                    tint = if (isNavActive) Color(0xFF00E5FF) else Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
+            Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.width(30.dp))
+
+            // --- Section 3: Modes (Vela) ---
+            com.serviseyem.ui.screens.map.MapMode.values().forEach { mode ->
+                val isSelected = currentMode == mode
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        if (mode == com.serviseyem.ui.screens.map.MapMode.ALEPH_AI) onOpenAleph() else onModeChange(mode)
+                    },
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(
+                            if (isSelected) Color(0xFF10B981).copy(alpha = 0.2f) else Color.Transparent,
+                            CircleShape
+                        )
+                ) {
+                    Text(text = mode.icon, fontSize = 18.sp)
+                }
             }
-        }
 
-        // 4.6 Download Full Navigation Tiles (تحميل الملاحة الكاملة أوفلاين)
-        Surface(
-            shape = CircleShape,
-            color = Color(0xFF0F242A),
-            border = BorderStroke(1.5.dp, Color(0xFF00E5FF)),
-            shadowElevation = 6.dp,
-            modifier = Modifier.size(46.dp)
-        ) {
-            IconButton(
-                onClick = onDownloadValhallaClick,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("download_valhalla_btn")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Download,
-                    contentDescription = "تحميل الملاحة الكاملة أوفلاين (25MB)",
-                    tint = Color(0xFF00E5FF),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
+            Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.width(30.dp))
 
-        // 5. Cloud Offline Cache Indicator Button (حفظ الأوفلاين)
-        Surface(
-            shape = CircleShape,
-            color = Color(0xFF1E293B),
-            border = BorderStroke(1.dp, Color(0xFF334155)),
-            shadowElevation = 6.dp,
-            modifier = Modifier.size(46.dp)
-        ) {
-            IconButton(
-                onClick = onToggleHeatmap,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("map_offline_cache_btn")
-            ) {
+            // --- Section 4: Tools (Heatmap & Download) ---
+            IconButton(onClick = onToggleHeatmap, modifier = Modifier.size(38.dp)) {
                 Icon(
                     imageVector = if (isHeatmapActive) Icons.Default.CloudDone else Icons.Default.CloudDownload,
-                    contentDescription = "التخزين المحلي للأوفلاين",
-                    tint = if (isHeatmapActive) Color(0xFF00E5FF) else Color(0xFF94A3B8),
+                    tint = if (isHeatmapActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.5f),
+                    contentDescription = "أوفلاين",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            IconButton(onClick = onDownloadValhallaClick, modifier = Modifier.size(38.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Download,
+                    tint = Color(0xFF10B981),
+                    contentDescription = "تحميل",
                     modifier = Modifier.size(20.dp)
                 )
             }

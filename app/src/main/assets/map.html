@@ -40,12 +40,11 @@
 
         // Expanded maxZoom to 22 for deep satellite and street zoom
         var tileProviders = {
-            'google_satellite': 'google_satellite',
-            'satellite_labels': L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22, maxNativeZoom: 19, opacity: 0.95 }),
+            'google_hybrid': L.tileLayer('https://mt1.google.com/vt/lyrs=y&hl=ar&x={x}&y={y}&z={z}', { maxZoom: 22, attribution: 'Google' }),
+            'google_streets': L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=ar&x={x}&y={y}&z={z}', { maxZoom: 22, attribution: 'Google' }),
             'imagery': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22, maxNativeZoom: 19 }),
-            'osm': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 22 }),
-            'navigation': L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', { maxZoom: 22 }),
-            'streets': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22 })
+            'osm_ar': L.tileLayer('https://tile.openstreetmap.be/osmfr/{z}/{x}/{y}.png', { maxZoom: 22 }),
+            'navigation': L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', { maxZoom: 22 })
         };
 
         function initMap() {
@@ -59,8 +58,8 @@
                     minZoom: 4
                 });
 
-                // Default hybrid satellite + reference labels for Arabic/English street & shop names
-                switchLayer('google_satellite');
+                // Default to Arabic Hybrid (Satellite + Arabic Labels)
+                switchLayer('google_hybrid');
 
                 markerClusterGroup = L.markerClusterGroup({ maxClusterRadius: 35, spiderfyOnMaxZoom: true });
                 map.addLayer(markerClusterGroup);
@@ -85,12 +84,14 @@
                 currentTileLayer = null;
             }
 
-            if (key === 'google_satellite' || key === 'hybrid') {
-                var sat = tileProviders['imagery'].addTo(map);
-                var lab = tileProviders['satellite_labels'].addTo(map);
-                currentTileLayer = [sat, lab];
-            } else if (tileProviders[key]) {
-                currentTileLayer = tileProviders[key].addTo(map);
+            // Mapping legacy keys to new Arabic ones
+            var targetKey = key;
+            if (key === 'google_satellite' || key === 'hybrid') targetKey = 'google_hybrid';
+            if (key === 'streets') targetKey = 'google_streets';
+            if (key === 'osm') targetKey = 'osm_ar';
+
+            if (tileProviders[targetKey]) {
+                currentTileLayer = tileProviders[targetKey].addTo(map);
             }
         }
 
@@ -200,6 +201,16 @@
         function zoomIn() { if (map) map.zoomIn(); }
         function zoomOut() { if (map) map.zoomOut(); }
         function recenterUser() { if (map) map.setView([userLat, userLng], 17, { animate: true }); }
+        
+        // Fly smoothly to a specific result
+        function flyToLocation(lat, lng, z) {
+            if (map) {
+                map.flyTo([lat, lng], z || 18, {
+                    animate: true,
+                    duration: 1.5
+                });
+            }
+        }
 
         window.onload = initMap;
     </script>

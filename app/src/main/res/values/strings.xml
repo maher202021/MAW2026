@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- APP INFO -->
-    <string name="app_name">كل خدمات اليمن</string>
+    <string name="app_name">خريطة ودليل اليمن الذكي</string>
     <string name="app_description">التطبيق الشامل للخدمات والحجوزات والفنيين والمتاجر والعقارات في اليمن</string>
     <string name="app_version_format">الإصدار %1$s</string>
 

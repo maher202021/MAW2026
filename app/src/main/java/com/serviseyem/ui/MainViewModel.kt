@@ -412,6 +412,9 @@ class MainViewModel @Inject constructor(
                 onCreated = onComplete
             )
         }
+        homeViewModel.navigateToMapCallback = {
+            navigateToScreen(AppScreens.MAP_VIEW)
+        }
         adminViewModel.getHomeViewModel = { homeViewModel }
         adminViewModel.getSettingsViewModel = { settingsViewModel }
         adminViewModel.getBookingViewModel = { bookingViewModel }

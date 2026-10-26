@@ -140,60 +140,8 @@ fun ServicesBrowserLayout(
             }
         }
 
-        // 4. Tab Navigation Chips (Modern luxury light aesthetic with active glowing border)
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(vertical = 4.dp, horizontal = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                activeTabs.forEach { tabName ->
-                    val isSelected = activeTabName == tabName
-                    val tabIcon = when (tabName) {
-                        "الرئيسية" -> androidx.compose.material.icons.Icons.Default.Home
-                        "المحلات والمتاجر", "المحلات" -> androidx.compose.material.icons.Icons.Default.Storefront
-                        "المطاعم والكافيهات", "المطاعم" -> androidx.compose.material.icons.Icons.Default.Restaurant
-                        "المراكز الطبية", "المراكز" -> androidx.compose.material.icons.Icons.Default.LocalHospital
-                        "العقارات" -> androidx.compose.material.icons.Icons.Default.Apartment
-                        "إعلانات الوظائف", "الوظائف" -> androidx.compose.material.icons.Icons.Default.Work
-                        "المفضلة" -> androidx.compose.material.icons.Icons.Default.Favorite
-                        else -> androidx.compose.material.icons.Icons.Default.Category
-                    }
-
-                    Surface(
-                        onClick = { viewModel.setActiveBrowserTab(tabName) },
-                        shape = RoundedCornerShape(20.dp),
-                        color = if (isSelected) Color.White else Color(0xFF131E33),
-                        shadowElevation = if (isSelected) 4.dp else 1.dp,
-                        border = BorderStroke(
-                            1.dp,
-                            if (isSelected) Color.White else Color(0xFF1F2F4E)
-                        )
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
-                        ) {
-                            Icon(
-                                imageVector = tabIcon,
-                                contentDescription = null,
-                                tint = if (isSelected) Color(0xFF0F172A) else Color(0xFF94A3B8),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = tabName,
-                                fontSize = 11.5.sp,
-                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
-                                color = if (isSelected) Color(0xFF0F172A) else Color.White
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        // 4. Tab Navigation Chips REMOVED for Minimalism
+        // item { ... }
 
         // 5. Main Tab Content
         item {
@@ -314,6 +262,9 @@ fun ServicesBrowserLayout(
             cities = citiesList,
             selectedCityId = activeCityId ?: "",
             onSelectCity = { viewModel.setCityFilter(it) },
+            categories = categories,
+            selectedCategoryId = selectedCategory,
+            onSelectCategory = { viewModel.selectCategory(it ?: "") },
             isVipOnly = isVipOnly,
             onToggleVip = { viewModel.toggleVipFilter() },
             isAvailableOnly = isAvailableOnly,

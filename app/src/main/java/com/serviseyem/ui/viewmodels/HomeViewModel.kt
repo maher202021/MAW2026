@@ -393,34 +393,14 @@ open class HomeViewModel @Inject constructor(
         }
     }
 
+    var navigateToMapCallback: (() -> Unit)? = null
+
     fun openExternalDirections(context: android.content.Context, destLat: Double, destLng: Double, label: String = "الوجهة") {
-        val encodedLabel = android.net.Uri.encode(label.ifBlank { "الوجهة" })
         try {
-            val gmapsUri = android.net.Uri.parse("geo:$destLat,$destLng?q=$destLat,$destLng($encodedLabel)")
-            val mapIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, gmapsUri).apply {
-                setPackage("com.google.android.apps.maps")
-                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            if (mapIntent.resolveActivity(context.packageManager) != null) {
-                context.startActivity(mapIntent)
-            } else {
-                val browserUri = android.net.Uri.parse("https://www.google.com/maps/dir/?api=1&destination=$destLat,$destLng")
-                val browserIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, browserUri).apply {
-                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(browserIntent)
-            }
+            navigateToMapCallback?.invoke()
         } catch (e: Exception) {
-            try {
-                val fallbackUri = android.net.Uri.parse("https://www.google.com/maps/search/?api=1&query=$destLat,$destLng")
-                val fallbackIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, fallbackUri).apply {
-                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(fallbackIntent)
-            } catch (ex: Exception) {
-                android.util.Log.e("HomeViewModel", "Failed to open external directions", ex)
-                triggerToast("❌ تعذر فتح تطبيق الخرائط على هذا الجهاز")
-            }
+            e.printStackTrace()
+            triggerToast("📍 جاري الانتقال لخريطة التطبيق...")
         }
     }
 }

@@ -101,7 +101,7 @@ fun RadarRenderer(
         val pulse2Stroke = remember { Stroke(width = 1.8f) }
         val pulse3Stroke = remember { Stroke(width = 1.2f) }
         val bgGradientColors = remember {
-            listOf(Color(0xFF1E293B), Color(0xFF0F172A), Color(0xFF020617))
+            listOf(Color(0xFF161C2C), Color(0xFF0B0F19), Color(0xFF020617))
         }
         val bgBrush = remember(centerOffset, widthPx, heightPx, bgGradientColors) {
             Brush.radialGradient(
@@ -342,12 +342,12 @@ fun RadarRenderer(
 
             // 8. مركز الرادار (صنعاء / موقع المستخدم)
             drawCircle(
-                color = Color(0xFF00E5FF).copy(alpha = 0.28f),
+                color = Color(0xFF10B981).copy(alpha = 0.28f),
                 radius = 16.dp.toPx(),
                 center = centerOffset
             )
             drawCircle(
-                color = Color(0xFF00E5FF),
+                color = Color(0xFF10B981),
                 radius = 5.dp.toPx(),
                 center = centerOffset
             )
