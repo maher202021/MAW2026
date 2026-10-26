@@ -9,10 +9,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -90,7 +93,7 @@ fun ServicesBrowserLayout(
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().background(com.serviseyem.ui.components.BespokePremiumSystem.DeepDark),
         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -111,19 +114,18 @@ fun ServicesBrowserLayout(
                 }
             }
 
-            // 3. Search Bar
+            // 3. Search Bar - Floating Glassmorphic
             item {
                 val isFilterActive = phoneOrNameFilter.isNotEmpty() || neighborFilter.isNotEmpty() || isVipOnly || isAvailableOnly
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { viewModel.navigateToScreen(AppScreens.UNIFIED_SEARCH) }
+                        .padding(vertical = 8.dp)
                 ) {
                     ServicesSearchBar(
                         searchQuery = searchQuery,
                         onSearchQueryChange = { 
                             viewModel.updateSearchQuery(it)
-                            viewModel.navigateToScreen(AppScreens.UNIFIED_SEARCH)
                         },
                         isFilterActive = isFilterActive,
                         onFilterClick = { showFiltersPanel = true },
@@ -131,130 +133,335 @@ fun ServicesBrowserLayout(
                         onVoiceClick = {
                             VoiceManager.onHear?.invoke { heardText ->
                                 viewModel.updateSearchQuery(heardText)
-                                viewModel.navigateToScreen(AppScreens.UNIFIED_SEARCH)
                             }
                         },
                         themeColors = themeColors
                     )
                 }
             }
-        }
+            
+            // 4. Quick Category Grid (4x2 Bespoke Categories)
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val gridRow1 = listOf(
+                        Triple("المتاجر", "🏪", com.serviseyem.ui.components.BespokePremiumSystem.StoresGradient) to {
+                            viewModel.setActiveBrowserTab("المحلات والمتاجر")
+                        },
+                        Triple("المطاعم", "🍔", com.serviseyem.ui.components.BespokePremiumSystem.FoodGradient) to {
+                            viewModel.setActiveBrowserTab("المطاعم والكافيهات")
+                        },
+                        Triple("المراكز الطبية", "🏥", com.serviseyem.ui.components.BespokePremiumSystem.MedicalGradient) to {
+                            viewModel.setActiveBrowserTab("المراكز الطبية")
+                        },
+                        Triple("العقارات", "🏠", com.serviseyem.ui.components.BespokePremiumSystem.EstateGradient) to {
+                            viewModel.setActiveBrowserTab("العقارات")
+                        }
+                    )
 
-        // 4. Tab Navigation Chips REMOVED for Minimalism
-        // item { ... }
+                    val gridRow2 = listOf(
+                        Triple("الوظائف", "💼", com.serviseyem.ui.components.BespokePremiumSystem.JobsGradient) to {
+                            viewModel.setActiveBrowserTab("إعلانات الوظائف")
+                        },
+                        Triple("الفنيون", "🛠️", com.serviseyem.ui.components.BespokePremiumSystem.ServicesGradient) to {
+                            viewModel.setActiveBrowserTab("الفنيون")
+                        },
+                        Triple("خدمات منزلية", "🧹", androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF0284C7), Color(0xFF0D9488)))) to {
+                            viewModel.setActiveBrowserTab("خدمات منزلية")
+                        },
+                        Triple("نقل وتوصيل", "🚗", androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF6366F1), Color(0xFF8B5CF6)))) to {
+                            viewModel.setActiveBrowserTab("نقل وتوصيل")
+                        }
+                    )
 
-        // 5. Main Tab Content
-        item {
-            when (activeTabName) {
-                "المفضلة" -> {
-                    FavoritesScreenLayout(
-                        viewModel = viewModel,
-                        themeColors = themeColors,
-                        onBackClick = { viewModel.setActiveBrowserTab("الرئيسية") },
-                        onOpenProviderDetails = {
-                            viewModel.selectedProvider = it
-                            viewModel.navigateTo("DYNAMIC_PROFILE")
-                        },
-                        onOpenStoreDetails = { selectedStoreForDetails = it },
-                        onOpenPropertyDetails = { selectedPropertyForDetails = it },
-                        onOpenChat = onChatOpen
-                    )
-                }
-                "المحلات والمتاجر", "المحلات", settingsState.storesTabName -> {
-                    StoresSectionView(
-                        viewModel = viewModel,
-                        themeColors = themeColors,
-                        onStoreClick = { 
-                            viewModel.selectedStore = it
-                            viewModel.navigateTo("STORE_DETAILS")
-                        },
-                        onCreateStoreClick = {
-                            viewModel.setTargetRegistrationType("store")
-                            viewModel.navigateTo(AppScreens.REGISTER_FORM)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        gridRow1.forEach { (cat, onClick) ->
+                            Surface(
+                                onClick = onClick,
+                                shape = RoundedCornerShape(14.dp),
+                                color = com.serviseyem.ui.components.BespokePremiumSystem.SurfaceDark,
+                                border = BorderStroke(1.dp, com.serviseyem.ui.components.BespokePremiumSystem.GlassBorder),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(72.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(cat.third),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(cat.second, fontSize = 16.sp)
+                                    }
+                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Text(
+                                        text = cat.first,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
+                                }
+                            }
                         }
-                    )
-                }
-                "المطاعم والكافيهات", "المطاعم" -> {
-                    RestaurantsSectionView(
-                        viewModel = viewModel,
-                        themeColors = themeColors,
-                        onStoreClick = { 
-                            viewModel.selectedStore = it
-                            viewModel.navigateTo("STORE_DETAILS")
-                        },
-                        onCreateRestaurantClick = {
-                            viewModel.setTargetRegistrationType("restaurant")
-                            viewModel.navigateTo(AppScreens.REGISTER_FORM)
-                        }
-                    )
-                }
-                "المراكز الطبية", "المراكز" -> {
-                    MedicalCentersSectionView(
-                        viewModel = viewModel,
-                        themeColors = themeColors,
-                        onStoreClick = { 
-                            viewModel.selectedStore = it
-                            viewModel.navigateTo("STORE_DETAILS")
-                        },
-                        onCreateMedicalClick = {
-                            viewModel.setTargetRegistrationType("medical")
-                            viewModel.navigateTo(AppScreens.REGISTER_FORM)
-                        }
-                    )
-                }
-                "العقارات", settingsState.propertiesTabName -> {
-                    PropertiesSectionView(
-                        viewModel = viewModel,
-                        themeColors = themeColors,
-                        onPropertyClick = { selectedPropertyForDetails = it },
-                        onCreatePropertyClick = {
-                            viewModel.setTargetRegistrationType("property")
-                            viewModel.navigateTo(AppScreens.REGISTER_FORM)
-                        }
-                    )
-                }
-                "إعلانات الوظائف", "الوظائف" -> {
-                    JobsSectionView(
-                        viewModel = viewModel,
-                        themeColors = themeColors,
-                        onJobClick = { selectedJobForDetails = it },
-                        onCreateJobClick = {
-                            viewModel.setTargetRegistrationType("job")
-                            viewModel.navigateTo(AppScreens.REGISTER_FORM)
-                        }
-                    )
-                }
-                else -> {
-                    val effectiveDisplayProviders = if (searchQuery.isBlank() && 
-                        (selectedCategory.isNullOrBlank() || selectedCategory == "ALL" || selectedCategory == "الكل")) {
-                        allProviders
-                    } else {
-                        filteredProviders
                     }
 
-                    ServicesBrowserMainContent(
-                        viewModel = viewModel,
-                        themeColors = themeColors,
-                        displayProviders = effectiveDisplayProviders,
-                        displayStores = filteredStores,
-                        displayProperties = filteredProperties,
-                        isProvidersLoading = isProvidersLoading,
-                        categories = categories,
-                        selectedCategoryId = selectedCategory,
-                        onCategorySelected = { viewModel.selectCategory(it ?: "") },
-                        providersLimit = providersLimit,
-                        onLoadMore = { providersLimit += 10 },
-                        onStoreClick = { 
-                            viewModel.selectedStore = it
-                            viewModel.navigateTo("STORE_DETAILS")
-                        },
-                        onPropertyClick = { selectedPropertyForDetails = it },
-                        onChatOpen = onChatOpen
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        gridRow2.forEach { (cat, onClick) ->
+                            Surface(
+                                onClick = onClick,
+                                shape = RoundedCornerShape(14.dp),
+                                color = com.serviseyem.ui.components.BespokePremiumSystem.SurfaceDark,
+                                border = BorderStroke(1.dp, com.serviseyem.ui.components.BespokePremiumSystem.GlassBorder),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(72.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(cat.third),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(cat.second, fontSize = 16.sp)
+                                    }
+                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Text(
+                                        text = cat.first,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 7. Join As Provider Gold Banner
+            item {
+                com.serviseyem.ui.components.BespokePremiumSystem.JoinAsProviderBanner {
+                    viewModel.navigateTo(AppScreens.REGISTER_FORM)
+                }
+            }
+
+            // 8. Technicians & Providers Header
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("🛠️", fontSize = 15.sp)
+                        Text(
+                            "الفنيون ومقدمو الخدمات المعتمدون",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent.copy(alpha = 0.15f),
+                        border = BorderStroke(0.5.dp, com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent)
+                    ) {
+                        Text(
+                            text = "موثق ✓",
+                            color = com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
         }
+
+        // 5. Main Tab Content
+        item {
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 100.dp)) {
+                when (activeTabName) {
+                    "الفنيون", "قسم الفنيين" -> {
+                        TechniciansSectionView(
+                            viewModel = viewModel,
+                            themeColors = themeColors,
+                            onChatOpen = onChatOpen
+                        )
+                    }
+                    "خدمات منزلية" -> {
+                        ComingSoonSectionView(
+                            title = "الخدمات المنزلية",
+                            subtitle = "نعمل على تجهيز باقة متكاملة من الخدمات المنزلية تشمل التنظيف الشامل، التعقيم، ورعاية الحدائق بأعلى معايير الجودة والأمان.",
+                            iconEmoji = "🧹",
+                            gradient = androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF0284C7), Color(0xFF0D9488))),
+                            onBackClick = { viewModel.setActiveBrowserTab("الرئيسية") },
+                            onRegisterClick = {
+                                viewModel.setTargetRegistrationType("home_services")
+                                viewModel.navigateTo(AppScreens.REGISTER_FORM)
+                            }
+                        )
+                    }
+                    "نقل وتوصيل" -> {
+                        ComingSoonSectionView(
+                            title = "النقل والتوصيل",
+                            subtitle = "نعمل على تجهيز أسطول النقل والتوصيل السريع لنقل البضائع، الطرود، والأثاث بين جميع المدن والمحافظات اليمنية.",
+                            iconEmoji = "🚗",
+                            gradient = androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF6366F1), Color(0xFF8B5CF6))),
+                            onBackClick = { viewModel.setActiveBrowserTab("الرئيسية") },
+                            onRegisterClick = {
+                                viewModel.setTargetRegistrationType("delivery")
+                                viewModel.navigateTo(AppScreens.REGISTER_FORM)
+                            }
+                        )
+                    }
+                    "المفضلة" -> {
+                        FavoritesScreenLayout(
+                            viewModel = viewModel,
+                            themeColors = themeColors,
+                            onBackClick = { viewModel.setActiveBrowserTab("الرئيسية") },
+                            onOpenProviderDetails = {
+                                viewModel.selectedProvider = it
+                                viewModel.navigateTo("DYNAMIC_PROFILE")
+                            },
+                            onOpenStoreDetails = { selectedStoreForDetails = it },
+                            onOpenPropertyDetails = { selectedPropertyForDetails = it },
+                            onOpenChat = onChatOpen
+                        )
+                    }
+                    "المحلات والمتاجر", "المحلات", settingsState.storesTabName -> {
+                        StoresSectionView(
+                            viewModel = viewModel,
+                            themeColors = themeColors,
+                            onStoreClick = { 
+                                viewModel.selectedStore = it
+                                viewModel.navigateTo("STORE_DETAILS")
+                            },
+                            onCreateStoreClick = {
+                                viewModel.setTargetRegistrationType("store")
+                                viewModel.navigateTo(AppScreens.REGISTER_FORM)
+                            }
+                        )
+                    }
+                    "المطاعم والكافيهات", "المطاعم" -> {
+                        RestaurantsSectionView(
+                            viewModel = viewModel,
+                            themeColors = themeColors,
+                            onStoreClick = { 
+                                viewModel.selectedStore = it
+                                viewModel.navigateTo("STORE_DETAILS")
+                            },
+                            onCreateRestaurantClick = {
+                                viewModel.setTargetRegistrationType("restaurant")
+                                viewModel.navigateTo(AppScreens.REGISTER_FORM)
+                            }
+                        )
+                    }
+                    "المراكز الطبية", "المراكز" -> {
+                        MedicalCentersSectionView(
+                            viewModel = viewModel,
+                            themeColors = themeColors,
+                            onStoreClick = { 
+                                viewModel.selectedStore = it
+                                viewModel.navigateTo("STORE_DETAILS")
+                            },
+                            onCreateMedicalClick = {
+                                viewModel.setTargetRegistrationType("medical")
+                                viewModel.navigateTo(AppScreens.REGISTER_FORM)
+                            }
+                        )
+                    }
+                    "العقارات", settingsState.propertiesTabName -> {
+                        PropertiesSectionView(
+                            viewModel = viewModel,
+                            themeColors = themeColors,
+                            onPropertyClick = { selectedPropertyForDetails = it },
+                            onCreatePropertyClick = {
+                                viewModel.setTargetRegistrationType("property")
+                                viewModel.navigateTo(AppScreens.REGISTER_FORM)
+                            }
+                        )
+                    }
+                    "إعلانات الوظائف", "الوظائف" -> {
+                        JobsSectionView(
+                            viewModel = viewModel,
+                            themeColors = themeColors,
+                            onJobClick = { selectedJobForDetails = it },
+                            onCreateJobClick = {
+                                viewModel.setTargetRegistrationType("job")
+                                viewModel.navigateTo(AppScreens.REGISTER_FORM)
+                            }
+                        )
+                    }
+                    else -> {
+                        val effectiveDisplayProviders = if (searchQuery.isBlank() && 
+                            (selectedCategory.isNullOrBlank() || selectedCategory == "ALL" || selectedCategory == "الكل")) {
+                            allProviders
+                        } else {
+                            filteredProviders
+                        }
+
+                        ServicesBrowserMainContent(
+                            viewModel = viewModel,
+                            themeColors = themeColors,
+                            displayProviders = effectiveDisplayProviders,
+                            displayStores = filteredStores,
+                            displayProperties = filteredProperties,
+                            isProvidersLoading = isProvidersLoading,
+                            categories = categories,
+                            selectedCategoryId = selectedCategory,
+                            onCategorySelected = { viewModel.selectCategory(it ?: "") },
+                            providersLimit = providersLimit,
+                            onLoadMore = { providersLimit += 10 },
+                            onStoreClick = { 
+                                viewModel.selectedStore = it
+                                viewModel.navigateTo("STORE_DETAILS")
+                            },
+                            onPropertyClick = { selectedPropertyForDetails = it },
+                            onChatOpen = onChatOpen
+                        )
+                    }
+                }
+            }
+        }
+
     }
+
 
     // Dialogs & Payment Sheets
     if (showFiltersPanel) {

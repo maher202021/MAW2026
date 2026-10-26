@@ -2,11 +2,12 @@ package com.serviseyem.ui.screens.home.sections
 
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,15 +19,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.serviseyem.data.StoreEntity
 import com.serviseyem.domain.isAdmin
 import com.serviseyem.ui.MainViewModel
+import com.serviseyem.ui.components.BespokePremiumSystem
+import com.serviseyem.ui.setActiveBrowserTab
 import com.serviseyem.ui.screens.home.extensions.isMedicalCenter
 import com.serviseyem.utils.VisualThemePalette
-import com.serviseyem.utils.formatArabicWorkingHours
 
 /**
  * 🏥 MedicalCentersSectionView - عرض المراكز والعيادات والمستشفيات الطبية بتصميم عصري فخم وخفيف
@@ -44,262 +45,105 @@ fun MedicalCentersSectionView(
     val adminRole by viewModel.adminRole.collectAsState()
     val isAdminUser = adminRole.isAdmin()
 
-    val medicalList = remember(allStores, currentUserId, adminRole) {
+    val subCategories = listOf("الكل", "مستشفيات", "عيادات تخصصية", "أسنان", "صيدليات", "بصريات", "مختبرات")
+    var selectedSubCategory by remember { mutableStateOf(subCategories[0]) }
+
+    val medicalList = remember(allStores, currentUserId, adminRole, selectedSubCategory) {
         allStores.filter { 
             it.isMedicalCenter() && !it.isDeleted && (it.isApproved || it.ownerId == currentUserId || isAdminUser)
-        }
-    }
-    var selectedSubCategory by remember { mutableStateOf("الكل") }
-
-    val subCategories = listOf(
-        "الكل",
-        "مستشفيات عامة",
-        "عيادات تخصصية",
-        "طب وجراحة الأسنان",
-        "صيدليات ومستلزمات",
-        "مختبرات تحاليل",
-        "مراكز بصريات"
-    )
-
-    val filteredList = remember(medicalList, selectedSubCategory) {
-        if (selectedSubCategory == "الكل") medicalList
-        else {
-            val key = selectedSubCategory.replace("مستشفيات", "مستشفى")
-                .replace("عيادات", "عيادة")
-                .replace("صيدليات", "صيدلية")
-                .replace("مختبرات", "مختبر")
-            medicalList.filter { store ->
-                store.name.contains(key, ignoreCase = true) || 
-                store.description.contains(key, ignoreCase = true) || 
-                store.categoryId.contains(key, ignoreCase = true)
-            }
+        }.filter { 
+            if (selectedSubCategory == "الكل") true else it.categoryId.contains(selectedSubCategory) || it.name.contains(selectedSubCategory)
         }
     }
 
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // Section Header
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(BespokePremiumSystem.DeepDark)
+            .padding(bottom = 20.dp)
+    ) {
+        // 0. Top Back Header
+        BespokePremiumSystem.SectionBackHeader(
+            title = "المراكز الطبية",
+            onBackClick = { viewModel.setActiveBrowserTab("الرئيسية") }
+        )
+
+        // 1. Medical Section Header
+        BespokePremiumSystem.SectionHeader(
+            title = "الرعاية والمراكز الطبية",
+            subtitle = "أفضل الخدمات الطبية المعتمدة في متناول يدك",
+            icon = Icons.Default.HealthAndSafety,
+            accentColor = BespokePremiumSystem.CyanMedical,
+            actionLabel = "إضافة منشأة",
+            onActionClick = onCreateMedicalClick
+        )
+
+        // 2. Emergency 24/7 Pill (Glassmorphic)
+        Surface(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF991B1B).copy(alpha = 0.2f),
+            border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.4f))
         ) {
-            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Default.LocalHospital, contentDescription = null, tint = Color(0xFF0D5C46), modifier = Modifier.size(18.dp))
-                    Text("المراكز والمجمعات الطبية", fontSize = 14.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                }
-                Text("تصفح المستشفيات والعيادات والمختبرات المعتمدة باليمن", fontSize = 10.5.sp, color = Color(0xFF64748B), maxLines = 1)
-            }
-            Button(
-                onClick = onCreateMedicalClick,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D5C46)),
-                shape = RoundedCornerShape(10.dp),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                modifier = Modifier.defaultMinSize(minHeight = 34.dp)
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("إضافة مركز", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
+                Surface(shape = CircleShape, color = Color(0xFFEF4444), modifier = Modifier.size(10.dp)) {}
+                Text("صيدليات ومراكز الطوارئ المناوبة (24/7)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = Color.White)
             }
         }
 
-        // Subcategories Chips
+        // 3. Category Selector (Minimalist Pills)
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            subCategories.forEach { subCat ->
-                val isSelected = selectedSubCategory == subCat
+            subCategories.forEach { cat ->
+                val isSelected = selectedSubCategory == cat
                 Surface(
-                    onClick = { selectedSubCategory = subCat },
-                    shape = RoundedCornerShape(16.dp),
-                    color = if (isSelected) Color(0xFF0D5C46) else Color.White,
-                    shadowElevation = if (isSelected) 3.dp else 1.dp,
-                    border = BorderStroke(1.dp, if (isSelected) Color(0xFFD4AF37) else Color(0xFFE2E8F0))
+                    onClick = { selectedSubCategory = cat },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isSelected) BespokePremiumSystem.CyanMedical.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f),
+                    border = BorderStroke(1.dp, if (isSelected) BespokePremiumSystem.CyanMedical else BespokePremiumSystem.GlassBorder)
                 ) {
                     Text(
-                        subCat,
+                        cat,
+                        color = if (isSelected) BespokePremiumSystem.CyanMedical else Color.LightGray,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isSelected) Color.White else Color(0xFF1E293B),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                     )
                 }
             }
         }
 
-        if (filteredList.isEmpty()) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth().padding(12.dp)
-            ) {
-                Text(
-                    "لا توجد مراكز طبية أو عيادات مسجلة في هذا القسم حالياً.",
-                    fontSize = 11.5.sp,
-                    color = Color(0xFF64748B),
-                    modifier = Modifier.padding(16.dp),
-                    textAlign = TextAlign.Center
-                )
-            }
-        } else {
-            filteredList.forEach { store ->
-                Card(
-                    onClick = { onStoreClick(store) },
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.5.dp),
-                    border = BorderStroke(1.dp, if (store.isVip) Color(0xFFD4AF37).copy(alpha = 0.5f) else Color(0xFFE2E8F0)),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 4.dp)
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFF1F5F9),
-                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                                modifier = Modifier.size(56.dp)
-                            ) {
-                                val logoUrl = store.logoImage.ifBlank { store.coverImage }
-                                if (logoUrl.isNotBlank()) {
-                                    coil.compose.AsyncImage(
-                                        model = logoUrl,
-                                        contentDescription = store.name,
-                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                } else {
-                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                        Icon(Icons.Default.LocalHospital, contentDescription = null, tint = Color(0xFF0D5C46), modifier = Modifier.size(28.dp))
-                                    }
-                                }
-                            }
+        Spacer(modifier = Modifier.height(16.dp))
 
-                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                        modifier = Modifier.weight(1f, fill = false)
-                                    ) {
-                                        Text(
-                                            text = store.name,
-                                            fontSize = 14.5.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF0F172A),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        if (store.isVerified) {
-                                            Icon(Icons.Default.Verified, contentDescription = "معتمد", tint = Color(0xFF0D5C46), modifier = Modifier.size(14.dp))
-                                        }
-                                    }
+        // 4. Medical Cards
+        medicalList.forEach { med ->
+            BespokePremiumSystem.MedicalClinicalCard(
+                name = med.name,
+                specialty = if (med.categoryId.isNotBlank()) med.categoryId else "مركز طبي متكامل",
+                isOpen = med.isActive,
+                onBook = { onStoreClick(med) },
+                onCall = {
+                    try {
+                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${med.phone}"))
+                        context.startActivity(intent)
+                    } catch (e: Exception) {}
+                },
+                onNav = { /* Directions */ }
+            )
+        }
 
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = Color(0xFFFEF3C7),
-                                        border = BorderStroke(0.5.dp, Color(0xFFF59E0B))
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                        ) {
-                                            Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(11.dp))
-                                            Text(String.format("%.1f", store.rating), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF92400E))
-                                        }
-                                    }
-                                }
-
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF64748B), modifier = Modifier.size(12.dp))
-                                    Text(
-                                        "${store.cityId} - ${store.localNeighborhood.ifBlank { "اليمن" }}",
-                                        fontSize = 11.sp,
-                                        color = Color(0xFF475569),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-
-                                if (store.workingHours.isNotEmpty()) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Icon(Icons.Default.Schedule, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(12.dp))
-                                        Text(
-                                            formatArabicWorkingHours(store.workingHours),
-                                            fontSize = 10.sp,
-                                            color = Color(0xFF059669),
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // Instant Action Buttons: [اتصال بالمركز] [حجز / استشارة]
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            FilledTonalButton(
-                                onClick = {
-                                    try {
-                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${store.phone}"))
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "هاتف المركز: ${store.phone}", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = Color(0xFFDCFCE7),
-                                    contentColor = Color(0xFF065F46)
-                                ),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.weight(1f).height(34.dp),
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                ) {
-                                    Icon(Icons.Default.Phone, contentDescription = "اتصال", tint = Color(0xFF065F46), modifier = Modifier.size(13.dp))
-                                    Text("اتصال", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-                                }
-                            }
-
-                            Button(
-                                onClick = { onStoreClick(store) },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D5C46)),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.weight(1.3f).height(34.dp),
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                ) {
-                                    Icon(Icons.Default.LocalHospital, contentDescription = "العيادات", tint = Color.White, modifier = Modifier.size(13.dp))
-                                    Text("العيادات والخدمات", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-                                }
-                            }
-                        }
-                    }
-                }
+        if (medicalList.isEmpty()) {
+            Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                Text("لا توجد منشآت طبية حالياً", color = Color.Gray, fontSize = 14.sp)
             }
         }
     }
 }
+

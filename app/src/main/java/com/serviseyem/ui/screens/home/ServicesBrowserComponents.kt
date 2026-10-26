@@ -44,31 +44,34 @@ fun ServicesSearchBar(
     onVoiceClick: () -> Unit,
     themeColors: VisualThemePalette
 ) {
-    Card(
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, if (isFilterActive) Color(0xFFD4AF37) else Color(0xFFE2E8F0)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.fillMaxWidth()
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = Color(0xFF1E293B).copy(alpha = 0.6f),
+        border = BorderStroke(1.dp, if (isFilterActive) com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent else com.serviseyem.ui.components.BespokePremiumSystem.GlassBorder),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .padding(horizontal = 4.dp)
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 7.dp),
+                .fillMaxSize()
+                .padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "بحث",
-                tint = Color(0xFF0D5C46),
-                modifier = Modifier.size(20.dp)
+                tint = com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent,
+                modifier = Modifier.size(22.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(vertical = 2.dp),
+                    .weight(1f),
                 contentAlignment = Alignment.CenterStart
             ) {
                 androidx.compose.foundation.text.BasicTextField(
@@ -77,19 +80,21 @@ fun ServicesSearchBar(
                     singleLine = true,
                     maxLines = 1,
                     textStyle = androidx.compose.ui.text.TextStyle(
-                        color = Color(0xFF0F172A),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Normal
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Start
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("search_text_input"),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent),
                     decorationBox = { innerTextField ->
                         if (searchQuery.isEmpty()) {
                             Text(
                                 text = "ابحث عن فني، متجر، خدمة، عقار...",
-                                fontSize = 11.5.sp,
-                                color = Color(0xFF94A3B8),
+                                fontSize = 13.sp,
+                                color = Color.White.copy(alpha = 0.4f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -101,57 +106,56 @@ fun ServicesSearchBar(
 
             if (searchQuery.isNotEmpty()) {
                 IconButton(
-                    onClick = { onSearchQueryChange("") },
-                    modifier = Modifier.size(24.dp)
+                    onClick = { 
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                        onSearchQueryChange("") 
+                    },
+                    modifier = Modifier.size(28.dp)
                 ) {
-                    Icon(Icons.Default.Clear, contentDescription = "مسح", tint = Color.Gray, modifier = Modifier.size(14.dp))
-                }
-            }
-
-            Spacer(modifier = Modifier.width(4.dp))
-
-            Box(contentAlignment = Alignment.TopEnd) {
-                Surface(
-                    onClick = onFilterClick,
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isFilterActive) Color(0xFF0D5C46) else Color(0xFFF1F5F9),
-                    border = BorderStroke(0.7.dp, if (isFilterActive) Color(0xFFD4AF37) else Color(0xFFE2E8F0)),
-                    modifier = Modifier.size(34.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = "فلترة وبحث متقدم",
-                            tint = if (isFilterActive) Color.White else Color(0xFF475569),
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-                if (isFilterActive) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(Color(0xFF10B981), CircleShape)
-                    )
+                    Icon(Icons.Default.Clear, contentDescription = "مسح", tint = Color.LightGray, modifier = Modifier.size(16.dp))
                 }
             }
 
             if (isSpeechSearchEnabled) {
                 IconButton(
-                    onClick = onVoiceClick,
-                    modifier = Modifier.size(30.dp)
+                    onClick = {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        onVoiceClick()
+                    },
+                    modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Mic,
                         contentDescription = "بحث صوتي",
-                        tint = Color(0xFF0D5C46),
-                        modifier = Modifier.size(18.dp)
+                        tint = com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
+            }
+
+            VerticalDivider(
+                modifier = Modifier.height(24.dp).padding(horizontal = 6.dp),
+                color = Color.White.copy(alpha = 0.15f)
+            )
+
+            IconButton(
+                onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    onFilterClick()
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FilterList,
+                    contentDescription = "تصفية وبحث متقدم",
+                    tint = if (isFilterActive) com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent else Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
             }
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
