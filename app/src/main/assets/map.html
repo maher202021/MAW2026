@@ -9,59 +9,127 @@
     <link rel="stylesheet" href="MarkerCluster.Default.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { width: 100%; height: 100%; background-color: #0F172A; overflow: hidden; font-family: sans-serif; }
-        #map { width: 100%; height: 100vh; background-color: #0F172A; }
-        .mode-3d-tilted { transform: rotateX(25deg) scale(1.05); transform-origin: 50% 80%; transition: transform 0.5s ease; }
+        html, body { width: 100%; height: 100%; background-color: #0B1020; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        
+        #map-wrapper {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            perspective: 1200px;
+            perspective-origin: 50% 60%;
+            overflow: hidden;
+            background: #0B1020;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background-color: #0B1020;
+            transform-origin: 50% 70%;
+            transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform;
+        }
+
+        .mode-3d-tilted {
+            transform: rotateX(42deg) scale(1.18);
+        }
         
         .custom-pin-container { display: flex; flex-direction: column; align-items: center; cursor: pointer; transform: translate(-50%, -100%); }
-        .custom-pin-head { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #ffffff; border: 2px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.7); z-index: 10; }
-        .custom-pin-arrow { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #ffffff; margin-top: -1px; }
-        .custom-pin-label { background: rgba(15, 23, 42, 0.95); color: #ffffff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; margin-top: 3px; white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; border: 1px solid rgba(255,255,255,0.35); box-shadow: 0 3px 8px rgba(0,0,0,0.5); direction: rtl; text-align: right; }
+        .custom-pin-head { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 17px; color: #ffffff; border: 2.5px solid #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.8); z-index: 10; transition: transform 0.2s ease; }
+        .custom-pin-container:active .custom-pin-head { transform: scale(1.15); }
+        .custom-pin-arrow { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid #ffffff; margin-top: -1px; }
+        .custom-pin-label { background: rgba(11, 16, 32, 0.94); color: #ffffff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; margin-top: 3px; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 10px rgba(0,0,0,0.6); direction: rtl; text-align: right; backdrop-filter: blur(4px); }
 
-        .user-pulse-marker { position: relative; width: 28px; height: 28px; }
-        .user-dot { width: 18px; height: 18px; background: #00E5FF; border: 3px solid #ffffff; border-radius: 50%; position: absolute; top: 5px; left: 5px; box-shadow: 0 0 16px #00E5FF; z-index: 5; }
-        .user-pulse { width: 48px; height: 48px; background: rgba(0, 229, 255, 0.5); border-radius: 50%; position: absolute; top: -10px; left: -10px; animation: userPulsing 2s infinite ease-out; z-index: 1; }
-        @keyframes userPulsing { 0% { transform: scale(0.4); opacity: 0.95; } 100% { transform: scale(1.9); opacity: 0; } }
+        .user-pulse-marker { position: relative; width: 32px; height: 32px; }
+        .user-dot { width: 20px; height: 20px; background: #00E5FF; border: 3px solid #ffffff; border-radius: 50%; position: absolute; top: 6px; left: 6px; box-shadow: 0 0 18px #00E5FF; z-index: 5; }
+        .user-pulse { width: 56px; height: 56px; background: rgba(0, 229, 255, 0.45); border-radius: 50%; position: absolute; top: -12px; left: -12px; animation: userPulsing 2s infinite ease-out; z-index: 1; }
+        @keyframes userPulsing { 0% { transform: scale(0.35); opacity: 0.95; } 100% { transform: scale(1.9); opacity: 0; } }
         
+        /* 3D Buildings simulated styling */
+        .building-layer-3d {
+            filter: drop-shadow(0px 8px 12px rgba(0, 0, 0, 0.75));
+        }
+
         .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
     </style>
 </head>
 <body>
-    <div id="map"></div>
+    <div id="map-wrapper">
+        <div id="map"></div>
+    </div>
     <script src="leaflet.js"></script>
     <script src="leaflet.markercluster.js"></script>
     <script>
         var map;
         var currentTileLayer = null;
+        var building3dLayer = null;
         var markerClusterGroup;
         var userMarker = null;
         var userLat = 15.3694;
         var userLng = 44.1910;
+        var currentTiltAngle = 0;
 
-        // Expanded maxZoom to 22 for deep satellite and street zoom
+        // Expanded maxZoom to 24 with high-res tile overscaling and multiple provider sources
         var tileProviders = {
-            'google_hybrid': L.tileLayer('https://mt1.google.com/vt/lyrs=y&hl=ar&x={x}&y={y}&z={z}', { maxZoom: 22, attribution: 'Google' }),
-            'google_streets': L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=ar&x={x}&y={y}&z={z}', { maxZoom: 22, attribution: 'Google' }),
-            'imagery': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22, maxNativeZoom: 19 }),
-            'osm_ar': L.tileLayer('https://tile.openstreetmap.be/osmfr/{z}/{x}/{y}.png', { maxZoom: 22 }),
-            'navigation': L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', { maxZoom: 22 })
+            'satellite': L.tileLayer('https://mt1.google.com/vt/lyrs=y&hl=ar&x={x}&y={y}&z={z}', {
+                maxZoom: 24,
+                maxNativeZoom: 20,
+                attribution: 'Google Satellite'
+            }),
+            'google_hybrid': L.tileLayer('https://mt1.google.com/vt/lyrs=y&hl=ar&x={x}&y={y}&z={z}', {
+                maxZoom: 24,
+                maxNativeZoom: 20,
+                attribution: 'Google'
+            }),
+            'vela_3d': L.tileLayer('https://mt1.google.com/vt/lyrs=y&hl=ar&x={x}&y={y}&z={z}', {
+                maxZoom: 24,
+                maxNativeZoom: 20,
+                className: 'building-layer-3d',
+                attribution: 'Vela 3D'
+            }),
+            'hot': L.tileLayer('https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+                maxZoom: 24,
+                maxNativeZoom: 19,
+                attribution: 'Humanitarian OSM'
+            }),
+            'topo': L.tileLayer('https://tile.opentopomap.org/{z}/{x}/{y}.png', {
+                maxZoom: 24,
+                maxNativeZoom: 17,
+                attribution: 'OpenTopoMap'
+            }),
+            'osm': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 24,
+                maxNativeZoom: 19,
+                attribution: 'OpenStreetMap'
+            }),
+            'navigation': L.tileLayer('https://tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                maxZoom: 24,
+                maxNativeZoom: 19,
+                attribution: 'OSM'
+            })
         };
 
         function initMap() {
             try {
                 map = L.map('map', {
                     center: [userLat, userLng],
-                    zoom: 14,
+                    zoom: 15,
+                    zoomDelta: 0.5,
+                    zoomSnap: 0.25,
+                    wheelPxPerZoomLevel: 60,
                     zoomControl: false,
                     attributionControl: false,
-                    maxZoom: 22,
-                    minZoom: 4
+                    maxZoom: 24,
+                    minZoom: 3
                 });
 
-                // Default to Arabic Hybrid (Satellite + Arabic Labels)
-                switchLayer('google_hybrid');
+                // Default to Satellite
+                switchLayer('satellite');
 
-                markerClusterGroup = L.markerClusterGroup({ maxClusterRadius: 35, spiderfyOnMaxZoom: true });
+                markerClusterGroup = L.markerClusterGroup({
+                    maxClusterRadius: 35,
+                    spiderfyOnMaxZoom: true,
+                    showCoverageOnHover: false
+                });
                 map.addLayer(markerClusterGroup);
 
                 map.on('click', function() {
@@ -70,48 +138,66 @@
 
                 if (window.AndroidBridge) window.AndroidBridge.onMapReady();
             } catch(e) {
+                console.error("Map init error:", e);
                 document.body.innerHTML = '<div style="color:white; padding:20px; text-align:center;">خطأ في تحميل الخريطة</div>';
             }
         }
 
         function switchLayer(key) {
             if (currentTileLayer) {
-                if (Array.isArray(currentTileLayer)) {
-                    currentTileLayer.forEach(function(l) { map.removeLayer(l); });
-                } else {
-                    map.removeLayer(currentTileLayer);
-                }
+                map.removeLayer(currentTileLayer);
                 currentTileLayer = null;
             }
 
-            // Mapping legacy keys to new Arabic ones
             var targetKey = key;
-            if (key === 'google_satellite' || key === 'hybrid') targetKey = 'google_hybrid';
-            if (key === 'streets') targetKey = 'google_streets';
-            if (key === 'osm') targetKey = 'osm_ar';
+            if (key === 'google_satellite' || key === 'hybrid') targetKey = 'satellite';
+            if (key === 'streets') targetKey = 'hot';
+            if (key === 'osm_ar') targetKey = 'osm';
 
             if (tileProviders[targetKey]) {
                 currentTileLayer = tileProviders[targetKey].addTo(map);
+            } else if (tileProviders['satellite']) {
+                currentTileLayer = tileProviders['satellite'].addTo(map);
+            }
+
+            // CRITICAL: Option 1 (satellite) and other layers are strictly 2D FLAT (tilt = 0).
+            // ONLY Option 2 (vela_3d) applies 3D tilt!
+            if (targetKey === 'vela_3d') {
+                setTilt(42);
+            } else {
+                setTilt(0);
             }
         }
 
         function setVelaMode(mode) {
-            var el = document.getElementById('map');
-            if (mode === 'VELA_3D' || mode === 'AERIAL_OAM') {
-                el.classList.add('mode-3d-tilted');
-                switchLayer('google_satellite');
+            if (mode === 'VELA_3D') {
+                setTilt(42);
+                switchLayer('vela_3d');
             } else {
-                el.classList.remove('mode-3d-tilted');
+                setTilt(0);
             }
         }
 
         function setTilt(angle) {
+            currentTiltAngle = angle;
             var el = document.getElementById('map');
-            if (angle > 0) {
-                el.classList.add('mode-3d-tilted');
-            } else {
-                el.classList.remove('mode-3d-tilted');
+            if (el) {
+                if (angle > 0) {
+                    el.style.transform = 'rotateX(' + angle + 'deg) scale(' + (1 + (angle * 0.004)) + ')';
+                } else {
+                    el.style.transform = 'none';
+                }
             }
+        }
+
+        function cycleTiltAngle() {
+            var nextAngle = 0;
+            if (currentTiltAngle === 0) nextAngle = 30;
+            else if (currentTiltAngle === 30) nextAngle = 45;
+            else if (currentTiltAngle === 45) nextAngle = 60;
+            else nextAngle = 0;
+            setTilt(nextAngle);
+            return nextAngle;
         }
 
         function updateUserLocation(lat, lng, acc, pan) {
@@ -119,14 +205,14 @@
             var icon = L.divIcon({
                 className: '',
                 html: '<div class="user-pulse-marker"><div class="user-pulse"></div><div class="user-dot"></div></div>',
-                iconSize: [28, 28], iconAnchor: [14, 14]
+                iconSize: [32, 32], iconAnchor: [16, 16]
             });
             if (!userMarker) {
                 userMarker = L.marker([lat, lng], { icon: icon, zIndexOffset: 2000 }).addTo(map);
             } else {
                 userMarker.setLatLng([lat, lng]);
             }
-            if (pan) map.panTo([lat, lng], { animate: true });
+            if (pan && map) map.panTo([lat, lng], { animate: true });
         }
 
         function setMarkers(json) {
@@ -139,7 +225,7 @@
                     '<div class="custom-pin-arrow" style="border-top-color:'+(item.badgeColor||'#00E5FF')+';"></div>' +
                     '<div class="custom-pin-label">'+item.name+'</div></div>';
                 var marker = L.marker([item.lat, item.lng], {
-                    icon: L.divIcon({ className:'', html: iconHtml, iconSize:[32,46], iconAnchor:[16,44] })
+                    icon: L.divIcon({ className:'', html: iconHtml, iconSize:[34,48], iconAnchor:[17,46] })
                 });
                 marker.on('click', function(e) {
                     L.DomEvent.stopPropagation(e);
@@ -154,22 +240,15 @@
 
         function drawRoute(lat1, lng1, lat2, lng2, color, destName) {
             clearRoute();
-            var midLat = (lat1 + lat2) / 2;
-            var midLng = (lng1 + lng2) / 2;
-            var deltaLat = Math.abs(lat1 - lat2);
-            var deltaLng = Math.abs(lng1 - lng2);
-            
             var waypoints = [
                 [lat1, lng1],
-                [midLat + (deltaLng * 0.05), midLng - (deltaLat * 0.05)],
                 [lat2, lng2]
             ];
             
             activeRouteLine = L.polyline(waypoints, {
                 color: color || '#00E5FF',
-                weight: 7,
+                weight: 6,
                 opacity: 0.95,
-                dashArray: '12, 8',
                 lineJoin: 'round',
                 lineCap: 'round'
             }).addTo(map);
@@ -183,7 +262,7 @@
                 destinationMarker.bindTooltip(destName, { permanent: true, direction: 'top', className: 'custom-pin-label' });
             }
 
-            map.fitBounds(activeRouteLine.getBounds(), { padding: [70, 70], maxZoom: 19 });
+            map.fitBounds(activeRouteLine.getBounds(), { padding: [60, 60], maxZoom: 20 });
         }
 
         function clearRoute() {
@@ -197,12 +276,11 @@
             }
         }
 
-        function setCity(n, lat, lng, z) { map.setView([lat, lng], z || 15, { animate: true }); }
-        function zoomIn() { if (map) map.zoomIn(); }
-        function zoomOut() { if (map) map.zoomOut(); }
-        function recenterUser() { if (map) map.setView([userLat, userLng], 17, { animate: true }); }
+        function setCity(n, lat, lng, z) { if (map) map.setView([lat, lng], z || 15, { animate: true }); }
+        function zoomIn() { if (map) map.zoomIn(0.5); }
+        function zoomOut() { if (map) map.zoomOut(0.5); }
+        function recenterUser() { if (map) map.setView([userLat, userLng], 18, { animate: true }); }
         
-        // Fly smoothly to a specific result
         function flyToLocation(lat, lng, z) {
             if (map) {
                 map.flyTo([lat, lng], z || 18, {

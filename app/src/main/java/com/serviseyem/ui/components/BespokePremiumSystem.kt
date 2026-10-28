@@ -138,11 +138,19 @@ object BespokePremiumSystem {
 
     @Composable
     fun JoinAsProviderBanner(onJoinClick: () -> Unit) {
+        val vibrantOrangeGradient = Brush.horizontalGradient(
+            listOf(
+                Color(0xFFEA580C),
+                Color(0xFFF97316),
+                Color(0xFFFB923C)
+            )
+        )
         Surface(
             onClick = onJoinClick,
             shape = RoundedCornerShape(18.dp),
             color = Color.Transparent,
-            border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.4f)),
+            border = BorderStroke(1.dp, Color(0xFFFED7AA).copy(alpha = 0.5f)),
+            shadowElevation = 6.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 6.dp, vertical = 6.dp)
@@ -150,7 +158,7 @@ object BespokePremiumSystem {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(GoldBannerGradient)
+                    .background(vibrantOrangeGradient)
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 Row(
@@ -160,23 +168,24 @@ object BespokePremiumSystem {
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("👑", fontSize = 14.sp)
-                            Text("انضم كمزوّد خدمة معتمد", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                            Text("👑", fontSize = 15.sp)
+                            Text("انضم كمزوّد خدمة معتمد", color = Color.White, fontSize = 14.5.sp, fontWeight = FontWeight.Black)
                         }
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text("سجّل نشاطك التجاري أو مهنتك واستقبل آلاف الطلبات الآن", color = Color.White.copy(alpha = 0.85f), fontSize = 10.sp)
+                        Text("سجّل نشاطك التجاري أو مهنتك واستقبل آلاف الطلبات الآن", color = Color.White.copy(alpha = 0.95f), fontSize = 10.5.sp, fontWeight = FontWeight.Medium)
                     }
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(12.dp),
                         color = Color.White,
-                        modifier = Modifier.padding(start = 8.dp)
+                        shadowElevation = 4.dp,
+                        modifier = Modifier.padding(start = 10.dp)
                     ) {
                         Text(
                             text = "سجّل الآن ✨",
-                            color = Color(0xFF78350F),
-                            fontSize = 11.sp,
+                            color = Color(0xFFC2410C),
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
                         )
                     }
                 }

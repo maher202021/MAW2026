@@ -48,9 +48,9 @@ fun RealLeafletMapView(
     panOffset: Offset = Offset.Zero,
     onPanOffsetChange: (Offset) -> Unit = {},
     selectedEntity: Any? = null,
-    mapMode: MapMode = MapMode.VELA_3D,
-    currentMapLayer: String = "google_satellite",
-    tiltAngle: Float = 30f,
+    mapMode: MapMode = MapMode.AERIAL_OAM,
+    currentMapLayer: String = "satellite",
+    tiltAngle: Float = 0f,
     onProviderSelected: (ProviderEntity) -> Unit,
     onStoreSelected: (StoreEntity) -> Unit,
     onPropertySelected: (PropertyEntity) -> Unit,
@@ -115,10 +115,11 @@ fun RealLeafletMapView(
         }
     }
 
-    // إمالة الكاميرا التفاعلية للوضع ثلاثي الأبعاد 3D Tilt
+    // إمالة الكاميرا التفاعلية للوضع ثلاثي الأبعاد 3D Tilt: تطبق فقط وحصراً عند اختيار نمط VELA_3D
     LaunchedEffect(isMapReady, tiltAngle, mapMode) {
-        if (isMapReady && webViewRef != null && mapMode == MapMode.VELA_3D) {
-            val script = "if (window.setTilt) { window.setTilt($tiltAngle); }"
+        if (isMapReady && webViewRef != null) {
+            val targetTilt = if (mapMode == MapMode.VELA_3D) tiltAngle else 0f
+            val script = "if (window.setTilt) { window.setTilt($targetTilt); }"
             webViewRef?.evaluateJavascript(script, null)
         }
     }

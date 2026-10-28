@@ -29,12 +29,12 @@ class MapScreenState(
     selectedCity: String = "الكل",
     searchQuery: String = "",
     maxRangeKm: Float = 25.0f,
-    initialMode: MapMode = MapMode.VELA_3D
+    initialMode: MapMode = MapMode.AERIAL_OAM
 ) {
     var currentMapMode by mutableStateOf(initialMode)
     var isRadarMode by mutableStateOf(isRadarMode)
     var isSatelliteMode by mutableStateOf(true)
-    var currentMapLayer by mutableStateOf("google_satellite")
+    var currentMapLayer by mutableStateOf("satellite")
     var isHeatmapActive by mutableStateOf(isHeatmapActive)
     var selectedCategory by mutableStateOf(selectedCategory)
     var selectedCity by mutableStateOf(selectedCity)
@@ -43,8 +43,8 @@ class MapScreenState(
 
     var zoomScale by mutableFloatStateOf(1.0f)
     var panOffset by mutableStateOf(androidx.compose.ui.geometry.Offset.Zero)
-    var tiltAngle by mutableFloatStateOf(30f)
-    var is3DBuildingsActive by mutableStateOf(true)
+    var tiltAngle by mutableFloatStateOf(0f)
+    var is3DBuildingsActive by mutableStateOf(false)
 
     var selectedEntity by mutableStateOf<Any?>(null)
     var bookingProviderTarget by mutableStateOf<ProviderEntity?>(null)

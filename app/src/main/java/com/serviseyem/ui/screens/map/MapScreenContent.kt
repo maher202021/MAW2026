@@ -348,8 +348,18 @@ fun MapScreenContent(
                 currentLayer = state.currentMapLayer,
                 onSwitchLayer = { layerKey ->
                     state.currentMapLayer = layerKey
+                    if (layerKey == "vela_3d") {
+                        state.currentMapMode = MapMode.VELA_3D
+                        state.tiltAngle = 42f
+                    } else {
+                        state.currentMapMode = MapMode.AERIAL_OAM
+                        state.tiltAngle = 0f
+                    }
                     if (layerKey == "navigation") state.currentMapMode = MapMode.NAVIGATION
-                    val script = "if (window.switchLayer) { window.switchLayer('$layerKey'); }"
+                    val script = """
+                        if (window.switchLayer) { window.switchLayer('$layerKey'); }
+                        if (window.setTilt) { window.setTilt(${state.tiltAngle}); }
+                    """.trimIndent()
                     webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
                 },
                 onZoomIn = {
@@ -373,9 +383,52 @@ fun MapScreenContent(
                 },
                 // Vela Modes
                 currentMode = state.currentMapMode,
-                onModeChange = { mode -> state.currentMapMode = mode },
+                onModeChange = { mode -> 
+                    state.currentMapMode = mode
+                    if (mode == MapMode.VELA_3D) {
+                        state.tiltAngle = 42f
+                        webViewRef?.post { webViewRef?.evaluateJavascript("if (window.setTilt) { window.setTilt(42); }", null) }
+                    } else {
+                        state.tiltAngle = 0f
+                        webViewRef?.post { webViewRef?.evaluateJavascript("if (window.setTilt) { window.setTilt(0); }", null) }
+                    }
+                },
                 tiltAngle = state.tiltAngle,
-                onToggleTilt = { state.tiltAngle = if (state.tiltAngle > 0) 0f else 32f },
+                onToggleTilt = {
+                    val next = if (state.tiltAngle > 0) 0f else 42f
+                    state.tiltAngle = next
+                    webViewRef?.post { webViewRef?.evaluateJavascript("if (window.setTilt) { window.setTilt($next); }", null) }
+                },
+                onCycleTiltAngle = {
+                    val next = when (state.tiltAngle) {
+                        0f -> 30f
+                        30f -> 45f
+                        45f -> 60f
+                        else -> 0f
+                    }
+                    state.tiltAngle = next
+                    webViewRef?.post { webViewRef?.evaluateJavascript("if (window.setTilt) { window.setTilt($next); }", null) }
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("زاوية الرؤية ثلاثية الأبعاد: ${next.toInt()}° 📐")
+                    }
+                },
+                onResetNorth = {
+                    state.panOffset = Offset.Zero
+                    webViewRef?.post { webViewRef?.evaluateJavascript("if (window.recenterUser) { window.recenterUser(); }", null) }
+                },
+                onToggleTraffic = {
+                    val target = if (state.currentMapLayer == "hot") "satellite" else "hot"
+                    state.currentMapLayer = target
+                    webViewRef?.post { webViewRef?.evaluateJavascript("if (window.switchLayer) { window.switchLayer('$target'); }", null) }
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(if (target == "hot") "تم تفعيل خريطة الشوارع الحية 🗺️" else "تم العودة للأقمار الصناعية 🛰️")
+                    }
+                },
+                onOpenStreetView = {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("عرض بانورامي تفاعلي 360° للموقع 🌐")
+                    }
+                },
                 onOpenAleph = {
                     state.alephSelectedEntity = state.selectedEntity
                     state.isAlephDialogOpen = true
