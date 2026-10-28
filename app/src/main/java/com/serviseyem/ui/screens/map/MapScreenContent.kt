@@ -359,6 +359,7 @@ fun MapScreenContent(
                     val script = """
                         if (window.switchLayer) { window.switchLayer('$layerKey'); }
                         if (window.setTilt) { window.setTilt(${state.tiltAngle}); }
+                        if (window.setVelaMode) { window.setVelaMode('${state.currentMapMode.name}'); }
                     """.trimIndent()
                     webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
                 },

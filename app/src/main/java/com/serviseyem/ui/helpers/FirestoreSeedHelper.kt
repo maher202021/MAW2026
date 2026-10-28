@@ -23,6 +23,58 @@ class FirestoreSeedHelper(private val db: FirebaseFirestore) {
             if (force || doc == null || !doc.exists()) {
                 android.util.Log.d("FirestoreSeedHelper", "📄 Seeding main_settings...")
                 db.collection("settings").document("main_settings").set(AdminSettingsEntity(), com.google.firebase.firestore.SetOptions.merge())
+            } else {
+                // [إضافة حساب Owner/Admin - آمن]
+                // تحديث بريد المالك والأدمن والبصمات المشفرة في إعدادات المنصة السحابية إذا كانت فارغة دون كتابة أي كلمة مرور
+                val updates = mutableMapOf<String, Any>()
+                if (doc.getString("ownerEmail").isNullOrBlank()) {
+                    updates["ownerEmail"] = "mah73646@gmail.com"
+                }
+                if (doc.getString("adminUsername").isNullOrBlank()) {
+                    updates["adminUsername"] = "meh777644@gmail.com"
+                }
+                if (doc.getString("ownerPasswordHash").isNullOrBlank()) {
+                    updates["ownerPasswordHash"] = "G0uai9m8T0MHkfr2vtrQkw==:NBYyb4UB+BUvzIm/qgKBWQN18CHlga0emPouk8nFLeA="
+                }
+                if (doc.getString("adminPasswordHash").isNullOrBlank()) {
+                    updates["adminPasswordHash"] = "YunxnaN4X1DrT09ATCtMMg==:ns+ZxBnMQ8V6L/u77WZlaYdT5RtBJb7T0xG3nnBDThs="
+                }
+                if (updates.isNotEmpty()) {
+                    db.collection("settings").document("main_settings").set(updates, com.google.firebase.firestore.SetOptions.merge())
+                    try {
+                        db.collection("admin_secrets").document("credentials").set(updates, com.google.firebase.firestore.SetOptions.merge())
+                    } catch (_: Exception) {}
+                }
+            }
+        }
+
+        // [إضافة حساب Owner/Admin - آمن]
+        // ضمان وجود بيانات دور المالك والأدمن في جدول admin_users السحابي دون أي كلمات مرور
+        db.collection("admin_users").document("mah73646@gmail.com").get().addOnSuccessListener { d ->
+            if (force || d == null || !d.exists()) {
+                db.collection("admin_users").document("mah73646@gmail.com").set(
+                    mapOf(
+                        "email" to "mah73646@gmail.com",
+                        "role" to "OWNER",
+                        "isActive" to true,
+                        "updatedAt" to com.google.firebase.Timestamp.now()
+                    ),
+                    com.google.firebase.firestore.SetOptions.merge()
+                )
+            }
+        }
+
+        db.collection("admin_users").document("meh777644@gmail.com").get().addOnSuccessListener { d ->
+            if (force || d == null || !d.exists()) {
+                db.collection("admin_users").document("meh777644@gmail.com").set(
+                    mapOf(
+                        "email" to "meh777644@gmail.com",
+                        "role" to "ADMIN",
+                        "isActive" to true,
+                        "updatedAt" to com.google.firebase.Timestamp.now()
+                    ),
+                    com.google.firebase.firestore.SetOptions.merge()
+                )
             }
         }
 

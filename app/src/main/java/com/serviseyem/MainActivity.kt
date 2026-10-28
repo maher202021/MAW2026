@@ -397,90 +397,9 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = if (isInitialized) colors.background else Color.Black
+                        color = colors.background
                     ) {
-                        if (!isInitialized) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Black),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 28.dp)
-                                ) {
-                                    // الدائرة والشعار WAM
-                                    Box(
-                                        modifier = Modifier
-                                            .size(140.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFF1D58B8)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = "WAM",
-                                            color = Color(0xFF00DC82),
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 36.sp,
-                                            letterSpacing = 1.sp
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.height(36.dp))
-
-                                    // العنوان الرئيسي
-                                    Text(
-                                        text = "كل خدمات اليمن",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 28.sp,
-                                        color = Color.White,
-                                        textAlign = TextAlign.Center
-                                    )
-
-                                    Spacer(modifier = Modifier.height(10.dp))
-
-                                    // العنوان الفرعي
-                                    Text(
-                                        text = "دليلك الشامل لكل الخدمات والمهن",
-                                        fontSize = 16.sp,
-                                        color = Color(0xFFD1D5DB),
-                                        textAlign = TextAlign.Center
-                                    )
-
-                                    Spacer(modifier = Modifier.height(38.dp))
-
-                                    // مؤشر التحميل الأخضر/الفيروزي
-                                    CircularProgressIndicator(
-                                        color = Color(0xFF00DC82),
-                                        modifier = Modifier.size(24.dp),
-                                        strokeWidth = 2.5.dp
-                                    )
-
-                                    Spacer(modifier = Modifier.height(38.dp))
-
-                                    // النص الترحيبي التعريفي
-                                    val splashMessage = if (settingsState.splashWelcomeMessage.isNotBlank()) {
-                                        settingsState.splashWelcomeMessage
-                                    } else {
-                                        "التطبيق الأول في اليمن والوطن العربي الذي يربط مقدمي الخدمات وأصحاب المهن بالمستخدمين فورياً"
-                                    }
-                                    Text(
-                                        text = splashMessage,
-                                        fontSize = 14.sp,
-                                        color = Color.White.copy(alpha = 0.9f),
-                                        textAlign = TextAlign.Center,
-                                        lineHeight = 22.sp,
-                                        modifier = Modifier.padding(horizontal = 12.dp)
-                                    )
-                                }
-                            }
-                        } else {
-                            AppNavigator(viewModel = viewModel, themeColors = colors, permissionLauncher = permissionLauncher, locationPermissions = locationPermissions)
-                        }
+                        AppNavigator(viewModel = viewModel, themeColors = colors, permissionLauncher = permissionLauncher, locationPermissions = locationPermissions)
                     }
                 }
             }

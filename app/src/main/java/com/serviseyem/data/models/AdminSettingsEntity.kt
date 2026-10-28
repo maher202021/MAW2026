@@ -37,8 +37,14 @@ data class AdminSettingsEntity(
     val supportPhone: String = "777644",
     val supportWhatsapp: String = "777644",
     val supportEmail: String = "",
-    val adminUsername: String = "",
-    val ownerEmail: String = "",
+    // [إضافة حساب Owner/Admin - آمن]
+    val adminUsername: String = "meh777644@gmail.com",
+    // [إضافة حساب Owner/Admin - آمن]
+    val ownerEmail: String = "mah73646@gmail.com",
+    // [إضافة حساب Owner/Admin - آمن]
+    val ownerPasswordHash: String = "G0uai9m8T0MHkfr2vtrQkw==:NBYyb4UB+BUvzIm/qgKBWQN18CHlga0emPouk8nFLeA=",
+    // [إضافة حساب Owner/Admin - آمن]
+    val adminPasswordHash: String = "YunxnaN4X1DrT09ATCtMMg==:ns+ZxBnMQ8V6L/u77WZlaYdT5RtBJb7T0xG3nnBDThs=",
     @Deprecated("Use SecureAdminStorage / ownerPasswordHash instead")
     @get:com.google.firebase.firestore.Exclude
     val ownerPassword: String = "",

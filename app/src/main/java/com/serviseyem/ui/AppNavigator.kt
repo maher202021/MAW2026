@@ -59,7 +59,7 @@ fun AppNavigator(
     val selectedCategory by viewModel.selectedCategoryId.collectAsState()
     val requestOffers by viewModel.requestOffers.collectAsState()
 
-    if (settingsState.isMaintenanceActive && adminRole == "GUEST") {
+    if (false && settingsState.isMaintenanceActive && adminRole == "GUEST") {
         MaintenanceSplashView(settingsState = settingsState, themeColors = themeColors, viewModel = viewModel)
         return
     }
@@ -520,6 +520,13 @@ fun AppNavigator(
                         viewModel = viewModel,
                         themeColors = themeColors,
                         onBackClick = { viewModel.navigateToScreen(AppScreens.USER_BROWSE) }
+                    )
+                }
+                AppScreens.FIREBASE_DIAGNOSTIC -> {
+                    com.serviseyem.ui.screens.admin.FirebaseDiagnosticScreen(
+                        viewModel = viewModel,
+                        themeColors = themeColors,
+                        onBack = { viewModel.navigateToScreen(AppScreens.ADMIN_PANEL) }
                     )
                 }
                 else -> {
