@@ -222,6 +222,17 @@ class MainViewModel @Inject constructor(
     var selectedOfferId by androidx.compose.runtime.mutableStateOf("")
     var selectedRequestId by androidx.compose.runtime.mutableStateOf("")
     var showQuickServiceDialog by androidx.compose.runtime.mutableStateOf(false)
+    var selectedNavigationTargetLat by androidx.compose.runtime.mutableDoubleStateOf(15.3547)
+    var selectedNavigationTargetLng by androidx.compose.runtime.mutableDoubleStateOf(44.2066)
+    var selectedNavigationTargetName by androidx.compose.runtime.mutableStateOf("الوجهة المحددة")
+
+    fun openNavigation(lat: Double, lng: Double, name: String) {
+        selectedNavigationTargetLat = lat
+        selectedNavigationTargetLng = lng
+        selectedNavigationTargetName = name
+        navigateToScreen(AppScreens.NAVIGATION)
+    }
+
     internal val _userLatitude = MutableStateFlow(15.3694)
     val userLatitude: StateFlow<Double> = _userLatitude.asStateFlow()
     internal val _userLongitude = MutableStateFlow(44.1910)

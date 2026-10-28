@@ -85,7 +85,7 @@ fun AppNavigator(
                 )
             }
         },
-        contentWindowInsets = if (currentScreen == AppScreens.CHAT_DIRECT || currentScreen == AppScreens.MAP_VIEW || currentScreen == AppScreens.SMART_ASSISTANT) {
+        contentWindowInsets = if (currentScreen == AppScreens.CHAT_DIRECT || currentScreen == AppScreens.MAP_VIEW || currentScreen == AppScreens.SMART_ASSISTANT || currentScreen == AppScreens.NAVIGATION) {
             WindowInsets(0, 0, 0, 0)
         } else {
             ScaffoldDefaults.contentWindowInsets
@@ -95,7 +95,7 @@ fun AppNavigator(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(if (currentScreen == AppScreens.CHAT_DIRECT || currentScreen == AppScreens.MAP_VIEW || currentScreen == AppScreens.SMART_ASSISTANT) PaddingValues(0.dp) else innerPadding)
+                .padding(if (currentScreen == AppScreens.CHAT_DIRECT || currentScreen == AppScreens.MAP_VIEW || currentScreen == AppScreens.SMART_ASSISTANT || currentScreen == AppScreens.NAVIGATION) PaddingValues(0.dp) else innerPadding)
         ) {
             when (currentScreen) {
                 AppScreens.USER_BROWSE, AppScreens.HOME -> {
@@ -360,6 +360,14 @@ fun AppNavigator(
                             }
                         }
                     }
+                )
+                AppScreens.NAVIGATION -> com.serviseyem.navigation.NavigationScreen(
+                    themeColors = themeColors,
+                    viewModel = viewModel,
+                    initialTargetLat = viewModel.selectedNavigationTargetLat,
+                    initialTargetLng = viewModel.selectedNavigationTargetLng,
+                    initialTargetName = viewModel.selectedNavigationTargetName,
+                    onBackClick = { viewModel.navigateToScreen(AppScreens.USER_BROWSE) }
                 )
                 AppScreens.FAVORITES_VIEW -> FavoritesScreenLayout(
                     viewModel = viewModel,

@@ -41,4 +41,5 @@ object AppScreens {
     const val SMART_ASSISTANT = "SMART_ASSISTANT"
     const val QUICK_SERVICE_REQUEST = "QUICK_SERVICE_REQUEST"
     const val UNIFIED_SEARCH = "UNIFIED_SEARCH"
+    const val NAVIGATION = "NAVIGATION"
 }

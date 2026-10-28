@@ -180,6 +180,13 @@ fun DynamicPolymorphicProfileScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        val lat = store?.latitude ?: provider?.latitude ?: property?.latitude ?: 15.3547
+                        val lng = store?.longitude ?: provider?.longitude ?: property?.longitude ?: 44.2066
+                        viewModel.openNavigation(lat, lng, entityName)
+                    }) {
+                        Icon(imageVector = Icons.Default.Navigation, contentDescription = "الملاحة للوجهة", tint = Color(0xFF00E5FF))
+                    }
                     IconButton(onClick = { viewModel.toggleFavorite(entityId) }) {
                         Icon(
                             imageVector = if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,

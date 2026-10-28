@@ -497,14 +497,7 @@ fun MapScreenContent(
                         state.isAlephDialogOpen = true
                     },
                     onStartNavigation = { targetLat, targetLng, destTitle ->
-                        state.currentMapMode = MapMode.NAVIGATION
-                        state.currentMapLayer = "navigation"
-                        val escapedTitle = destTitle.replace("'", "\\'")
-                        val script = "if (window.switchLayer) { window.switchLayer('navigation'); window.drawRoute($safeUserLat, $safeUserLng, $targetLat, $targetLng, '#00E5FF', '$escapedTitle'); }"
-                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("🧭 بدء الملاحة الداخلية إلى: $destTitle")
-                        }
+                        viewModel.openNavigation(targetLat, targetLng, destTitle)
                     },
                     themeColors = themeColors,
                     modifier = Modifier

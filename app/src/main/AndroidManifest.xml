@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
 
@@ -47,6 +49,11 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <service
+            android:name="com.serviseyem.navigation.NavigationForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
         <!-- [FIX-CRITICAL] FileProvider لمشاركة الملفات -->
         <provider
