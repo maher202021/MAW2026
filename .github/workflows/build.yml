@@ -31,74 +31,15 @@ jobs:
         GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
       run: |
         mkdir -p app
-        python3 -c "
-        import os, base64
-
-        sec = os.environ.get('GOOGLE_SERVICES_JSON_BASE64', '').strip()
-        if sec:
-            print('Decoding google-services.json from GitHub Secret...')
-            try:
-                with open('app/google-services.json', 'wb') as f:
-                    f.write(base64.b64decode(sec))
-                print('Successfully decoded secret into app/google-services.json')
-            except Exception as e:
-                print('Error decoding secret:', e)
-
-        if os.path.exists('app/google-services.json') and os.path.getsize('app/google-services.json') > 10:
-            print('Valid app/google-services.json confirmed in repository.')
-        else:
-            print('Creating fallback app/google-services.json...')
-            fallback_json = '''{
-  \"project_info\": {
-    \"project_number\": \"248399837437\",
-    \"project_id\": \"gen-lang-client-0971808563\",
-    \"storage_bucket\": \"gen-lang-client-0971808563.firebasestorage.app\"
-  },
-  \"client\": [
-    {
-      \"client_info\": {
-        \"mobilesdk_app_id\": \"1:248399837437:android:e98f77cc6c7b1df6e7e694\",
-        \"android_client_info\": {
-          \"package_name\": \"com.serviseyem\"
-        }
-      },
-      \"oauth_client\": [
-        {
-          \"client_id\": \"248399837437-lce4n82nqd2hgr94ucs1opol8d7q0hgn.apps.googleusercontent.com\",
-          \"client_type\": 1,
-          \"android_info\": {
-            \"package_name\": \"com.serviseyem\",
-            \"certificate_hash\": \"2ac9a4ad2af4eb227fbf540875a9d9b882fc86be\"
-          }
-        },
-        {
-          \"client_id\": \"248399837437-051107tco5jtmgfdqmk12ee7hh7hc07n.apps.googleusercontent.com\",
-          \"client_type\": 3
-        }
-      ],
-      \"api_key\": [
-        {
-          \"current_key\": \"AIzaSyC6IR5Gpb_RmAeONYQ1r93G6FMUgdFSRL8\"
-        }
-      ],
-      \"services\": {
-        \"appinvite_service\": {
-          \"other_platform_oauth_client\": [
-            {
-              \"client_id\": \"248399837437-051107tco5jtmgfdqmk12ee7hh7hc07n.apps.googleusercontent.com\",
-              \"client_type\": 3
-            }
-          ]
-        }
-      }
-    }
-  ],
-  \"configuration_version\": \"1\"
-}'''
-            with open('app/google-services.json', 'w', encoding='utf-8') as f:
-                f.write(fallback_json)
-            print('Fallback app/google-services.json created successfully.')
-        "
+        if [ -n "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+          echo "Decoding google-services.json from GitHub Secret..."
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > app/google-services.json
+        fi
+        if [ ! -f "app/google-services.json" ]; then
+          echo "Error: app/google-services.json is missing!"
+          exit 1
+        fi
+        echo "app/google-services.json verified successfully."
 
     - name: Setup Keystore
       env:
