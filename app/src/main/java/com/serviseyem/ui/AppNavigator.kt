@@ -362,12 +362,18 @@ fun AppNavigator(
                     }
                 )
                 AppScreens.NAVIGATION -> com.serviseyem.navigation.NavigationScreen(
+                    userLat = viewModel.userLatitude.collectAsState().value,
+                    userLng = viewModel.userLongitude.collectAsState().value,
+                    hasRealLocation = viewModel.isUserLocationReal.collectAsState().value,
+                    initialWaypoints = listOf(com.serviseyem.navigation.NavWaypoint(
+                        name = viewModel.selectedNavigationTargetName,
+                        latitude = viewModel.selectedNavigationTargetLat,
+                        longitude = viewModel.selectedNavigationTargetLng
+                    )),
+                    onFinishNavigation = { viewModel.navigateToScreen(AppScreens.USER_BROWSE) },
                     themeColors = themeColors,
-                    viewModel = viewModel,
-                    initialTargetLat = viewModel.selectedNavigationTargetLat,
-                    initialTargetLng = viewModel.selectedNavigationTargetLng,
-                    initialTargetName = viewModel.selectedNavigationTargetName,
-                    onBackClick = { viewModel.navigateToScreen(AppScreens.USER_BROWSE) }
+                    nearbyProviders = viewModel.providers.collectAsState().value,
+                    nearbyStores = viewModel.stores.collectAsState().value
                 )
                 AppScreens.FAVORITES_VIEW -> FavoritesScreenLayout(
                     viewModel = viewModel,

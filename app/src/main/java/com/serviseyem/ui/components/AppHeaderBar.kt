@@ -167,15 +167,15 @@ fun AppHeaderBar(
 
                 Text(
                     text = titleText,
-                    fontSize = 11.5.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
+                    modifier = Modifier.weight(1f)
                 )
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.width(8.dp))
 
                 // [ طلباتي 📋 ] Action Button in Header
                 Box(

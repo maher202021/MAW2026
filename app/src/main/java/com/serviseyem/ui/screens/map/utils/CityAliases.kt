@@ -22,10 +22,10 @@ object CityAliases {
         "المهرة" to listOf("المهرة", "الغيضة", "al-mahra", "ye_mah"),
         "أبين" to listOf("أبين", "زنجبار", "ابين", "ye_aby", "جعار"),
         "لحج" to listOf("لحج", "الحوطة", "lahj", "ye_lah"),
-        "الضالع" to listOf("الضالع", "dhale", "ye_dha"),
+        "الضالع" to listOf("الضالع", "dhale", "ye_dal"),
         "البيضاء" to listOf("البيضاء", "al-bayda", "ye_bay", "رداع"),
         "عمران" to listOf("عمران", "amran", "ye_amr"),
-        "المحويت" to listOf("المحويت", "al-mahweet", "ye_mah"),
+        "المحويت" to listOf("المحويت", "al-mahweet", "ye_mhw"),
         "ريمة" to listOf("ريمة", "raymah", "ye_ray"),
         "الجوف" to listOf("الجوف", "al-jawf", "ye_jaw"),
         "سقطرى" to listOf("سقطرى", "socotra", "ye_soc", "حديبو")

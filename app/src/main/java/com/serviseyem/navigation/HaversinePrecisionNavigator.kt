@@ -2,6 +2,7 @@ package com.serviseyem.navigation
 
 import java.util.Locale
 import kotlin.math.*
+import com.serviseyem.navigation.ManeuverType
 
 /**
  * 📐 HaversinePrecisionNavigator

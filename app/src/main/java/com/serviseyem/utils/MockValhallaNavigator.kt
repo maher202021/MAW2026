@@ -6,7 +6,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlin.math.*
 
-data class NavigationRouteResult(
+data class MockNavigationRouteResult(
     val distanceKm: Double,
     val distanceText: String,
     val durationText: String,
@@ -16,7 +16,7 @@ data class NavigationRouteResult(
 
 object MockValhallaNavigator {
 
-    fun calculateRoute(context: Context, startLat: Double, startLng: Double, endLat: Double, endLng: Double, targetCity: String = ""): NavigationRouteResult {
+    fun calculateRoute(context: Context, startLat: Double, startLng: Double, endLat: Double, endLng: Double, targetCity: String = ""): MockNavigationRouteResult {
         // Calculate direct Haversine distance as fallback
         val R = 6371.0 // Radius of the earth in km
         val dLat = Math.toRadians(endLat - startLat)
@@ -65,7 +65,7 @@ object MockValhallaNavigator {
                     for (j in 0 until instArray.length()) {
                         list.add(instArray.getString(j))
                     }
-                    return NavigationRouteResult(
+                    return MockNavigationRouteResult(
                         distanceKm = routeDistance,
                         distanceText = "$routeDistance كم",
                         durationText = dur,
@@ -78,7 +78,7 @@ object MockValhallaNavigator {
             e.printStackTrace()
         }
 
-        return NavigationRouteResult(
+        return MockNavigationRouteResult(
             distanceKm = routeDistance,
             distanceText = "$routeDistance كم",
             durationText = durationStr,

@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AlYemenServices"
+rootProject.name = "خريطة ودليل اليمن الذكي"
 include(":app")

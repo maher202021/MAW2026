@@ -1,5 +1,7 @@
 package com.serviseyem.navigation
 
+import com.serviseyem.navigation.ManeuverType
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke

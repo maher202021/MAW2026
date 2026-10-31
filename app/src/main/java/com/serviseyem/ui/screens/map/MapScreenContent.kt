@@ -7,40 +7,68 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Navigation
-import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.serviseyem.data.PropertyEntity
 import com.serviseyem.data.ProviderEntity
 import com.serviseyem.data.StoreEntity
+import com.serviseyem.navigation.NavWaypoint
+import com.serviseyem.navigation.SearchAddressResult
 import com.serviseyem.ui.MainViewModel
 import com.serviseyem.ui.dialogs.BookingDialog
 import com.serviseyem.ui.screens.map.components.*
+import com.serviseyem.ui.screens.map.utils.MapDistanceCalculator
 import com.serviseyem.ui.screens.map.utils.OfflineMapManager
+import com.serviseyem.navigation.RealValhallaNavigator
+import com.serviseyem.utils.SosDispatcher
+import com.serviseyem.navigation.ValhallaTileDownloader
 import com.serviseyem.utils.VisualThemePalette
 import com.serviseyem.utils.resolveThemePalette
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
+import com.serviseyem.navigation.NavigationScreen
 
 /**
  * 🗺️ MapScreenContent
- * Primary presentation composable for the Map & Radar screen (Radar-First 100%).
+ * Clean, modern, 90% clutter-free Map & Navigation Screen:
+ * 1. Single Glassmorphism Top Search Capsule with hidden filter popup (NO rows underneath).
+ * 2. Unified Vertical Control Dock (GPS -> Zoom+ -> Zoom- -> Layers -> Compass -> Context).
+ * 3. Soft Pulsing Floating AR (VELA) button opposite the dock.
+ * 4. Discreet SOS / الفزعة button in calm orange-red.
+ * 5. Hidden-by-default Bottom Sheet with Emerald Green [بدء الملاحة] (#10B981).
+ * 6. Night Windshield HUD Mode reflection.
+ * 7. Smart Companion Bar for intercity travelers.
+ * 8. Accurate location engine with road snapping.
  */
 @Composable
 fun MapScreenContent(
@@ -56,9 +84,10 @@ fun MapScreenContent(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
-    // ضبط أيقونات شريط الحالة العلوي للهاتف لتكون واضحة وناصعة البياض على الخلفية الداكنة
+    com.serviseyem.utils.CrashReportDialog()
+
+    // Status bar icon color setup
     val view = androidx.compose.ui.platform.LocalView.current
     if (!view.isInEditMode) {
         androidx.compose.runtime.SideEffect {
@@ -70,16 +99,20 @@ fun MapScreenContent(
         }
     }
 
-    var showMapErrorOverlay by remember { mutableStateOf(false) }
-    var mapRetryCount by remember { mutableIntStateOf(0) }
-    var webViewRef by remember { mutableStateOf<android.webkit.WebView?>(null) }
-    var showValhallaDialog by remember { mutableStateOf(false) }
-    var isDownloadingValhalla by remember { mutableStateOf(false) }
-    var downloadProgress by remember { mutableFloatStateOf(0f) }
-    var downloadStatusText by remember { mutableStateOf("") }
+    var isDrivingMode by remember { mutableStateOf(true) }
+    var isHudMode by remember { mutableStateOf(false) }
+    var isHudMirrored by remember { mutableStateOf(false) }
+    var showCompanionBar by remember { mutableStateOf(false) }
+    var companionFilter by remember { mutableStateOf<String?>(null) }
+    var showSosDialog by remember { mutableStateOf(false) }
+    var showDownloadDialog by remember { mutableStateOf(false) }
 
     androidx.activity.compose.BackHandler(enabled = true) {
-        if (state.selectedEntity != null) {
+        if (isHudMode) {
+            isHudMode = false
+        } else if (state.isNavigating) {
+            state.stopNavigation()
+        } else if (state.selectedEntity != null) {
             state.resetSelection()
         } else {
             onBackClick()
@@ -94,12 +127,60 @@ fun MapScreenContent(
     val userLatState by viewModel.userLatitude.collectAsState()
     val userLngState by viewModel.userLongitude.collectAsState()
 
-    // إصلاح 1.1: عند عدم توفر GPS حقيقي نستخدم مركز المدينة المحددة حالياً بدلاً من إحداثيات ثابتة قديمة
     val fallbackCityCoords = remember(state.selectedCity) {
         OfflineMapManager.getCityCoordinates(state.selectedCity)
     }
-    val safeUserLat = if (userLatState != 0.0 && !userLatState.isNaN()) userLatState else fallbackCityCoords.latitude
-    val safeUserLng = if (userLngState != 0.0 && !userLngState.isNaN()) userLngState else fallbackCityCoords.longitude
+    val rawUserLat = if (userLatState != 0.0 && !userLatState.isNaN()) userLatState else fallbackCityCoords.latitude
+    val rawUserLng = if (userLngState != 0.0 && !userLngState.isNaN()) userLngState else fallbackCityCoords.longitude
+
+    // [إصلاح 17] التحقق من الموقع الحقيقي وعدم الاعتماد على إحداثيات وهمية
+    val isUserLocationReal by viewModel.isUserLocationReal.collectAsState()
+    val hasRealLocation = isUserLocationReal &&
+            userLatState != 0.0 && userLngState != 0.0 && !userLatState.isNaN() && !userLngState.isNaN()
+    val safeUserLat = rawUserLat
+    val safeUserLng = rawUserLng
+
+    // [إصلاح 18] بوصلة حقيقية باستخدام الحساسات
+    val heading = com.serviseyem.utils.rememberHeadingDegrees(
+        enabled = !state.isNavigating,
+        lat = safeUserLat,
+        lng = safeUserLng
+    )
+
+    var isTilesDownloaded by remember { mutableStateOf(ValhallaTileDownloader.isTilesDownloaded(context)) }
+    var searchResults by remember { mutableStateOf<List<SearchAddressResult>>(emptyList()) }
+    var isSearching by remember { mutableStateOf(false) }
+    var searchMessage by remember { mutableStateOf<String?>(null) }
+    var searchPanelOpen by remember { mutableStateOf(false) }
+    var searchedPlace by remember { mutableStateOf<SearchAddressResult?>(null) }
+
+    // [إصلاح 18] البحث الصوتي باستخدام محرك النظام
+    val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+        if (res.resultCode == android.app.Activity.RESULT_OK) {
+            val text = res.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!text.isNullOrBlank()) {
+                state.searchQuery = text.trim()
+                searchPanelOpen = true
+            }
+        }
+    }
+
+    LaunchedEffect(state.searchQuery) {
+        val q = state.searchQuery.trim()
+        if (q.length < 3) {
+            searchResults = emptyList()
+            searchMessage = null
+            isSearching = false
+            searchPanelOpen = false
+            return@LaunchedEffect
+        }
+        delay(600)
+        isSearching = true
+        searchPanelOpen = true
+        searchResults = RealValhallaNavigator.searchAddressAndPlaces(q, providers, stores, safeUserLat, safeUserLng)
+        searchMessage = if (searchResults.isEmpty()) (RealValhallaNavigator.lastSearchError ?: "لا توجد نتائج لـ «$q»") else null
+        isSearching = false
+    }
 
     // Location Permission launcher
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -110,13 +191,15 @@ fun MapScreenContent(
         if (granted) {
             viewModel.startLocationUpdates()
             coroutineScope.launch {
-                snackbarHostState.showSnackbar("تم تفعيل نظام تحديد المواقع بنجاح ✓")
+                snackbarHostState.showSnackbar("تم تفعيل نظام تحديد المواقع بدقة ✓")
             }
         }
     }
 
-    // Auto-request location updates on screen launch to acquire user's real GPS immediately
     LaunchedEffect(Unit) {
+        try {
+            OfflineMapManager.purgeCacheIfNeeded(context)
+        } catch (e: Exception) {}
         val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         if (hasFine || hasCoarse) {
@@ -128,68 +211,76 @@ fun MapScreenContent(
         }
     }
 
+    LaunchedEffect(viewModel.selectedProvider, viewModel.selectedStore, viewModel.selectedProperty) {
+        val targetEntity = viewModel.selectedProvider ?: viewModel.selectedStore ?: viewModel.selectedProperty
+        if (targetEntity != null) {
+            state.selectedEntity = targetEntity
+            state.isRadarMode = false
+        }
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             state.clearOffsets()
         }
     }
 
-    // Filtered lists using MapScreenFilters module
-    val filteredProviders = remember(providers, state.selectedCategory, state.selectedCity, state.searchQuery) {
-        MapScreenFilters.filterProviders(providers, state.selectedCategory, state.selectedCity, state.searchQuery)
+    // Filtered lists
+    val filteredProviders = remember(providers, state.selectedCategory, state.selectedCity, state.searchQuery, companionFilter) {
+        var list = MapScreenFilters.filterProviders(providers, state.selectedCategory, state.selectedCity, state.searchQuery)
+        if (companionFilter != null) {
+            list = list.filter { it.specialization.contains(companionFilter!!) || it.profession.contains(companionFilter!!) }
+        }
+        list
     }
 
-    val filteredStores = remember(stores, state.selectedCategory, state.selectedCity, state.searchQuery) {
-        MapScreenFilters.filterStores(stores, state.selectedCategory, state.selectedCity, state.searchQuery)
+    val filteredStores = remember(stores, state.selectedCategory, state.selectedCity, state.searchQuery, companionFilter) {
+        var list = MapScreenFilters.filterStores(stores, state.selectedCategory, state.selectedCity, state.searchQuery)
+        if (companionFilter != null) {
+            list = list.filter { it.name.contains(companionFilter!!) || it.description.contains(companionFilter!!) }
+        }
+        list
     }
 
     val filteredProperties = remember(properties, state.selectedCategory, state.selectedCity, state.searchQuery) {
-        MapScreenFilters.filterProperties(properties, state.selectedCategory, state.selectedCity, state.searchQuery)
+        if (companionFilter != null) emptyList()
+        else MapScreenFilters.filterProperties(properties, state.selectedCategory, state.selectedCity, state.searchQuery)
     }
 
-    // Radar Points calculated via MapScreenFilters
-    val radarPoints = remember(filteredProviders, filteredStores, filteredProperties, safeUserLat, safeUserLng) {
-        MapScreenFilters.buildRadarPoints(
-            filteredProviders = filteredProviders,
-            filteredStores = filteredStores,
-            filteredProperties = filteredProperties,
-            safeUserLat = safeUserLat,
-            safeUserLng = safeUserLng
+    // Pulse animation for AR (VELA) button
+    val infiniteTransition = rememberInfiniteTransition(label = "ar_glow")
+    val arGlowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.85f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ar_alpha"
+    )
+
+    // Fullscreen Turn-by-Turn Navigation Screen
+    if (state.isNavigating) {
+        DisposableEffect(Unit) {
+            viewModel.startNavigationTracking()
+            onDispose { viewModel.stopNavigationTracking() }
+        }
+        NavigationScreen(
+            targetEntity = null,
+            userLat = safeUserLat,
+            userLng = safeUserLng,
+            hasRealLocation = hasRealLocation,
+            initialWaypoints = state.navWaypoints,
+            onFinishNavigation = { state.stopNavigation() },
+            nearbyProviders = filteredProviders,
+            nearbyStores = filteredStores
         )
-    }
-
-    // Reset map pan & zoom when governorate changes
-    LaunchedEffect(state.selectedCity) {
-        state.panOffset = Offset.Zero
-        state.zoomScale = 1.0f
-    }
-
-    val sensorManager = remember { context.getSystemService(android.content.Context.SENSOR_SERVICE) as android.hardware.SensorManager }
-    val gpsFusionFilter = remember { com.serviseyem.utils.GpsSensorFusionFilter(sensorManager) }
-
-    LaunchedEffect(Unit) {
-        gpsFusionFilter.start()
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            gpsFusionFilter.stop()
-        }
-    }
-
-    // Update fusion filter when raw location changes
-    LaunchedEffect(userLatState, userLngState) {
-        val loc = android.location.Location("fusion").apply {
-            latitude = userLatState
-            longitude = userLngState
-            accuracy = 10f // Assuming 10m accuracy for raw GPS
-        }
-        gpsFusionFilter.onLocationUpdate(loc)
+        return
     }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        containerColor = Color(0xFF0B0F19), // Requested background
+        containerColor = Color(0xFF0B0F19),
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
                 Snackbar(
@@ -197,7 +288,7 @@ fun MapScreenContent(
                     containerColor = Color(0xFF1E293B),
                     contentColor = Color.White,
                     actionColor = Color(0xFF10B981),
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(12.dp)
                 )
             }
         }
@@ -208,294 +299,576 @@ fun MapScreenContent(
                 .background(Color(0xFF0B0F19))
                 .padding(paddingValues)
         ) {
-            // Main Map View (Radar-First 100% by default; WebView only on explicit user toggle)
-            if (state.isRadarMode) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    RadarRenderer(
-                        items = radarPoints,
-                        selectedItemId = when (val ent = state.selectedEntity) {
-                            is ProviderEntity -> ent.id
-                            is StoreEntity -> ent.id
-                            is PropertyEntity -> ent.id
-                            else -> null
-                        },
-                        onItemSelected = { item ->
-                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                            state.selectedEntity = item.originalItem
-                        },
-                        isHeatmapActive = state.isHeatmapActive,
-                        maxRangeKm = state.maxRangeKm,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            } else if (state.currentMapMode == MapMode.AR_VPS) {
-                // 📷 الوضع 3: كاميرا الواقع المعزز والرؤية الحاسوبية (VPS AR Mode)
-                VpsArCameraView(
-                    userLat = safeUserLat,
-                    userLng = safeUserLng,
+            // 🗺️ 1. Main Map Background / AR View (Occupies 100% of viewport, 90% completely unobstructed)
+            
+            if (state.currentMapMode == MapMode.AR_VPS) {
+                ArVpsCameraOverlay(
                     nearbyProviders = filteredProviders,
                     nearbyStores = filteredStores,
                     nearbyProperties = filteredProperties,
-                    onEntitySelected = { 
-                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                        state.selectedEntity = it 
+                    userLat = safeUserLat,
+                    userLng = safeUserLng,
+                    onProviderSelected = { state.selectedEntity = it },
+                    onStoreSelected = { state.selectedEntity = it },
+                    onPropertySelected = { state.selectedEntity = it },
+                    onCloseAr = { state.currentMapMode = MapMode.SATELLITE },
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else if (state.isRadarMode) {
+                RadarRenderer(
+                    items = remember(filteredProviders, filteredStores, filteredProperties, safeUserLat, safeUserLng) {
+                        MapScreenFilters.buildRadarPoints(
+                            filteredProviders = filteredProviders,
+                            filteredStores = filteredStores,
+                            filteredProperties = filteredProperties,
+                            safeUserLat = safeUserLat,
+                            safeUserLng = safeUserLng
+                        )
                     },
-                    onCloseAR = { state.currentMapMode = MapMode.VELA_3D },
-                    themeColors = themeColors,
+                    selectedItemId = when (val ent = state.selectedEntity) {
+                        is ProviderEntity -> ent.id
+                        is StoreEntity -> ent.id
+                        is PropertyEntity -> ent.id
+                        else -> null
+                    },
+                    onItemSelected = { item ->
+                        state.selectedEntity = item.originalItem
+                    },
+                    isHeatmapActive = state.isHeatmapActive,
+                    maxRangeKm = state.maxRangeKm,
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    RealLeafletMapView(
-                        userCoords = Pair(safeUserLat, safeUserLng),
-                        nearbyProviders = filteredProviders,
-                        nearbyStores = filteredStores,
-                        nearbyProperties = filteredProperties,
-                        dynamicOffsets = state.dynamicOffsets,
-                        selectedCity = state.selectedCity,
-                        zoomScale = state.zoomScale,
-                        onZoomScaleChange = { state.zoomScale = it },
-                        panOffset = state.panOffset,
-                        onPanOffsetChange = { state.panOffset = it },
-                        selectedEntity = state.selectedEntity,
-                        mapMode = state.currentMapMode,
-                        currentMapLayer = state.currentMapLayer,
-                        tiltAngle = state.tiltAngle,
-                        onProviderSelected = { 
-                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                            state.selectedEntity = it 
-                        },
-                        onStoreSelected = { 
-                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                            state.selectedEntity = it 
-                        },
-                        onPropertySelected = { 
-                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                            state.selectedEntity = it 
-                        },
-                        onDeselect = { state.selectedEntity = null },
-                        onSwitchToRadar = {
-                            showMapErrorOverlay = false
-                            state.isRadarMode = true
-                        },
-                        onWebViewCreated = { webViewRef = it },
-                        modifier = Modifier.fillMaxSize()
-                    )
+                RealLeafletMapView(
+                    userCoords = Pair(safeUserLat, safeUserLng),
+                    nearbyProviders = filteredProviders,
+                    nearbyStores = filteredStores,
+                    nearbyProperties = filteredProperties,
+                    dynamicOffsets = state.dynamicOffsets,
+                    currentMapMode = state.currentMapMode,
+                    selectedCity = state.selectedCity,
+                    zoomScale = state.zoomScale,
+                    onZoomScaleChange = { state.zoomScale = it },
+                    panOffset = state.panOffset,
+                    onPanOffsetChange = { state.panOffset = it },
+                    selectedEntity = state.selectedEntity,
+                    onProviderSelected = { state.selectedEntity = it },
+                    onStoreSelected = { state.selectedEntity = it },
+                    onPropertySelected = { state.selectedEntity = it },
+                    onDeselect = { state.selectedEntity = null },
+                    onSwitchToRadar = { state.isRadarMode = true },
+                    focusPoint = searchedPlace?.let { Triple(it.shortName, it.latitude, it.longitude) },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            // 🌙 2. HUD Mode Overlay (Night Windshield Reflection)
+            if (isHudMode) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.94f))
+                        .graphicsLayer(
+                            scaleX = if (isHudMirrored) -1f else 1f,
+                            scaleY = if (isHudMirrored) -1f else 1f
+                        )
+                        .padding(24.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Straight,
+                            contentDescription = null,
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(96.dp)
+                        )
+                        Text(
+                            text = if (isDrivingMode) "55" else "4.2",
+                            fontSize = 80.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFF10B981)
+                        )
+                        Text(
+                            text = if (isDrivingMode) "كم / ساعة" else "كم / س (مشياً)",
+                            fontSize = 18.sp,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "واصل السير على المسار الملاحي",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Button(
+                            onClick = { isHudMirrored = !isHudMirrored },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(if (isHudMirrored) "عكس عادي" else "انعكاس الزجاج 🪞", color = Color(0xFF10B981))
+                        }
+                        Button(
+                            onClick = { isHudMode = false },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("خروج من وضع HUD", color = Color.White)
+                        }
+                    }
                 }
             }
 
-            androidx.activity.compose.BackHandler(enabled = state.currentMapMode == MapMode.AR_VPS) {
-                state.currentMapMode = MapMode.VELA_3D
-            }
-
-            // --- 1. Minimalist Search Bar (Top) ---
-            MapFilterBar(
-                selectedCategory = state.selectedCategory,
-                onCategorySelected = { state.selectedCategory = it },
-                selectedCity = state.selectedCity,
-                onCitySelected = { city ->
-                    state.selectedCity = city
-                    if (city != "الكل") {
-                        val coords = OfflineMapManager.getCityCoordinates(city)
-                        viewModel.updateUserLocation(coords.latitude, coords.longitude)
-                    }
-                },
-                searchQuery = state.searchQuery,
-                onSearchQueryChange = { state.searchQuery = it },
-                onResultSelected = { result ->
-                    state.searchQuery = result.title
-                    state.panOffset = Offset.Zero
-                    state.zoomScale = 1.8f
-                    
-                    // التوجه السينمائي إلى الموقع المختار
-                    val script = "if (window.flyToLocation) { window.flyToLocation(${result.latitude}, ${result.longitude}, 18); }"
-                    webViewRef?.evaluateJavascript(script, null)
-                    
-                    // عرض تفاصيل العنصر فوراً إذا كان كياناً
-                    when (val item = result.originalItem) {
-                        is ProviderEntity -> state.selectedEntity = item
-                        is StoreEntity -> state.selectedEntity = item
-                        is PropertyEntity -> state.selectedEntity = item
-                    }
-                },
-                providers = providers,
-                stores = stores,
-                properties = properties,
-                onBackClick = onBackClick,
-                themeColors = themeColors,
+            // 🔍 3. Top Search Bar: Single Glassmorphism Capsule (NO CLUTTER UNDERNEATH)
+            Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
+                    .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(top = 8.dp)
-            )
+            ) {
+                MapFilterBar(
+                    selectedCategory = state.selectedCategory,
+                    onCategorySelected = { state.selectedCategory = it },
+                    selectedCity = state.selectedCity,
+                    onCitySelected = { city ->
+                        state.selectedCity = city
+                    },
+                    searchQuery = state.searchQuery,
+                    onSearchQueryChange = { state.searchQuery = it },
+                    themeColors = themeColors,
+                    onBackClick = onBackClick,
+                    onVoiceSearchClick = {
+                        val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
+                            putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "تحدث باسم الشارع أو الخدمة")
+                            putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                        }
+                        try {
+                            speechLauncher.launch(intent)
+                        } catch (e: android.content.ActivityNotFoundException) {
+                            coroutineScope.launch { snackbarHostState.showSnackbar("جهازك لا يدعم التعرف على الصوت") }
+                        }
+                    },
+                    onSearchExecute = { query ->
+                        val q = query.trim()
+                        if (q.length >= 3) searchPanelOpen = true
+                        OfflineMapManager.findCity(q)?.let { city -> state.selectedCity = city.nameAr }
+                    }
+                )
 
-            // --- 2. Unified Floating Control Dock (Right Side) ---
-            MapControls(
-                isRadarMode = state.isRadarMode,
-                onToggleRadarMode = {
-                    showMapErrorOverlay = false
-                    state.isRadarMode = !state.isRadarMode
-                },
-                isHeatmapActive = state.isHeatmapActive,
-                onToggleHeatmap = {
-                    state.isHeatmapActive = !state.isHeatmapActive
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar(
-                            if (state.isHeatmapActive) "تم تفعيل الخريطة الحرارية 🔥" else "تم إيقاف الخريطة الحرارية"
+                // 🇾🇪 Offline Map Status Badge
+                Surface(
+                    onClick = { if (!isTilesDownloaded) showDownloadDialog = true },
+                    shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
+                    color = Color(0xFF0B0F19).copy(alpha = 0.85f),
+                    border = BorderStroke(1.dp, if (isTilesDownloaded) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFF59E0B).copy(alpha = 0.4f)),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 64.dp, end = 24.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(if (isTilesDownloaded) Color(0xFF10B981) else Color(0xFFF59E0B))
+                        )
+                        Text(
+                            text = if (isTilesDownloaded) "خرائط اليمن أوفلاين ✓" else "تحميل خرائط الملاحة 🇾🇪",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
-                },
-                currentLayer = state.currentMapLayer,
-                onSwitchLayer = { layerKey ->
-                    state.currentMapLayer = layerKey
-                    if (layerKey == "vela_3d") {
-                        state.currentMapMode = MapMode.VELA_3D
-                        state.tiltAngle = 42f
-                    } else {
-                        state.currentMapMode = MapMode.AERIAL_OAM
-                        state.tiltAngle = 0f
+                }
+
+                // 📋 لوحة نتائج البحث
+                if (searchPanelOpen && (isSearching || searchResults.isNotEmpty() || searchMessage != null)) {
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = Color(0xFF0B0F19).copy(alpha = 0.97f),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.10f)),
+                        modifier = Modifier
+                            .padding(top = 66.dp, start = 16.dp, end = 16.dp)
+                            .fillMaxWidth()
+                            .heightIn(max = 320.dp)
+                    ) {
+                        Column {
+                            if (isSearching) {
+                                LinearProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = Color(0xFF10B981)
+                                )
+                            }
+                            searchMessage?.let {
+                                Text(
+                                    text = it,
+                                    color = Color(0xFFF59E0B),
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(14.dp)
+                                )
+                            }
+                            LazyColumn {
+                                items(searchResults) { res ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                searchedPlace = res
+                                                searchPanelOpen = false
+                                                state.searchQuery = ""
+                                            }
+                                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Text(res.icon, fontSize = 18.sp)
+                                        Column(Modifier.weight(1f)) {
+                                            Text(
+                                                text = res.shortName,
+                                                color = Color.White,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = res.displayName,
+                                                color = Color(0xFF94A3B8),
+                                                fontSize = 11.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+                                }
+                            }
+                        }
                     }
-                    if (layerKey == "navigation") state.currentMapMode = MapMode.NAVIGATION
-                    val script = """
-                        if (window.switchLayer) { window.switchLayer('$layerKey'); }
-                        if (window.setTilt) { window.setTilt(${state.tiltAngle}); }
-                        if (window.setVelaMode) { window.setVelaMode('${state.currentMapMode.name}'); }
-                    """.trimIndent()
-                    webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                },
+                }
+            }
+
+            // 🎮 4. Unified Control Dock (قاعدة التحكم الموحدة) - Single continuous vertical capsule
+            MapControls(
+                isRadarMode = state.isRadarMode,
+                onToggleRadarMode = { state.isRadarMode = !state.isRadarMode },
+                isHeatmapActive = state.isHeatmapActive,
+                onToggleHeatmap = { state.isHeatmapActive = !state.isHeatmapActive },
                 onZoomIn = {
-                    state.zoomScale = (state.zoomScale * 1.3f).coerceIn(0.25f, 8.0f)
-                    webViewRef?.post { webViewRef?.evaluateJavascript("if (window.zoomIn) { window.zoomIn(); }", null) }
+                    state.zoomScale = (state.zoomScale * 1.30f).coerceIn(0.25f, 8.0f)
                 },
                 onZoomOut = {
-                    state.zoomScale = (state.zoomScale / 1.3f).coerceIn(0.25f, 8.0f)
-                    webViewRef?.post { webViewRef?.evaluateJavascript("if (window.zoomOut) { window.zoomOut(); }", null) }
+                    state.zoomScale = (state.zoomScale / 1.30f).coerceIn(0.25f, 8.0f)
                 },
                 onRecenterLocation = {
                     state.panOffset = Offset.Zero
                     state.zoomScale = 1.0f
-                    viewModel.startLocationUpdates()
+                    val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    if (hasFine || hasCoarse) {
+                        viewModel.startLocationUpdates()
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("تمت إعادة التمركز إلى موقعك الفعلي 📍")
+                        }
+                    } else {
+                        locationPermissionLauncher.launch(
+                            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+                        )
+                    }
+                },
+                onOpenLayerDialog = { state.showLayerDialog = true },
+                isNavigationActive = state.isNavigating,
+                onToggleNavigation = {
+                    when {
+                        !hasRealLocation -> {
+                            viewModel.startLocationUpdates()
+                            coroutineScope.launch { snackbarHostState.showSnackbar("فعّل GPS وانتظر تحديد موقعك ثم أعد المحاولة") }
+                        }
+                        !state.startNavigation(state.selectedEntity) -> {
+                            coroutineScope.launch { snackbarHostState.showSnackbar("اختر وجهة أولاً: اضغط على مكان في الخريطة أو ابحث عنه") }
+                        }
+                    }
                 },
                 isGpsActive = viewModel.isGpsTrackingActive.collectAsState().value,
-                onDownloadValhallaClick = {
-                    state.currentMapMode = MapMode.NAVIGATION
-                    state.currentMapLayer = "navigation"
-                    showValhallaDialog = true
-                },
-                // Vela Modes
-                currentMode = state.currentMapMode,
-                onModeChange = { mode -> 
-                    state.currentMapMode = mode
-                    if (mode == MapMode.VELA_3D) {
-                        state.tiltAngle = 42f
-                        webViewRef?.post { webViewRef?.evaluateJavascript("if (window.setTilt) { window.setTilt(42); }", null) }
-                    } else {
-                        state.tiltAngle = 0f
-                        webViewRef?.post { webViewRef?.evaluateJavascript("if (window.setTilt) { window.setTilt(0); }", null) }
-                    }
-                },
-                tiltAngle = state.tiltAngle,
-                onToggleTilt = {
-                    val next = if (state.tiltAngle > 0) 0f else 42f
-                    state.tiltAngle = next
-                    webViewRef?.post { webViewRef?.evaluateJavascript("if (window.setTilt) { window.setTilt($next); }", null) }
-                },
-                onCycleTiltAngle = {
-                    val next = when (state.tiltAngle) {
-                        0f -> 30f
-                        30f -> 45f
-                        45f -> 60f
-                        else -> 0f
-                    }
-                    state.tiltAngle = next
-                    webViewRef?.post { webViewRef?.evaluateJavascript("if (window.setTilt) { window.setTilt($next); }", null) }
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("زاوية الرؤية ثلاثية الأبعاد: ${next.toInt()}° 📐")
-                    }
-                },
-                onResetNorth = {
-                    state.panOffset = Offset.Zero
-                    webViewRef?.post { webViewRef?.evaluateJavascript("if (window.recenterUser) { window.recenterUser(); }", null) }
-                },
-                onToggleTraffic = {
-                    val target = if (state.currentMapLayer == "hot") "satellite" else "hot"
-                    state.currentMapLayer = target
-                    webViewRef?.post { webViewRef?.evaluateJavascript("if (window.switchLayer) { window.switchLayer('$target'); }", null) }
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar(if (target == "hot") "تم تفعيل خريطة الشوارع الحية 🗺️" else "تم العودة للأقمار الصناعية 🛰️")
-                    }
-                },
-                onOpenStreetView = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("عرض بانورامي تفاعلي 360° للموقع 🌐")
-                    }
-                },
-                onOpenAleph = {
-                    state.alephSelectedEntity = state.selectedEntity
-                    state.isAlephDialogOpen = true
-                },
                 themeColors = themeColors,
+                currentMapMode = state.currentMapMode,
+                onSelectMapMode = { mode, tilt ->
+                    state.currentMapMode = mode
+                    state.isRadarMode = false
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("تم تطبيق النمط بنجاح ✓")
+                    }
+                },
+                isDrivingMode = isDrivingMode,
+                onToggleDrivingMode = {
+                    isDrivingMode = !isDrivingMode
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(
+                            if (isDrivingMode) "🚘 تم تفعيل وضع القيادة والملاحة المباشرة"
+                            else "🚶 تم تفعيل وضع المشي المريح"
+                        )
+                    }
+                },
+                compassBearing = -heading,
+                onResetCompass = {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("🧭 اتجاه الشمال مضبوط وفق بوصلة الجهاز الحقيقية")
+                    }
+                },
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 12.dp)
+                    .padding(end = 16.dp)
             )
 
-            // BackHandler for Navigation mode
-            androidx.activity.compose.BackHandler(enabled = state.currentMapMode == MapMode.NAVIGATION) {
-                state.currentMapMode = MapMode.VELA_3D
-                val script = "if (window.clearRoute) { window.clearRoute(); }"
-                webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+            // 📷 5. Floating AR (VELA) Button (Opposite the dock with soft pulsing glow)
+            Surface(
+                onClick = {
+                    state.currentMapMode = if (state.currentMapMode == MapMode.AR_VPS) MapMode.SATELLITE else MapMode.AR_VPS
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(
+                            if (state.currentMapMode == MapMode.AR_VPS) "📷 تم تشغيل كاميرا الواقع المعزز (VELA AR) مع التوجيه ثلاثي الأبعاد"
+                            else "🗺️ تم العودة لخريطة الأقمار الصناعية"
+                        )
+                    }
+                },
+                shape = RoundedCornerShape(18.dp),
+                color = Color(0xFF0B0F19).copy(alpha = 0.85f),
+                border = BorderStroke(1.2.dp, Color(0xFF10B981).copy(alpha = arGlowAlpha)),
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 16.dp)
+                    .testTag("mode_ar_vela_btn")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF10B981).copy(alpha = arGlowAlpha))
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ViewInAr,
+                        contentDescription = "واقع معزز",
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "VELA AR",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
-            // 🧭 Dedicated Smart Navigation Panel (Dual: Inter-City Highways & Urban Street Precision)
-            if (state.currentMapMode == MapMode.NAVIGATION) {
-                com.serviseyem.ui.screens.map.components.SmartNavigationPanel(
-                    userLat = safeUserLat,
-                    userLng = safeUserLng,
-                    themeColors = themeColors,
-                    onDrawRouteOnMap = { lat1, lng1, lat2, lng2, destName ->
-                        val escapedName = destName.replace("'", "\\'")
-                        val script = "if (window.drawRoute) { window.drawRoute($lat1, $lng1, $lat2, $lng2, '#00E5FF', '$escapedName'); }"
-                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                    },
-                    onClearRoute = {
-                        val script = "if (window.clearRoute) { window.clearRoute(); }"
-                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                    },
-                    onCloseNavigation = {
-                        state.currentMapMode = MapMode.VELA_3D
-                        state.currentMapLayer = "google_satellite"
-                        val script = "if (window.clearRoute) { window.clearRoute(); } if (window.switchLayer) { window.switchLayer('google_satellite'); }"
-                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                    },
-                    onPromptDownloadOffline = {
-                        showValhallaDialog = true
-                    },
+            // 🚨 6. Quiet Discreet SOS / الفزعة Button (Calm orange-red #EF4444)
+            Surface(
+                onClick = { showSosDialog = true },
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFF0B0F19).copy(alpha = 0.85f),
+                border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.45f)),
+                shadowElevation = 6.dp,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .navigationBarsPadding()
+                    .padding(start = 16.dp, bottom = if (state.selectedEntity != null) 240.dp else 24.dp)
+                    .testTag("map_sos_btn")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Emergency,
+                        contentDescription = "فزعة طوارئ",
+                        tint = Color(0xFFEF4444),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "فزعة",
+                        color = Color(0xFFFCA5A5),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // 🚗 7. Smart Companion Bar for Intercity Trips (Discreet, triggers on toggle or driving mode)
+            if (isDrivingMode && state.selectedEntity == null) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color(0xFF0B0F19).copy(alpha = 0.85f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.10f)),
+                    shadowElevation = 8.dp,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
+                        .padding(bottom = 24.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // HUD toggle
+                        IconButton(
+                            onClick = { isHudMode = true },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Nightlife, contentDescription = "HUD ليلي", tint = Color(0xFF38BDF8), modifier = Modifier.size(18.dp))
+                        }
+
+                        // Intercity companion filters
+                        val items = listOf(
+                            Triple("وقود", "⛽ وقود", "محطة"),
+                            Triple("استراحة", "☕ استراحة", "استراحة"),
+                            Triple("ميكانيك", "🔧 بنشر/صيانة", "صيانة")
+                        )
+
+                        items.forEach { (key, label, filterQuery) ->
+                            val isActive = companionFilter == filterQuery
+                            Surface(
+                                onClick = {
+                                    companionFilter = if (isActive) null else filterQuery
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            if (!isActive) "رفيق السفر: تصفية أقرب $label على الطريق"
+                                            else "تم إلغاء تصفية رفيق السفر"
+                                        )
+                                    }
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isActive) Color(0xFF10B981).copy(alpha = 0.25f) else Color.Transparent,
+                                border = if (isActive) BorderStroke(1.dp, Color(0xFF10B981)) else null
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontSize = 11.5.sp,
+                                    color = if (isActive) Color(0xFF10B981) else Color.White,
+                                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 🗺️ 8. Layer Selection Dialog (نظام الطبقات الخمس)
+            if (state.showLayerDialog) {
+                MapLayersDialog(
+                    currentMapMode = state.currentMapMode,
+                    onSelectLayer = { mode, tilt ->
+                        state.currentMapMode = mode
+                        state.isRadarMode = false
+                        state.showLayerDialog = false
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("تم تفعيل الطبقة بنجاح ✓")
+                        }
+                    },
+                    onDismiss = { state.showLayerDialog = false }
                 )
             }
 
-            // Bottom Sheet for selected item
+            // 📍 8.5. Multi-Stop Waypoints Management Bar (Appears when stops are added)
+            if (state.selectedWaypoints.isNotEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color(0xFF0B0F19).copy(alpha = 0.90f),
+                    border = BorderStroke(1.2.dp, Color(0xFF38BDF8).copy(alpha = 0.6f)),
+                    shadowElevation = 10.dp,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = if (state.selectedEntity != null) 250.dp else 90.dp)
+                        .fillMaxWidth(0.92f)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "محطات التوقف المحددة (${state.selectedWaypoints.size})",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            TextButton(onClick = { state.clearWaypoints() }) {
+                                Text("مسح الكل", color = Color(0xFFEF4444), fontSize = 11.sp)
+                            }
+                        }
+                        
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(bottom = 4.dp)
+                        ) {
+                            items(state.selectedWaypoints) { wp ->
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFF1E293B),
+                                    border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.4f))
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(wp.name, color = Color.White, fontSize = 11.sp, maxLines = 1)
+                                        Spacer(Modifier.width(4.dp))
+                                        IconButton(
+                                            onClick = { state.removeWaypoint(wp) },
+                                            modifier = Modifier.size(16.dp)
+                                        ) {
+                                            Icon(Icons.Default.Close, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(12.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 📋 9. Bottom Sheet for clicked place (HIDDEN BY DEFAULT - APPEARS ONLY ON PIN TAP)
             state.selectedEntity?.let { entity ->
                 MapBottomSheet(
                     entity = entity,
                     userLat = safeUserLat,
                     userLng = safeUserLng,
                     onDismiss = { state.selectedEntity = null },
+                    onAddStop = { target ->
+                        state.addWaypoint(target)
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("📍 تمت إضافة المحطة للمسار")
+                        }
+                    },
                     onRequestBooking = { target ->
                         state.selectedEntity = null
                         when (target) {
-                            is ProviderEntity -> {
-                                state.bookingProviderTarget = target
-                            }
-                            is StoreEntity -> {
-                                onRequestBooking(target)
-                            }
-                            is PropertyEntity -> {
-                                onRequestBooking(target)
-                            }
+                            is ProviderEntity -> state.bookingProviderTarget = target
+                            is StoreEntity -> onRequestBooking(target)
+                            is PropertyEntity -> onRequestBooking(target)
                             else -> onRequestBooking(target)
                         }
                     },
@@ -507,217 +880,238 @@ fun MapScreenContent(
                             is PropertyEntity -> onOpenPropertyDetails(ent)
                         }
                     },
-                    onOpenChat = { ent ->
-                        state.selectedEntity = null
-                        when (ent) {
-                            is ProviderEntity -> {
-                                viewModel.openDirectChat(
-                                    targetUserId = ent.id.ifBlank { ent.phone },
-                                    targetUserName = ent.name,
-                                    targetUserPhoto = ent.profileImage,
-                                    relatedEntityId = ent.id,
-                                    relatedEntityType = "PROVIDER"
-                                )
+                    themeColors = themeColors,
+                    onStartNavigation = { target ->
+                        when {
+                            !hasRealLocation -> {
+                                viewModel.startLocationUpdates()
+                                coroutineScope.launch { snackbarHostState.showSnackbar("فعّل GPS وانتظر تحديد موقعك") }
                             }
-                            is StoreEntity -> {
-                                val isMedical = ent.sectionId.contains("medical") || ent.categoryId.contains("medical") || ent.name.contains("طبي") || ent.name.contains("صيدلية")
-                                val isRestaurant = !isMedical && (ent.sectionId.contains("restaurant") || ent.categoryId.contains("restaurant") || ent.name.contains("مطعم") || ent.name.contains("كافيه"))
-                                val entityType = when {
-                                    isMedical -> "MEDICAL"
-                                    isRestaurant -> "RESTAURANT"
-                                    else -> "STORE"
-                                }
-                                viewModel.openDirectChat(
-                                    targetUserId = ent.id,
-                                    targetUserName = ent.name,
-                                    targetUserPhoto = ent.logoImage.ifBlank { ent.coverImage },
-                                    relatedEntityId = ent.id,
-                                    relatedEntityType = entityType
-                                )
-                            }
-                            is PropertyEntity -> {
-                                viewModel.openDirectChat(
-                                    targetUserId = ent.id,
-                                    targetUserName = ent.title,
-                                    targetUserPhoto = ent.images.firstOrNull() ?: "",
-                                    relatedEntityId = ent.id,
-                                    relatedEntityType = "PROPERTY"
-                                )
+                            !state.startNavigation(target) -> {
+                                coroutineScope.launch { snackbarHostState.showSnackbar("موقع هذا المكان غير محدد بدقة، لا يمكن الملاحة إليه") }
                             }
                         }
                     },
-                    onOpenAleph = { ent ->
-                        state.alephSelectedEntity = ent
-                        state.isAlephDialogOpen = true
-                    },
-                    onStartNavigation = { targetLat, targetLng, destTitle ->
-                        viewModel.openNavigation(targetLat, targetLng, destTitle)
-                    },
-                    themeColors = themeColors,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
                 )
             }
+
+            // 📍 بطاقة المكان المختار من البحث (إصلاح البحث)
+            searchedPlace?.let { place ->
+                val dist = MapDistanceCalculator.calculateDistanceMeters(safeUserLat, safeUserLng, place.latitude, place.longitude)
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color(0xFF0B0F19).copy(alpha = 0.96f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.10f)),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(12.dp)
+                        .fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(place.shortName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text(place.displayName, color = Color(0xFF94A3B8), fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text("المسافة المباشرة: ${MapDistanceCalculator.formatDistance(dist)} (تقريبي)", color = Color(0xFF10B981), fontSize = 12.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    val wp = NavWaypoint(name = place.shortName, latitude = place.latitude, longitude = place.longitude)
+                                    if (!hasRealLocation) {
+                                        viewModel.startLocationUpdates()
+                                        coroutineScope.launch { snackbarHostState.showSnackbar("فعّل GPS وانتظر تحديد موقعك") }
+                                    } else if (state.startNavigation(wp)) {
+                                        searchedPlace = null
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("ابدأ الملاحة", fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    state.addWaypoint(NavWaypoint(name = place.shortName, latitude = place.latitude, longitude = place.longitude))
+                                    coroutineScope.launch { snackbarHostState.showSnackbar("تمت إضافة المحطة للمسار") }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("إضافة كمحطة")
+                            }
+                            TextButton(onClick = { searchedPlace = null }) {
+                                Text("إغلاق", color = Color(0xFF94A3B8))
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
-    // 👁️ المساعد البصري الذكي Aleph Dialog
-    if (state.isAlephDialogOpen) {
-        AlephVisualAssistantDialog(
-            targetEntity = state.alephSelectedEntity ?: state.selectedEntity,
-            userLat = safeUserLat,
-            userLng = safeUserLng,
-            onDismiss = { state.isAlephDialogOpen = false },
-            onOpenBooking = { target ->
-                state.isAlephDialogOpen = false
-                target?.let { onRequestBooking(it) }
+    // 📥 Download Dialog for Offline Maps
+    if (showDownloadDialog) {
+        var isDownloading by remember { mutableStateOf(false) }
+        var downloadProgress by remember { mutableFloatStateOf(0f) }
+        var downloadStatusText by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { if (!isDownloading) showDownloadDialog = false },
+            containerColor = Color(0xFF0B0F19),
+            titleContentColor = Color.White,
+            textContentColor = Color.White,
+            shape = RoundedCornerShape(20.dp),
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.CloudDownload, contentDescription = null, tint = Color(0xFF38BDF8))
+                    Text("تحميل خرائط الملاحة أوفلاين", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                }
             },
-            themeColors = themeColors
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "للحصول على أدق النتائج والملاحة في اليمن بدون إنترنت، يرجى تحميل حزمة الخرائط (حوالي 25 ميجابايت).",
+                        color = Color.White,
+                        fontSize = 13.sp
+                    )
+                    if (isDownloading) {
+                        LinearProgressIndicator(
+                            progress = { downloadProgress },
+                            modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                            color = Color(0xFF10B981),
+                            trackColor = Color(0xFF1E293B)
+                        )
+                        Text(downloadStatusText, color = Color(0xFF10B981), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            },
+            confirmButton = {
+                if (!isDownloading) {
+                    Button(
+                        onClick = {
+                            isDownloading = true
+                            coroutineScope.launch {
+                                val result = ValhallaTileDownloader.downloadAndExtractTiles(context) { p, status ->
+                                    downloadProgress = p.toFloat()
+                                    downloadStatusText = status
+                                }
+                                if (result) {
+                                    isTilesDownloaded = true
+                                    showDownloadDialog = false
+                                    snackbarHostState.showSnackbar("✅ تم تثبيت خرائط اليمن بنجاح! استمتع بالملاحة أوفلاين.")
+                                } else {
+                                    isDownloading = false
+                                    snackbarHostState.showSnackbar("❌ فشل التحميل، يرجى التحقق من الاتصال.")
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                    ) {
+                        Text("تحميل الآن (25MB)", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                if (!isDownloading) {
+                    TextButton(onClick = { showDownloadDialog = false }) {
+                        Text("لاحقاً", color = Color(0xFF94A3B8))
+                    }
+                }
+            }
         )
     }
 
-    // Unified Direct Booking Dialog
+    // 🚨 10. SOS / الفزعة Confirmation Dialog
+    if (showSosDialog) {
+        val nearest = remember(filteredProviders, safeUserLat, safeUserLng) {
+            filteredProviders
+                .filter { it.phone.isNotBlank() && it.latitude != 0.0 && it.longitude != 0.0 }
+                .minByOrNull { MapDistanceCalculator.calculateDistanceMeters(safeUserLat, safeUserLng, it.latitude, it.longitude) }
+        }
+        val sosText = SosDispatcher.buildMessage(safeUserLat, safeUserLng, null)
+
+        AlertDialog(
+            onDismissRequest = { showSosDialog = false },
+            containerColor = Color(0xFF0F172A),
+            shape = RoundedCornerShape(20.dp),
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Emergency, contentDescription = null, tint = Color(0xFFEF4444))
+                    Text("🚨 نداء فزعة طوارئ", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (!hasRealLocation) {
+                        Text("لم يتم تحديد موقعك الحقيقي بعد، فلن يُرسَل موقع. يمكنك الاتصال مباشرة.", color = Color(0xFFF59E0B), fontSize = 13.sp)
+                    } else {
+                        Text("سيتم استخدام موقعك الحالي. لا يُعتبر النداء مرسلاً إلا بعد تأكيد الإرسال أدناه.", color = Color(0xFFCBD5E1), fontSize = 13.sp)
+                    }
+                    nearest?.let { p ->
+                        Text("أقرب فني: ${p.name}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Button(
+                            onClick = { SosDispatcher.safeStart(context, SosDispatcher.dialIntent(p.phone)) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("📞 اتصل بـ ${p.name}")
+                        }
+                        if (hasRealLocation) {
+                            OutlinedButton(
+                                onClick = {
+                                    if (!SosDispatcher.safeStart(context, SosDispatcher.smsIntent(p.phone, sosText))) {
+                                        coroutineScope.launch { snackbarHostState.showSnackbar("تعذر فتح تطبيق الرسائل") }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("✉️ أرسل رسالة SMS بموقعي (تعمل بلا إنترنت)")
+                            }
+                        }
+                    }
+                    if (hasRealLocation) {
+                        OutlinedButton(
+                            onClick = { SosDispatcher.safeStart(context, SosDispatcher.shareIntent(sosText)) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("📤 مشاركة موقعي (واتساب وغيره)")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.enqueueSos(safeUserLat, safeUserLng, null, sosText)
+                                showSosDialog = false
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("تم حفظ النداء وسيُرسل للخادم فور توفر الإنترنت. للأمان اتصل أيضاً بأقرب فني.")
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("🚨 إرسال نداء عبر التطبيق", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showSosDialog = false }) {
+                    Text("إغلاق", color = Color(0xFF94A3B8))
+                }
+            }
+        )
+    }
+
+    // Provider Booking Dialog
     state.bookingProviderTarget?.let { provider ->
         BookingDialog(
             provider = provider,
             viewModel = viewModel,
             themeColors = themeColors,
             onDismiss = { state.bookingProviderTarget = null }
-        )
-    }
-
-    // 📥 Valhalla Offline Navigation Download Dialog
-    if (showValhallaDialog) {
-        val isAlreadyDownloaded = remember(showValhallaDialog) {
-            com.serviseyem.utils.ValhallaDownloadManager.isDownloaded(context)
-        }
-
-        AlertDialog(
-            onDismissRequest = { if (!isDownloadingValhalla) showValhallaDialog = false },
-            title = {
-                Text(
-                    text = if (isAlreadyDownloaded) "🧭 الملاحة الدقيقة (أوفلاين) جاهزة" else "📥 تحميل الملاحة الدقيقة الكاملة (أوفلاين)",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (isAlreadyDownloaded && !isDownloadingValhalla) {
-                        Text(
-                            text = "ملف خرائط ومسارات الملاحة الدقيقة (25 ميجابايت) محفوظ مسبقاً على هذا الهاتف وجاهز للاستخدام أوفلاين دون إنترنت.\n\nيمكنك بدء الملاحة الآن فوراً، أو إعادة تنزيل أحدث ملف خرائط.",
-                            fontSize = 12.sp,
-                            color = Color(0xFFA7F3D0)
-                        )
-                    } else {
-                        Text(
-                            text = "لتفعيل الملاحة الدقيقة والمسارات التفصيلية داخل شوارع اليمن، يحتاج التطبيق إلى تحميل ملف خرائط أوفلاين (حوالي 25 ميجابايت). يُنصح باستخدام شبكة Wi-Fi.",
-                            fontSize = 12.sp,
-                            color = Color.LightGray
-                        )
-                    }
-                    
-                    if (isDownloadingValhalla) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LinearProgressIndicator(
-                            progress = { downloadProgress },
-                            modifier = Modifier.fillMaxWidth().height(8.dp),
-                            color = Color(0xFF00E5FF),
-                            trackColor = Color(0xFF1E293B)
-                        )
-                        Text(downloadStatusText, fontSize = 11.sp, color = Color(0xFF00E5FF))
-                    }
-                }
-            },
-            confirmButton = {
-                if (!isDownloadingValhalla) {
-                    if (isAlreadyDownloaded) {
-                        Button(
-                            onClick = {
-                                state.currentMapMode = MapMode.NAVIGATION
-                                state.currentMapLayer = "navigation"
-                                val script = "if (window.switchLayer) { window.switchLayer('navigation'); }"
-                                webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                                showValhallaDialog = false
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("🧭 تم فتح شاشة الملاحة الدقيقة أوفلاين بنجاح")
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
-                        ) {
-                            Text("بدء الملاحة الآن 🧭", color = Color.Black, fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        Button(
-                            onClick = {
-                                isDownloadingValhalla = true
-                                downloadStatusText = "جاري بدء التحميل..."
-                                coroutineScope.launch {
-                                    val prefs = context.getSharedPreferences("valhalla_prefs", android.content.Context.MODE_PRIVATE)
-                                    val adminUrl = prefs.getString("valhalla_url", "") ?: ""
-                                    val success = com.serviseyem.utils.ValhallaDownloadManager.downloadAndExtractOfflineTiles(context, adminUrl) { prog, msg ->
-                                        downloadProgress = prog
-                                        downloadStatusText = msg
-                                    }
-                                    isDownloadingValhalla = false
-                                    showValhallaDialog = false
-                                    if (success) {
-                                        state.currentMapMode = MapMode.NAVIGATION
-                                        state.currentMapLayer = "navigation"
-                                        val script = "if (window.switchLayer) { window.switchLayer('navigation'); }"
-                                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                                        snackbarHostState.showSnackbar("تم تحميل وحفظ الملاحة بنجاح ✓ تم فتح شاشة الملاحة")
-                                    } else {
-                                        snackbarHostState.showSnackbar("فشل التحميل، يرجى التحقق من الاتصال")
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
-                        ) {
-                            Text("تحميل الآن", color = Color.Black, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            },
-            dismissButton = {
-                if (!isDownloadingValhalla) {
-                    if (isAlreadyDownloaded) {
-                        TextButton(
-                            onClick = {
-                                isDownloadingValhalla = true
-                                downloadStatusText = "جاري إعادة التحميل..."
-                                coroutineScope.launch {
-                                    com.serviseyem.utils.ValhallaDownloadManager.clearOfflineData(context)
-                                    val prefs = context.getSharedPreferences("valhalla_prefs", android.content.Context.MODE_PRIVATE)
-                                    val adminUrl = prefs.getString("valhalla_url", "") ?: ""
-                                    val success = com.serviseyem.utils.ValhallaDownloadManager.downloadAndExtractOfflineTiles(context, adminUrl) { prog, msg ->
-                                        downloadProgress = prog
-                                        downloadStatusText = msg
-                                    }
-                                    isDownloadingValhalla = false
-                                    showValhallaDialog = false
-                                    if (success) {
-                                        state.currentMapMode = MapMode.NAVIGATION
-                                        state.currentMapLayer = "navigation"
-                                        val script = "if (window.switchLayer) { window.switchLayer('navigation'); }"
-                                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                                        snackbarHostState.showSnackbar("تم تحديث وحفظ خرائط الملاحة بنجاح ✓")
-                                    }
-                                }
-                            }
-                        ) {
-                            Text("إعادة التنزيل 🔄", color = Color(0xFF00E5FF), fontSize = 12.sp)
-                        }
-                    } else {
-                        TextButton(onClick = { showValhallaDialog = false }) {
-                            Text("لاحقاً", color = Color.Gray)
-                        }
-                    }
-                }
-            },
-            containerColor = Color(0xFF0F172A),
-            shape = RoundedCornerShape(16.dp)
         )
     }
 }

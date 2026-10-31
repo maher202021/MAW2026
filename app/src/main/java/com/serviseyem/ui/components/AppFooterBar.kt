@@ -54,6 +54,7 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .widthIn(max = 600.dp)
                 .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceAround

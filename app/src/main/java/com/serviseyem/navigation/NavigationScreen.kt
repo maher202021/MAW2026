@@ -1,6 +1,7 @@
 package com.serviseyem.navigation
 
 // [إصلاح ملاحة نهائي] شاشة الملاحة الهجينة الذكية المتكاملة (أونلاين OSRM وأوفلاين Valhalla بدون تعطل)
+import com.serviseyem.utils.*
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
@@ -51,6 +52,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import com.serviseyem.data.ProviderEntity
+import com.serviseyem.data.StoreEntity
+
 /**
  * 🧭 NavigationScreen
  * World-Class Production-Grade Hybrid Navigation Screen:
@@ -63,12 +67,15 @@ import java.util.Locale
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun NavigationScreen(
-    themeColors: VisualThemePalette,
-    viewModel: MainViewModel? = null,
-    initialTargetLat: Double = 15.3547,
-    initialTargetLng: Double = 44.2066,
-    initialTargetName: String = "المركز الطبي الاستشاري - شارع حدة",
-    onBackClick: () -> Unit
+    targetEntity: Any? = null,
+    userLat: Double,
+    userLng: Double,
+    hasRealLocation: Boolean,
+    initialWaypoints: List<NavWaypoint> = emptyList(),
+    onFinishNavigation: () -> Unit,
+    nearbyProviders: List<ProviderEntity> = emptyList(),
+    nearbyStores: List<StoreEntity> = emptyList(),
+    themeColors: VisualThemePalette = resolveThemePalette(com.serviseyem.data.AdminSettingsEntity())
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -101,9 +108,9 @@ fun NavigationScreen(
     }
 
     // Destinations
-    var targetLat by rememberSaveable { mutableDoubleStateOf(initialTargetLat) }
-    var targetLng by rememberSaveable { mutableDoubleStateOf(initialTargetLng) }
-    var targetName by rememberSaveable { mutableStateOf(initialTargetName) }
+    var targetLat by rememberSaveable { mutableDoubleStateOf(initialWaypoints.lastOrNull()?.latitude ?: 15.3547) }
+    var targetLng by rememberSaveable { mutableDoubleStateOf(initialWaypoints.lastOrNull()?.longitude ?: 44.2066) }
+    var targetName by rememberSaveable { mutableStateOf(initialWaypoints.lastOrNull()?.name ?: "الوجهة") }
 
     // [إصلاح ملاحة نهائي] التحقق من حالة حزمة الخرائط الأوفلاين
     var hasValhallaFiles by remember { mutableStateOf(ValhallaTileDownloader.isTilesDownloaded(context)) }
@@ -315,21 +322,20 @@ fun NavigationScreen(
             // 1. البحث المحلي في المتاجر والعقارات المسجلة
             val localResults = mutableListOf<NavigationSearchResult>()
             try {
-                viewModel?.stores?.value?.filter {
+                nearbyStores.filter {
                     it.name.contains(query, ignoreCase = true) ||
                     it.localNeighborhood.contains(query, ignoreCase = true) ||
                     it.cityId.contains(query, ignoreCase = true)
-                }?.take(4)?.forEach { s ->
+                }.take(4).forEach { s ->
                     val subtitle = s.localNeighborhood.ifBlank { s.cityId }.ifBlank { "متجر / خدمة" }
                     localResults.add(NavigationSearchResult(title = s.name, subtitle = subtitle, lat = s.latitude, lng = s.longitude, isLocal = true))
                 }
-                viewModel?.properties?.value?.filter {
-                    it.title.contains(query, ignoreCase = true) ||
-                    it.localNeighborhood.contains(query, ignoreCase = true) ||
-                    it.cityId.contains(query, ignoreCase = true)
-                }?.take(3)?.forEach { p ->
-                    val subtitle = p.localNeighborhood.ifBlank { p.cityId }.ifBlank { "عقار" }
-                    localResults.add(NavigationSearchResult(title = p.title, subtitle = subtitle, lat = p.latitude, lng = p.longitude, isLocal = true))
+                nearbyProviders.filter {
+                    it.name.contains(query, ignoreCase = true) ||
+                    it.profession.contains(query, ignoreCase = true)
+                }.take(3).forEach { p ->
+                    val subtitle = p.profession.ifBlank { "مزود خدمة" }
+                    localResults.add(NavigationSearchResult(title = p.name, subtitle = subtitle, lat = p.latitude, lng = p.longitude, isLocal = true))
                 }
             } catch (_: Throwable) {}
 
@@ -392,7 +398,7 @@ fun NavigationScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(
-                    onClick = onBackClick,
+                    onClick = onFinishNavigation,
                     modifier = Modifier
                         .size(44.dp)
                         .background(Color(0xFF131C2E).copy(alpha = 0.94f), RoundedCornerShape(12.dp))
@@ -786,9 +792,9 @@ fun NavigationScreen(
                 val script = "if (window.centerOnUser) { window.centerOnUser(${locationFix.latitude}, ${locationFix.longitude}); }"
                 webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
             },
-            onEndNavigationClick = {
+                onEndNavigationClick = {
                 navigationVoice.speak("تم إنهاء رحلة الملاحة بنجاح")
-                onBackClick()
+                onFinishNavigation()
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)

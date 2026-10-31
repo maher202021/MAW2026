@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.serviseyem.data.*
@@ -140,13 +141,13 @@ fun ServicesBrowserLayout(
                 }
             }
             
-            // 4. Quick Category Grid (4x2 Bespoke Categories - Unified Dimensions & High Contrast)
+            // 4. Quick Category Grid (4x2 Bespoke Categories)
             item {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     val gridRow1 = listOf(
                         Triple("المتاجر", "🏪", com.serviseyem.ui.components.BespokePremiumSystem.StoresGradient) to {
@@ -180,42 +181,42 @@ fun ServicesBrowserLayout(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         gridRow1.forEach { (cat, onClick) ->
                             Surface(
                                 onClick = onClick,
                                 shape = RoundedCornerShape(14.dp),
-                                color = Color(0xFF131D33),
-                                border = BorderStroke(1.dp, Color(0xFF1E2E4E)),
-                                shadowElevation = 3.dp,
+                                color = com.serviseyem.ui.components.BespokePremiumSystem.SurfaceDark,
+                                border = BorderStroke(1.dp, com.serviseyem.ui.components.BespokePremiumSystem.GlassBorder),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(76.dp)
+                                    .defaultMinSize(minHeight = 72.dp)
                             ) {
                                 Column(
                                     modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 4.dp, vertical = 6.dp),
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 2.dp, vertical = 6.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(36.dp)
+                                            .size(32.dp)
                                             .clip(RoundedCornerShape(10.dp))
                                             .background(cat.third),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(cat.second, fontSize = 18.sp)
+                                        Text(cat.second, fontSize = 15.sp)
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = cat.first,
-                                        fontSize = 10.5.sp,
+                                        fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
                                         maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                         softWrap = false
                                     )
                                 }
@@ -225,42 +226,42 @@ fun ServicesBrowserLayout(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         gridRow2.forEach { (cat, onClick) ->
                             Surface(
                                 onClick = onClick,
                                 shape = RoundedCornerShape(14.dp),
-                                color = Color(0xFF131D33),
-                                border = BorderStroke(1.dp, Color(0xFF1E2E4E)),
-                                shadowElevation = 3.dp,
+                                color = com.serviseyem.ui.components.BespokePremiumSystem.SurfaceDark,
+                                border = BorderStroke(1.dp, com.serviseyem.ui.components.BespokePremiumSystem.GlassBorder),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(76.dp)
+                                    .defaultMinSize(minHeight = 72.dp)
                             ) {
                                 Column(
                                     modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 4.dp, vertical = 6.dp),
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 2.dp, vertical = 6.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(36.dp)
+                                            .size(32.dp)
                                             .clip(RoundedCornerShape(10.dp))
                                             .background(cat.third),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(cat.second, fontSize = 18.sp)
+                                        Text(cat.second, fontSize = 15.sp)
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = cat.first,
-                                        fontSize = 10.5.sp,
+                                        fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
                                         maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                         softWrap = false
                                     )
                                 }

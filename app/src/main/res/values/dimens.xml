@@ -72,6 +72,8 @@
     <!-- ═══════════════════════════════════════ -->
     <!-- LAYOUT CONSTRAINTS                       -->
     <!-- ═══════════════════════════════════════ -->
+    <dimen name="card_corner_radius">16dp</dimen>
+    <dimen name="card_content_padding">12dp</dimen>
     <dimen name="screen_padding_horizontal">16dp</dimen>
     <dimen name="screen_padding_vertical">12dp</dimen>
     <dimen name="max_content_width">600dp</dimen>

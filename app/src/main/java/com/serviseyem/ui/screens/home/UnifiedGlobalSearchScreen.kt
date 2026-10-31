@@ -148,7 +148,6 @@ fun UnifiedGlobalSearchScreen(
         modifier = modifier
             .fillMaxSize()
             .background(themeColors.background)
-            .statusBarsPadding()
     ) {
         // Search Header Bar
         Row(

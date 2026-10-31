@@ -1,6 +1,7 @@
 package com.serviseyem.navigation
 
 // [إصلاح ملاحة نهائي] محرك الملاحة الهجين الشامل (OSRM أونلاين + Valhalla أوفلاين + مسار مباشر احتياطي)
+import com.serviseyem.utils.*
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
@@ -70,16 +71,9 @@ class RealValhallaNavigator(private val context: Context) {
                     origin = Pair(startLat, startLon),
                     waypoints = listOf(Pair(endLat, endLon))
                 )
-                if (osrmResult.success && osrmResult.points.isNotEmpty()) {
+                if (osrmResult is NavigationRouteResult.Success && osrmResult.points.isNotEmpty()) {
                     Log.d(TAG, "Priority 1: Online OSRM routing succeeded (${osrmResult.points.size} points).")
-                    return@withContext NavigationRouteResult.Success(
-                        points = osrmResult.points,
-                        instructions = osrmResult.instructions,
-                        totalDistanceMeters = osrmResult.totalDistanceMeters,
-                        estimatedDurationSeconds = osrmResult.estimatedDurationSeconds,
-                        isOfflineEngine = false,
-                        modeLabel = "ملاحة أونلاين (OSRM)"
-                    )
+                    return@withContext osrmResult
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Priority 1: OSRM online failed safely: ${e.message}")
@@ -298,41 +292,65 @@ class RealValhallaNavigator(private val context: Context) {
 
         return minCrossTrack > threshold
     }
+
+    companion object {
+        var lastSearchError: String? = null
+
+        fun searchAddressAndPlaces(
+            query: String,
+            providers: List<com.serviseyem.data.ProviderEntity>,
+            stores: List<com.serviseyem.data.StoreEntity>,
+            userLat: Double,
+            userLng: Double
+        ): List<SearchAddressResult> {
+            val results = mutableListOf<SearchAddressResult>()
+            val q = query.trim().lowercase()
+
+            // 1. Search in providers
+            providers.filter { 
+                it.name.lowercase().contains(q) || it.profession.lowercase().contains(q) || it.specialization.lowercase().contains(q)
+            }.take(10).forEach { p ->
+                results.add(SearchAddressResult(
+                    shortName = p.name,
+                    displayName = "${p.profession} - ${p.specialization}",
+                    latitude = p.latitude,
+                    longitude = p.longitude,
+                    type = "provider",
+                    icon = "👷"
+                ))
+            }
+
+            // 2. Search in stores
+            stores.filter { 
+                it.name.lowercase().contains(q) || it.description.lowercase().contains(q)
+            }.take(10).forEach { s ->
+                results.add(SearchAddressResult(
+                    shortName = s.name,
+                    displayName = s.description,
+                    latitude = s.latitude,
+                    longitude = s.longitude,
+                    type = "store",
+                    icon = if (s.categoryId.contains("medical")) "🏥" else if (s.categoryId.contains("restaurant")) "🍔" else "🏪"
+                ))
+            }
+
+            // 3. Search in Yemen Cities (Mocked Geocoder)
+            com.serviseyem.ui.screens.map.utils.OfflineMapManager.getAllCities().filter {
+                it.nameAr.contains(q)
+            }.take(5).forEach { city ->
+                results.add(SearchAddressResult(
+                    shortName = city.nameAr,
+                    displayName = "محافظة ${city.nameAr}، اليمن",
+                    latitude = city.latitude,
+                    longitude = city.longitude,
+                    type = "city",
+                    icon = "🏙️"
+                ))
+            }
+
+            lastSearchError = if (results.isEmpty()) "لم يتم العثور على نتائج" else null
+            return results
+        }
+    }
 }
 
-sealed class NavigationRouteResult {
-    data class Success(
-        val points: List<RoutePoint>,
-        val instructions: List<NavigationInstruction>,
-        val totalDistanceMeters: Double,
-        val estimatedDurationSeconds: Int,
-        val isOfflineEngine: Boolean = false,
-        val modeLabel: String = ""
-    ) : NavigationRouteResult()
-
-    data class Error(val message: String) : NavigationRouteResult()
-}
-
-data class RoutePoint(val lat: Double, val lon: Double)
-
-data class NavigationInstruction(
-    val text: String,
-    val maneuverType: ManeuverType,
-    val distanceRemaining: Double,
-    val segmentDistance: Double,
-    val streetName: String = ""
-)
-
-enum class ManeuverType {
-    START,
-    STRAIGHT,
-    SLIGHT_RIGHT,
-    TURN_RIGHT,
-    SHARP_RIGHT,
-    SLIGHT_LEFT,
-    TURN_LEFT,
-    SHARP_LEFT,
-    U_TURN,
-    ROUNDABOUT,
-    DESTINATION
-}

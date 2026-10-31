@@ -10,7 +10,6 @@ import com.serviseyem.utils.getProviderCoords
 import com.serviseyem.utils.getStoreCoords
 import com.serviseyem.ui.screens.map.utils.CityAliases
 import com.serviseyem.ui.screens.map.utils.MapDistanceCalculator
-import com.serviseyem.ui.screens.home.extensions.*
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -65,12 +64,11 @@ object MapScreenFilters {
     ): List<StoreEntity> {
         val cleanQuery = searchQuery.trim().lowercase()
         return stores.filter { s ->
-            val isMedical = s.isMedicalCenter()
-            val isRestaurant = s.isRestaurantOrCafe()
+            val isMedical = s.sectionId.contains("medical") || s.categoryId.contains("medical") || s.name.contains("طبي") || s.name.contains("صيدلية") || s.name.contains("مستشفى") || s.name.contains("عيادة")
+            val isRestaurant = !isMedical && (s.sectionId.contains("restaurant") || s.categoryId.contains("restaurant") || s.name.contains("مطعم") || s.name.contains("كافيه") || s.name.contains("مأكولات") || s.name.contains("شاورما"))
 
             val matchesCat = when (selectedCategory) {
                 "ALL" -> true
-                "PROVIDERS" -> false
                 "STORES" -> !isMedical && !isRestaurant
                 "RESTAURANTS" -> isRestaurant
                 "MEDICAL" -> isMedical
@@ -113,70 +111,82 @@ object MapScreenFilters {
         safeUserLng: Double
     ): List<MarkerRenderer.MapItemPoint> {
         val list = mutableListOf<MarkerRenderer.MapItemPoint>()
-        var angle = 0.0
 
-        filteredProviders.forEach { p ->
-            val coords = getProviderCoords(p)
-            val d = MapDistanceCalculator.calculateDistanceMeters(safeUserLat, safeUserLng, coords.first, coords.second)
-            val r = (d / 1000.0).coerceIn(1.0, 30.0).toFloat() * 10f
-            val rad = Math.toRadians(angle)
-            list.add(
-                MarkerRenderer.MapItemPoint(
-                    id = p.id,
-                    title = p.name,
-                    type = "PROVIDER",
-                    x = (r * cos(rad)).toFloat(),
-                    y = (r * sin(rad)).toFloat(),
-                    rating = p.rating.toDouble(),
-                    isAvailable = p.isAvailable,
-                    originalItem = p
+        fun addPoints(items: List<Any>, typeName: String) {
+            items.forEach { item ->
+                val lat: Double
+                val lng: Double
+                val title: String
+                val rating: Double
+                val isAvailable: Boolean
+                val id: String
+
+                when (item) {
+                    is ProviderEntity -> {
+                        id = item.id
+                        lat = item.latitude
+                        lng = item.longitude
+                        title = item.name
+                        rating = item.rating.toDouble()
+                        isAvailable = item.isAvailable
+                    }
+                    is StoreEntity -> {
+                        id = item.id
+                        lat = item.latitude
+                        lng = item.longitude
+                        title = item.name
+                        rating = item.rating.toDouble()
+                        isAvailable = item.isActive
+                    }
+                    is PropertyEntity -> {
+                        id = item.id
+                        lat = item.latitude
+                        lng = item.longitude
+                        title = item.title
+                        rating = 5.0
+                        isAvailable = item.isActive
+                    }
+                    else -> return@forEach
+                }
+
+                val d = MapDistanceCalculator.calculateDistanceMeters(safeUserLat, safeUserLng, lat, lng)
+                val r = (d / 1000.0).coerceIn(0.5, 30.0).toFloat() * 10f
+                
+                val dLng = Math.toRadians(lng - safeUserLng)
+                val lat1 = Math.toRadians(safeUserLat)
+                val lat2 = Math.toRadians(lat)
+                val y = sin(dLng) * cos(lat2)
+                val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLng)
+                val azimuth = Math.atan2(y, x)
+
+                val derivedType = when (item) {
+                    is StoreEntity -> {
+                        val isMedical = item.sectionId.contains("medical") || item.categoryId.contains("medical") || item.name.contains("طبي") || item.name.contains("صيدلية")
+                        val isRestaurant = !isMedical && (item.sectionId.contains("restaurant") || item.categoryId.contains("restaurant") || item.name.contains("مطعم") || item.name.contains("كافيه"))
+                        if (isMedical) "MEDICAL" else if (isRestaurant) "RESTAURANT" else "STORE"
+                    }
+                    else -> typeName
+                }
+
+                list.add(
+                    MarkerRenderer.MapItemPoint(
+                        id = id,
+                        title = title,
+                        type = derivedType,
+                        x = (r * sin(azimuth)).toFloat(),
+                        y = (r * -cos(azimuth)).toFloat(),
+                        rating = rating,
+                        isAvailable = isAvailable,
+                        originalItem = item
+                    )
                 )
-            )
-            angle += 40.0
+            }
         }
 
-        filteredStores.forEach { s ->
-            val coords = getStoreCoords(s)
-            val isMedical = s.isMedicalCenter()
-            val isRestaurant = s.isRestaurantOrCafe()
-            val typeStr = if (isMedical) "MEDICAL" else if (isRestaurant) "RESTAURANT" else "STORE"
-            val d = MapDistanceCalculator.calculateDistanceMeters(safeUserLat, safeUserLng, coords.first, coords.second)
-            val r = (d / 1000.0).coerceIn(1.0, 30.0).toFloat() * 10f
-            val rad = Math.toRadians(angle)
-            list.add(
-                MarkerRenderer.MapItemPoint(
-                    id = s.id,
-                    title = s.name,
-                    type = typeStr,
-                    x = (r * cos(rad)).toFloat(),
-                    y = (r * sin(rad)).toFloat(),
-                    rating = s.rating.toDouble(),
-                    isAvailable = s.isActive,
-                    originalItem = s
-                )
-            )
-            angle += 35.0
-        }
+        addPoints(filteredProviders, "PROVIDER")
+        addPoints(filteredStores, "STORE")
+        addPoints(filteredProperties, "PROPERTY")
 
-        filteredProperties.forEach { pr ->
-            val coords = getPropertyCoords(pr)
-            val d = MapDistanceCalculator.calculateDistanceMeters(safeUserLat, safeUserLng, coords.first, coords.second)
-            val r = (d / 1000.0).coerceIn(1.0, 30.0).toFloat() * 10f
-            val rad = Math.toRadians(angle)
-            list.add(
-                MarkerRenderer.MapItemPoint(
-                    id = pr.id,
-                    title = pr.title,
-                    type = "PROPERTY",
-                    x = (r * cos(rad)).toFloat(),
-                    y = (r * sin(rad)).toFloat(),
-                    rating = 5.0,
-                    isAvailable = pr.isActive,
-                    originalItem = pr
-                )
-            )
-            angle += 45.0
-        }
         return list
     }
 }
