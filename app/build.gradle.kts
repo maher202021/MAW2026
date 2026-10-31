@@ -52,10 +52,7 @@ android {
       val keyAl: String? = System.getenv("RELEASE_KEY_ALIAS") ?: System.getenv("KEY_ALIAS") ?: localProperties.getProperty("RELEASE_KEY_ALIAS")
       val keyPass: String? = System.getenv("RELEASE_KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD") ?: localProperties.getProperty("RELEASE_KEY_PASSWORD")
 
-      if (customKeystore.exists() || releaseKeystore.exists()) {
-        if (storePass == null || keyAl == null || keyPass == null) {
-            throw GradleException("Release keystore passwords are not configured in local.properties or environment variables!")
-        }
+      if ((customKeystore.exists() || releaseKeystore.exists()) && !storePass.isNullOrEmpty() && !keyAl.isNullOrEmpty() && !keyPass.isNullOrEmpty()) {
         storeFile = if (customKeystore.exists()) customKeystore else releaseKeystore
         storePassword = storePass
         keyAlias = keyAl
@@ -207,40 +204,21 @@ dependencies {
 
 tasks.register("copyApkToRoot") {
     doLast {
+        val srcFile = file("${layout.buildDirectory.get().asFile}/outputs/apk/debug/app-debug.apk")
+        val destFile = file("${project.rootDir}/app-debug.apk")
         val buildOutputsDir = file("${project.rootDir}/.build-outputs")
         buildOutputsDir.mkdirs()
-
-        val debugSrc = file("${layout.buildDirectory.get().asFile}/outputs/apk/debug/app-debug.apk")
-        val releaseSrc = file("${layout.buildDirectory.get().asFile}/outputs/apk/release/app-release.apk")
-        val releaseUnsignedSrc = file("${layout.buildDirectory.get().asFile}/outputs/apk/release/app-release-unsigned.apk")
-
-        if (releaseSrc.exists()) {
-            val destRelease = file("${project.rootDir}/app-release.apk")
-            val destBuildOutputsRelease = file("${project.rootDir}/.build-outputs/app-release.apk")
-            releaseSrc.copyTo(destRelease, overwrite = true)
-            releaseSrc.copyTo(destBuildOutputsRelease, overwrite = true)
-            println("Release APK copied successfully to ${destRelease.absolutePath} (${destRelease.length()} bytes)")
-        } else if (releaseUnsignedSrc.exists()) {
-            val destRelease = file("${project.rootDir}/app-release.apk")
-            val destBuildOutputsRelease = file("${project.rootDir}/.build-outputs/app-release.apk")
-            releaseUnsignedSrc.copyTo(destRelease, overwrite = true)
-            releaseUnsignedSrc.copyTo(destBuildOutputsRelease, overwrite = true)
-            println("Unsigned Release APK copied successfully to ${destRelease.absolutePath} (${destRelease.length()} bytes)")
-        }
-
-        if (debugSrc.exists()) {
-            val destDebug = file("${project.rootDir}/app-debug.apk")
-            val destBuildOutputsDebug = file("${project.rootDir}/.build-outputs/app-debug.apk")
-            debugSrc.copyTo(destDebug, overwrite = true)
-            debugSrc.copyTo(destBuildOutputsDebug, overwrite = true)
-            println("Debug APK copied successfully to ${destDebug.absolutePath} (${destDebug.length()} bytes)")
+        val buildOutputsApk = file("${project.rootDir}/.build-outputs/app-debug.apk")
+        if (srcFile.exists()) {
+            srcFile.copyTo(destFile, overwrite = true)
+            srcFile.copyTo(buildOutputsApk, overwrite = true)
+            println("APK copied successfully to ${destFile.absolutePath} (Size: ${destFile.length()} bytes)")
         }
     }
 }
 
 afterEvaluate {
     tasks.findByName("assembleDebug")?.finalizedBy("copyApkToRoot")
-    tasks.findByName("assembleRelease")?.finalizedBy("copyApkToRoot")
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {

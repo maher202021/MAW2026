@@ -1,7 +1,5 @@
 package com.serviseyem.navigation
 
-// [إصلاح ملاحة نهائي] شاشة الملاحة الهجينة الذكية المتكاملة (أونلاين OSRM وأوفلاين Valhalla بدون تعطل)
-import com.serviseyem.utils.*
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
@@ -9,7 +7,6 @@ import android.view.WindowManager
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -24,7 +21,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,34 +44,27 @@ import org.json.JSONArray
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
-
-import com.serviseyem.data.ProviderEntity
-import com.serviseyem.data.StoreEntity
 
 /**
  * 🧭 NavigationScreen
  * World-Class Production-Grade Hybrid Navigation Screen:
- * - Online OSRM + Real Offline Valhalla + Fallback Direct Geodesic.
- * - Optional offline maps download card with persistent memory.
- * - Accurate GPS distance, real-time progress fraction, and verified arrival logic.
- * - Prominent and highly responsive search bar.
- * - 100% crash-proof execution with comprehensive try-catch wrappers.
+ * - LocationEngine integration with 1s updates, 1D Kalman smoothing, and dead reckoning.
+ * - NavigationForegroundService with persistent notification to survive screen-off.
+ * - FLAG_KEEP_SCREEN_ON to keep display active while driving.
+ * - NavigationVoice with AudioFocus ducking and speed-scaled Arabic announcements.
+ * - True offline Valhalla routing vs clean non-fabricated direct Basic mode.
+ * - High-contrast HUD overlay with real-time speed, compass, and connection badge.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun NavigationScreen(
-    targetEntity: Any? = null,
-    userLat: Double,
-    userLng: Double,
-    hasRealLocation: Boolean,
-    initialWaypoints: List<NavWaypoint> = emptyList(),
-    onFinishNavigation: () -> Unit,
-    nearbyProviders: List<ProviderEntity> = emptyList(),
-    nearbyStores: List<StoreEntity> = emptyList(),
-    themeColors: VisualThemePalette = resolveThemePalette(com.serviseyem.data.AdminSettingsEntity())
+    themeColors: VisualThemePalette,
+    viewModel: MainViewModel? = null,
+    initialTargetLat: Double = 15.3547,
+    initialTargetLng: Double = 44.2066,
+    initialTargetName: String = "المركز الطبي الاستشاري - شارع حدة",
+    onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -84,40 +73,37 @@ fun NavigationScreen(
     // 1. Production Location Engine & Sensors
     val locationEngine = remember { LocationEngine(context) }
     val locationFix by locationEngine.locationFlow.collectAsState()
+    val compassHeading by locationEngine.compassHeadingFlow.collectAsState()
     val isGpsWeak by locationEngine.isGpsLostFlow.collectAsState()
 
     // 2. Production Voice Guidance Engine
     val navigationVoice = remember { NavigationVoice(context) }
     val isVoiceMuted by navigationVoice.isMuted.collectAsState()
+    val isArabicVoiceSupported by navigationVoice.isArabicSupported.collectAsState()
 
-    // Screen-on and Foreground Service lifecycle management safely
+    // Screen-on and Foreground Service management
     DisposableEffect(Unit) {
-        try {
-            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            locationEngine.startNavigationTracking()
-        } catch (_: Throwable) {}
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        locationEngine.startNavigationTracking()
 
         onDispose {
-            try {
-                activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                locationEngine.stopTracking()
-                navigationVoice.destroy()
-                NavigationForegroundService.stopService(context)
-            } catch (_: Throwable) {}
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            locationEngine.stopTracking()
+            navigationVoice.destroy()
+            NavigationForegroundService.stopService(context)
         }
     }
 
     // Destinations
-    var targetLat by rememberSaveable { mutableDoubleStateOf(initialWaypoints.lastOrNull()?.latitude ?: 15.3547) }
-    var targetLng by rememberSaveable { mutableDoubleStateOf(initialWaypoints.lastOrNull()?.longitude ?: 44.2066) }
-    var targetName by rememberSaveable { mutableStateOf(initialWaypoints.lastOrNull()?.name ?: "الوجهة") }
+    var targetLat by remember { mutableDoubleStateOf(initialTargetLat) }
+    var targetLng by remember { mutableDoubleStateOf(initialTargetLng) }
+    var targetName by remember { mutableStateOf(initialTargetName) }
 
-    // [إصلاح ملاحة نهائي] التحقق من حالة حزمة الخرائط الأوفلاين
-    var hasValhallaFiles by remember { mutableStateOf(ValhallaTileDownloader.isTilesDownloaded(context)) }
-    var isDownloadBannerDismissed by rememberSaveable { mutableStateOf(false) }
-    var isTileDownloading by remember { mutableStateOf(false) }
-    var tileDownloadProgress by remember { mutableIntStateOf(0) }
-    var tileDownloadStatusText by remember { mutableStateOf("") }
+    // Offline / Valhalla State
+    var hasValhallaFiles by remember { mutableStateOf(OfflineMapLifecycleManager.getInstance(context).isOfflineDataAvailable()) }
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableIntStateOf(0) }
+    var downloadStatusText by remember { mutableStateOf("") }
 
     val realNavigator = remember { RealValhallaNavigator(context) }
 
@@ -130,16 +116,14 @@ fun NavigationScreen(
     var estimatedTimeText by remember { mutableStateOf("جاري الحساب...") }
     var estimatedArrivalClock by remember { mutableStateOf("--:--") }
     var totalTripDistanceMeters by remember { mutableDoubleStateOf(1000.0) }
-    var tripProgressFraction by remember { mutableFloatStateOf(0.0f) }
-    var hasAnnouncedArrival by remember { mutableStateOf(false) }
+    var tripProgressFraction by remember { mutableFloatStateOf(0.1f) }
 
     // Off-route tracking
     var offRouteConsecutiveSeconds by remember { mutableIntStateOf(0) }
     var isRerouting by remember { mutableStateOf(false) }
 
     // Search state
-    var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
-    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
     var searchResults by remember { mutableStateOf<List<NavigationSearchResult>>(emptyList()) }
     var isSearching by remember { mutableStateOf(false) }
     var searchJob by remember { mutableStateOf<Job?>(null) }
@@ -147,166 +131,129 @@ fun NavigationScreen(
     // Map WebView reference
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
 
-    // [إصلاح ملاحة نهائي] دالة إعادة حساب المسار الآمنة تماماً
+    // Recalculate route
     fun recalculateRoute(announce: Boolean = false) {
         coroutineScope.launch {
-            try {
-                val result = realNavigator.calculateRoute(
-                    startLat = locationFix.latitude,
-                    startLon = locationFix.longitude,
-                    endLat = targetLat,
-                    endLon = targetLng,
-                    destinationName = targetName
+            val result = realNavigator.calculateRoute(
+                locationFix.latitude,
+                locationFix.longitude,
+                targetLat,
+                targetLng,
+                targetName
+            )
+
+            routeResult = result
+
+            if (result is NavigationRouteResult.Success) {
+                totalTripDistanceMeters = result.totalDistanceMeters
+                tripProgressFraction = HaversinePrecisionNavigator.calculateTripProgress(
+                    result.totalDistanceMeters,
+                    result.totalDistanceMeters * 0.95
+                )
+                remainingDistanceText = HaversinePrecisionNavigator.formatDistanceArabic(result.totalDistanceMeters)
+                estimatedTimeText = HaversinePrecisionNavigator.formatDurationArabic(result.estimatedDurationSeconds)
+
+                val arrivalTimeMillis = System.currentTimeMillis() + (result.estimatedDurationSeconds * 1000L)
+                val sdf = java.text.SimpleDateFormat("hh:mm a", Locale("ar"))
+                estimatedArrivalClock = sdf.format(java.util.Date(arrivalTimeMillis))
+
+                if (result.instructions.isNotEmpty()) {
+                    activeInstructionIndex = 0
+                    val first = result.instructions.first()
+                    currentInstruction = first.text
+                    nextTurnManeuver = first.maneuverType
+
+                    if (announce) {
+                        navigationVoice.speak("بدء الملاحة إلى $targetName. ${first.text}", queueMode = android.speech.tts.TextToSpeech.QUEUE_FLUSH)
+                    }
+                }
+
+                // Update notification in foreground service
+                NavigationForegroundService.updateNotification(
+                    context,
+                    currentInstruction,
+                    remainingDistanceText,
+                    estimatedArrivalClock
                 )
 
-                routeResult = result
-
-                if (result is NavigationRouteResult.Success) {
-                    totalTripDistanceMeters = result.totalDistanceMeters.coerceAtLeast(50.0)
-                    hasAnnouncedArrival = false
-
-                    // حساب المسافة المتبقية بدقة
-                    val directDist = HaversinePrecisionNavigator.distanceMeters(
-                        locationFix.latitude, locationFix.longitude,
-                        targetLat, targetLng
-                    )
-                    remainingDistanceText = HaversinePrecisionNavigator.formatDistanceArabic(directDist)
-
-                    // حساب الوقت المتبقي
-                    val durationSec = result.estimatedDurationSeconds.coerceAtLeast(30)
-                    estimatedTimeText = HaversinePrecisionNavigator.formatDurationArabic(durationSec)
-
-                    val arrivalTimeMillis = System.currentTimeMillis() + (durationSec * 1000L)
-                    val sdf = SimpleDateFormat("hh:mm a", Locale("ar"))
-                    estimatedArrivalClock = sdf.format(Date(arrivalTimeMillis))
-
-                    tripProgressFraction = 0.05f
-
-                    if (result.instructions.isNotEmpty()) {
-                        activeInstructionIndex = 0
-                        val first = result.instructions.first()
-                        currentInstruction = first.text
-                        nextTurnManeuver = first.maneuverType
-
-                        if (announce) {
-                            navigationVoice.speak("بدء الملاحة إلى $targetName. ${first.text}", queueMode = android.speech.tts.TextToSpeech.QUEUE_FLUSH)
-                        }
+                // Draw polyline on Leaflet WebView
+                val coordsJson = JSONArray().apply {
+                    result.points.forEach { pt ->
+                        put(JSONArray().apply {
+                            put(pt.lat)
+                            put(pt.lon)
+                        })
                     }
+                }.toString()
 
-                    // Update notification in foreground service
-                    NavigationForegroundService.updateNotification(
-                        context,
-                        currentInstruction,
-                        remainingDistanceText,
-                        estimatedArrivalClock
-                    )
-
-                    // Draw polyline on Leaflet WebView
-                    val coordsJson = JSONArray().apply {
-                        result.points.forEach { pt ->
-                            put(JSONArray().apply {
-                                put(pt.lat)
-                                put(pt.lon)
-                            })
-                        }
-                    }.toString()
-
-                    val escapedTarget = targetName.replace("'", "\\'")
-                    val script = "if (window.renderNavigationRoute) { window.renderNavigationRoute(${locationFix.latitude}, ${locationFix.longitude}, $targetLat, $targetLng, $coordsJson, '$escapedTarget'); }"
-                    webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                }
-            } catch (e: Throwable) {
-                android.util.Log.e("NavigationScreen", "recalculateRoute error caught safely: ${e.message}")
-            } finally {
-                isRerouting = false
+                val escapedTarget = targetName.replace("'", "\\'")
+                val script = "if (window.renderNavigationRoute) { window.renderNavigationRoute(${locationFix.latitude}, ${locationFix.longitude}, $targetLat, $targetLng, $coordsJson, '$escapedTarget'); }"
+                webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
             }
+            isRerouting = false
         }
     }
 
-    // Launch initial route calculation & start foreground service safely
+    // Launch initial route calculation & start foreground service
     LaunchedEffect(targetLat, targetLng, hasValhallaFiles) {
-        try {
-            NavigationForegroundService.startService(context, currentInstruction, remainingDistanceText, estimatedArrivalClock)
-            recalculateRoute(announce = true)
-        } catch (_: Throwable) {}
+        NavigationForegroundService.startService(context, currentInstruction, remainingDistanceText, estimatedArrivalClock)
+        recalculateRoute(announce = true)
     }
 
-    // [إصلاح ملاحة نهائي] حلقة تحديث المسافة والتقدم والوصول بناءً على GPS الحقيقي
+    // Live GPS tracking update loop (every new fix from LocationEngine)
     LaunchedEffect(locationFix.latitude, locationFix.longitude) {
-        try {
+        val res = routeResult
+        if (res is NavigationRouteResult.Success && res.isOfflineEngine) {
+            // Check off-route
+            val offRoute = realNavigator.isOffRoute(
+                locationFix.latitude,
+                locationFix.longitude,
+                locationFix.accuracyMeters,
+                res.points
+            )
+
+            if (offRoute) {
+                offRouteConsecutiveSeconds++
+                if (offRouteConsecutiveSeconds >= 5 && !isRerouting) {
+                    isRerouting = true
+                    currentInstruction = "جارٍ إعادة حساب المسار..."
+                    navigationVoice.announceReroute()
+                    recalculateRoute(announce = false)
+                    offRouteConsecutiveSeconds = 0
+                }
+            } else {
+                offRouteConsecutiveSeconds = 0
+            }
+
+            // Check distance to next maneuver and trigger voice
+            if (res.instructions.isNotEmpty() && activeInstructionIndex < res.instructions.size) {
+                val currentStep = res.instructions[activeInstructionIndex]
+                val distToStep = currentStep.segmentDistance.coerceAtLeast(30.0)
+
+                navigationVoice.processTurnAnnouncement(
+                    instructionKey = "${activeInstructionIndex}_${currentStep.maneuverType}",
+                    instructionText = currentStep.text,
+                    distanceToTurnMeters = distToStep,
+                    currentSpeedKmh = locationFix.speedKmh
+                )
+            }
+
+            // Check destination arrival
             val distToEnd = HaversinePrecisionNavigator.distanceMeters(
                 locationFix.latitude, locationFix.longitude,
                 targetLat, targetLng
             )
-
-            // تحديث نص المسافة المتبقية بدقة
-            remainingDistanceText = HaversinePrecisionNavigator.formatDistanceArabic(distToEnd)
-
-            // حساب نسبة التقدم الحقيقية
-            if (totalTripDistanceMeters > 50.0) {
-                val progress = (1.0 - (distToEnd / totalTripDistanceMeters)).coerceIn(0.0, 1.0).toFloat()
-                tripProgressFraction = progress
+            if (distToEnd <= 30.0) {
+                navigationVoice.announceArrival(targetName)
             }
+        }
 
-            // تقدير وقت الوصول المتوقع
-            val currentSpeedMps = if (locationFix.speedKmh > 10f) (locationFix.speedKmh * 1000.0 / 3600.0) else 11.11
-            val remainingSec = (distToEnd / currentSpeedMps).toInt().coerceAtLeast(30)
-            estimatedTimeText = HaversinePrecisionNavigator.formatDurationArabic(remainingSec)
-            val arrivalTimeMillis = System.currentTimeMillis() + (remainingSec * 1000L)
-            estimatedArrivalClock = SimpleDateFormat("hh:mm a", Locale("ar")).format(Date(arrivalTimeMillis))
-
-            val res = routeResult
-            if (res is NavigationRouteResult.Success) {
-                // فحص الانحراف عن المسار (Off-route)
-                val offRoute = realNavigator.isOffRoute(
-                    locationFix.latitude,
-                    locationFix.longitude,
-                    locationFix.accuracyMeters,
-                    res.points
-                )
-
-                if (offRoute) {
-                    offRouteConsecutiveSeconds++
-                    if (offRouteConsecutiveSeconds >= 5 && !isRerouting) {
-                        isRerouting = true
-                        currentInstruction = "جارٍ إعادة حساب المسار..."
-                        navigationVoice.announceReroute()
-                        recalculateRoute(announce = false)
-                        offRouteConsecutiveSeconds = 0
-                    }
-                } else {
-                    offRouteConsecutiveSeconds = 0
-                }
-
-                // التوجيه الصوتي للخطوة القادمة
-                if (res.instructions.isNotEmpty() && activeInstructionIndex < res.instructions.size) {
-                    val currentStep = res.instructions[activeInstructionIndex]
-                    val distToStep = currentStep.segmentDistance.coerceAtLeast(30.0)
-
-                    navigationVoice.processTurnAnnouncement(
-                        instructionKey = "${activeInstructionIndex}_${currentStep.maneuverType}",
-                        instructionText = currentStep.text,
-                        distanceToTurnMeters = distToStep,
-                        currentSpeedKmh = locationFix.speedKmh
-                    )
-                }
-
-                // [إصلاح ملاحة نهائي] إعلان الوصول بدقة فقط عندما تكون المسافة أقل من 30 متراً والمسافة الكلية أكبر من 60 متراً
-                if (distToEnd <= 30.0 && totalTripDistanceMeters > 60.0 && !hasAnnouncedArrival) {
-                    hasAnnouncedArrival = true
-                    currentInstruction = "وصلت إلى وجهتك: $targetName"
-                    nextTurnManeuver = ManeuverType.DESTINATION
-                    navigationVoice.announceArrival(targetName)
-                }
-            }
-
-            // Update user marker on Leaflet map
-            val script = "if (window.updateUserPosition) { window.updateUserPosition(${locationFix.latitude}, ${locationFix.longitude}, ${locationFix.bearingDegrees}); }"
-            webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-        } catch (_: Throwable) {}
+        // Update user marker on Leaflet map
+        val script = "if (window.updateUserPosition) { window.updateUserPosition(${locationFix.latitude}, ${locationFix.longitude}, ${locationFix.bearingDegrees}); }"
+        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
     }
 
-    // [إصلاح ملاحة نهائي] محرك البحث السريع داخل شاشة الملاحة
+    // Search query debouncing with Arabic normalization
     LaunchedEffect(searchQuery) {
         if (searchQuery.trim().length < 2) {
             searchResults = emptyList()
@@ -315,31 +262,30 @@ fun NavigationScreen(
         }
         searchJob?.cancel()
         searchJob = coroutineScope.launch {
-            delay(400)
+            delay(500)
             isSearching = true
             val query = searchQuery.trim()
 
-            // 1. البحث المحلي في المتاجر والعقارات المسجلة
+            // 1. Search local stores, clinics, properties
             val localResults = mutableListOf<NavigationSearchResult>()
-            try {
-                nearbyStores.filter {
-                    it.name.contains(query, ignoreCase = true) ||
-                    it.localNeighborhood.contains(query, ignoreCase = true) ||
-                    it.cityId.contains(query, ignoreCase = true)
-                }.take(4).forEach { s ->
-                    val subtitle = s.localNeighborhood.ifBlank { s.cityId }.ifBlank { "متجر / خدمة" }
-                    localResults.add(NavigationSearchResult(title = s.name, subtitle = subtitle, lat = s.latitude, lng = s.longitude, isLocal = true))
-                }
-                nearbyProviders.filter {
-                    it.name.contains(query, ignoreCase = true) ||
-                    it.profession.contains(query, ignoreCase = true)
-                }.take(3).forEach { p ->
-                    val subtitle = p.profession.ifBlank { "مزود خدمة" }
-                    localResults.add(NavigationSearchResult(title = p.name, subtitle = subtitle, lat = p.latitude, lng = p.longitude, isLocal = true))
-                }
-            } catch (_: Throwable) {}
+            viewModel?.stores?.value?.filter {
+                it.name.contains(query, ignoreCase = true) ||
+                it.localNeighborhood.contains(query, ignoreCase = true) ||
+                it.cityId.contains(query, ignoreCase = true)
+            }?.take(3)?.forEach { s ->
+                val subtitle = s.localNeighborhood.ifBlank { s.cityId }.ifBlank { "متجر / خدمة" }
+                localResults.add(NavigationSearchResult(title = s.name, subtitle = subtitle, lat = s.latitude, lng = s.longitude, isLocal = true))
+            }
+            viewModel?.properties?.value?.filter {
+                it.title.contains(query, ignoreCase = true) ||
+                it.localNeighborhood.contains(query, ignoreCase = true) ||
+                it.cityId.contains(query, ignoreCase = true)
+            }?.take(2)?.forEach { p ->
+                val subtitle = p.localNeighborhood.ifBlank { p.cityId }.ifBlank { "عقار" }
+                localResults.add(NavigationSearchResult(title = p.title, subtitle = subtitle, lat = p.latitude, lng = p.longitude, isLocal = true))
+            }
 
-            // 2. البحث الجغرافي الخارجي عبر Nominatim في الخلفية
+            // 2. OpenStreetMap Nominatim API in background
             val onlineResults = withContext(Dispatchers.IO) {
                 fetchNominatimPlaces(query)
             }
@@ -383,38 +329,32 @@ fun NavigationScreen(
             update = { view -> webViewRef = view }
         )
 
-        // 2. Top Header, Download Banner, Search & Turn-by-Turn Card
+        // 2. Top Header & Turn-by-Turn Card
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 14.dp, vertical = 6.dp),
+                .padding(horizontal = 14.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Action bar: Back, Mode Badge, Search Toggle, Voice Mute
+            // Action bar: Back, Mode Badge, GPS Weak indicator
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(
-                    onClick = onFinishNavigation,
+                    onClick = onBackClick,
                     modifier = Modifier
                         .size(44.dp)
-                        .background(Color(0xFF131C2E).copy(alpha = 0.94f), RoundedCornerShape(12.dp))
+                        .background(Color(0xFF131C2E).copy(alpha = 0.92f), RoundedCornerShape(12.dp))
                 ) {
                     Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع", tint = Color.White)
                 }
 
-                // Mode Indicator Badge
-                val currentModeLabel = when {
-                    hasValhallaFiles -> "ملاحة أوفلاين (Valhalla)"
-                    routeResult is NavigationRouteResult.Success -> (routeResult as NavigationRouteResult.Success).modeLabel
-                    else -> "ملاحة ذكية"
-                }
                 Surface(
                     shape = RoundedCornerShape(20.dp),
-                    color = if (hasValhallaFiles) Color(0xFF064E3B).copy(alpha = 0.85f) else Color(0xFF0C4A6E).copy(alpha = 0.85f),
+                    color = if (hasValhallaFiles) Color(0xFF064E3B).copy(alpha = 0.8f) else Color(0xFF0C4A6E).copy(alpha = 0.8f),
                     border = BorderStroke(1.dp, if (hasValhallaFiles) Color(0xFF10B981) else Color(0xFF0284C7))
                 ) {
                     Row(
@@ -429,7 +369,7 @@ fun NavigationScreen(
                                 .background(if (hasValhallaFiles) Color(0xFF10B981) else Color(0xFF38BDF8))
                         )
                         Text(
-                            text = currentModeLabel,
+                            text = if (hasValhallaFiles) "ملاحة أوفلاين (فالدالا)" else "تقريبي - مسافة مباشرة",
                             color = Color.White,
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold
@@ -437,32 +377,17 @@ fun NavigationScreen(
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    IconButton(
-                        onClick = { isSearchExpanded = !isSearchExpanded },
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(Color(0xFF131C2E).copy(alpha = 0.94f), RoundedCornerShape(12.dp))
-                    ) {
-                        Icon(
-                            imageVector = if (isSearchExpanded) Icons.Default.Close else Icons.Default.Search,
-                            contentDescription = "بحث",
-                            tint = Color(0xFF00E5FF)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { navigationVoice.toggleMute() },
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(Color(0xFF131C2E).copy(alpha = 0.94f), RoundedCornerShape(12.dp))
-                    ) {
-                        Icon(
-                            imageVector = if (isVoiceMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                            contentDescription = "الصوت",
-                            tint = if (isVoiceMuted) Color.Gray else Color(0xFF00E5FF)
-                        )
-                    }
+                IconButton(
+                    onClick = { navigationVoice.toggleMute() },
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color(0xFF131C2E).copy(alpha = 0.92f), RoundedCornerShape(12.dp))
+                ) {
+                    Icon(
+                        imageVector = if (isVoiceMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                        contentDescription = "الصوت",
+                        tint = if (isVoiceMuted) Color.Gray else Color(0xFF00E5FF)
+                    )
                 }
             }
 
@@ -484,187 +409,75 @@ fun NavigationScreen(
                 }
             }
 
-            // [إصلاح ملاحة نهائي] 2️⃣ بطاقة تحميل حزمة الخرائط الاختيارية بالكامل (بدون أي فرض أو إزعاج)
-            if (!hasValhallaFiles && !isDownloadBannerDismissed) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFF111827).copy(alpha = 0.96f),
-                    border = BorderStroke(1.2.dp, Color(0xFF0284C7).copy(alpha = 0.7f)),
-                    shadowElevation = 6.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+            // Search Bar
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFF131C2E).copy(alpha = 0.95f),
+                border = BorderStroke(1.dp, Color(0xFF2563EB).copy(alpha = 0.4f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("بحث عن مكان، شارع، أو خدمة لتغيير الوجهة...", color = Color.Gray, fontSize = 12.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF00E5FF)) },
+                        trailingIcon = {
+                            if (isSearching) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color(0xFF00E5FF))
+                            } else if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = "مسح", tint = Color.Gray)
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (searchResults.isNotEmpty()) {
+                        Divider(color = Color.White.copy(alpha = 0.1f))
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 200.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text("🗺️", fontSize = 18.sp)
-                                Text(
-                                    text = "تفعيل الملاحة الأوفلاين (موصى به)",
-                                    color = Color.White,
-                                    fontSize = 12.5.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            IconButton(
-                                onClick = { isDownloadBannerDismissed = true },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(Icons.Default.Close, contentDescription = "لاحقاً", tint = Color.Gray, modifier = Modifier.size(16.dp))
-                            }
-                        }
-
-                        Text(
-                            text = "حمّل حزمة خرائط اليمن مرة واحدة لتعمل الملاحة بدون إنترنت بأعلى دقة.",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 11.sp,
-                            lineHeight = 15.sp
-                        )
-
-                        if (isTileDownloading) {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                LinearProgressIndicator(
-                                    progress = { tileDownloadProgress / 100f },
-                                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                                    color = Color(0xFF00E5FF),
-                                    trackColor = Color(0xFF334155),
-                                )
-                                Text(
-                                    text = "$tileDownloadStatusText ($tileDownloadProgress%)",
-                                    color = Color(0xFF38BDF8),
-                                    fontSize = 10.5.sp
-                                )
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Button(
-                                    onClick = {
-                                        isTileDownloading = true
-                                        tileDownloadProgress = 5
-                                        tileDownloadStatusText = "بدء الاتصال..."
-                                        coroutineScope.launch {
-                                            val success = ValhallaTileDownloader.downloadAndExtractTiles(context) { pct, msg ->
-                                                tileDownloadProgress = pct
-                                                tileDownloadStatusText = msg
-                                            }
-                                            isTileDownloading = false
-                                            if (success) {
-                                                hasValhallaFiles = true
-                                                isDownloadBannerDismissed = true
-                                                realNavigator.initializeEngine()
-                                                Toast.makeText(context, "✅ تم تحميل خرائط اليمن وتفعيل الملاحة الأوفلاين بنجاح!", Toast.LENGTH_LONG).show()
-                                                recalculateRoute(announce = false)
-                                            } else {
-                                                Toast.makeText(context, "⚠️ تعذر تنزيل الحزمة حالياً. الملاحة مستمرة أونلاين.", Toast.LENGTH_SHORT).show()
-                                            }
+                            items(searchResults) { result ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            targetLat = result.lat
+                                            targetLng = result.lng
+                                            targetName = result.title
+                                            searchQuery = ""
+                                            searchResults = emptyList()
+                                            recalculateRoute(announce = true)
                                         }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
-                                    shape = RoundedCornerShape(10.dp),
-                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                                    modifier = Modifier.weight(1f)
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    Text("تحميل الآن ⬇️", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                }
-
-                                OutlinedButton(
-                                    onClick = { isDownloadBannerDismissed = true },
-                                    shape = RoundedCornerShape(10.dp),
-                                    border = BorderStroke(1.dp, Color(0xFF475569)),
-                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("لاحقاً", fontSize = 11.5.sp, color = Color.LightGray)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Search Bar (Expanded on demand or tap)
-            AnimatedVisibility(visible = isSearchExpanded) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFF131C2E).copy(alpha = 0.98f),
-                    border = BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.5f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            placeholder = { Text("ابحث عن مدينة، شارع، مستشفى، أو متجر...", color = Color.Gray, fontSize = 12.sp) },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF00E5FF)) },
-                            trailingIcon = {
-                                if (isSearching) {
-                                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color(0xFF00E5FF))
-                                } else if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(Icons.Default.Close, contentDescription = "مسح", tint = Color.Gray)
+                                    Icon(
+                                        imageVector = if (result.isLocal) Icons.Default.Place else Icons.Default.LocationSearching,
+                                        contentDescription = null,
+                                        tint = if (result.isLocal) Color(0xFF10B981) else Color(0xFF38BDF8),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(text = result.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(text = result.subtitle, color = Color.Gray, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                 }
-                            },
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        if (searchResults.isNotEmpty()) {
-                            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                            LazyColumn(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(max = 220.dp)
-                            ) {
-                                items(searchResults) { result ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                targetLat = result.lat
-                                                targetLng = result.lng
-                                                targetName = result.title
-                                                searchQuery = ""
-                                                searchResults = emptyList()
-                                                isSearchExpanded = false
-                                                recalculateRoute(announce = true)
-                                            }
-                                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = if (result.isLocal) Icons.Default.Place else Icons.Default.LocationSearching,
-                                            contentDescription = null,
-                                            tint = if (result.isLocal) Color(0xFF10B981) else Color(0xFF38BDF8),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(text = result.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            Text(text = result.subtitle, color = Color.Gray, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        }
-                                    }
-                                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
-                                }
+                                Divider(color = Color.White.copy(alpha = 0.05f))
                             }
                         }
                     }
@@ -775,7 +588,7 @@ fun NavigationScreen(
             }
         }
 
-        // 4. Real-Time Navigation Progress HUD Component at Bottom
+        // 4. Real-Time Navigation Progress HUD Component
         RealtimeNavigationProgressComponent(
             isOfflineMode = hasValhallaFiles,
             progressPercentage = tripProgressFraction,
@@ -792,9 +605,9 @@ fun NavigationScreen(
                 val script = "if (window.centerOnUser) { window.centerOnUser(${locationFix.latitude}, ${locationFix.longitude}); }"
                 webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
             },
-                onEndNavigationClick = {
+            onEndNavigationClick = {
                 navigationVoice.speak("تم إنهاء رحلة الملاحة بنجاح")
-                onFinishNavigation()
+                onBackClick()
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -817,9 +630,9 @@ private fun fetchNominatimPlaces(query: String): List<NavigationSearchResult> {
         val encoded = URLEncoder.encode("$query, Yemen", "UTF-8")
         val url = URL("https://nominatim.openstreetmap.org/search?format=json&q=$encoded&countrycodes=ye&limit=5&addressdetails=1")
         val conn = (url.openConnection() as HttpURLConnection).apply {
-            connectTimeout = 4000
-            readTimeout = 4000
-            setRequestProperty("User-Agent", "YemenServicesGuide/1.0 (Android; Navigation)")
+            connectTimeout = 5000
+            readTimeout = 5000
+            setRequestProperty("User-Agent", "YemenServicesGuide/1.0 (Android)")
         }
 
         if (conn.responseCode == 200) {
@@ -842,12 +655,11 @@ private fun fetchNominatimPlaces(query: String): List<NavigationSearchResult> {
         } else {
             emptyList()
         }
-    } catch (_: Throwable) {
+    } catch (_: Exception) {
         emptyList()
     }
 }
 
-// [إصلاح ملاحة نهائي] توليد كود Leaflet التفاعلي مع دعم setRoute و clearRoute ورسم المسار بالكامل
 private fun buildNavigationLeafletHtml(
     startLat: Double,
     startLon: Double,
@@ -907,14 +719,11 @@ private fun buildNavigationLeafletHtml(
             window.renderNavigationRoute = function(sLat, sLng, eLat, eLng, coords, title) {
                 userMarker.setLatLng([sLat, sLng]);
                 destMarker.setLatLng([eLat, eLng]);
-                if (title) destMarker.setPopupContent(title);
+                destMarker.setPopupContent(title);
 
                 if (routePolyline) {
                     map.removeLayer(routePolyline);
-                    routePolyline = null;
                 }
-
-                if (!coords || coords.length === 0) return;
 
                 var latlngs = [];
                 for (var i = 0; i < coords.length; i++) {
@@ -924,41 +733,11 @@ private fun buildNavigationLeafletHtml(
                 routePolyline = L.polyline(latlngs, {
                     color: '#00E5FF',
                     weight: 6,
-                    opacity: 0.92,
+                    opacity: 0.9,
                     lineJoin: 'round'
                 }).addTo(map);
 
-                try {
-                    map.fitBounds(routePolyline.getBounds(), { padding: [80, 80], maxZoom: 17 });
-                } catch(e) {}
-            };
-
-            window.setRoute = function(coords) {
-                if (routePolyline) {
-                    map.removeLayer(routePolyline);
-                    routePolyline = null;
-                }
-                if (!coords || coords.length === 0) return;
-                var latlngs = [];
-                for (var i = 0; i < coords.length; i++) {
-                    latlngs.push([coords[i][0], coords[i][1]]);
-                }
-                routePolyline = L.polyline(latlngs, {
-                    color: '#00E5FF',
-                    weight: 6,
-                    opacity: 0.92,
-                    lineJoin: 'round'
-                }).addTo(map);
-                try {
-                    map.fitBounds(routePolyline.getBounds(), { padding: [80, 80], maxZoom: 17 });
-                } catch(e) {}
-            };
-
-            window.clearRoute = function() {
-                if (routePolyline) {
-                    map.removeLayer(routePolyline);
-                    routePolyline = null;
-                }
+                map.fitBounds(routePolyline.getBounds(), { padding: [80, 80] });
             };
 
             window.updateUserPosition = function(lat, lng, heading) {

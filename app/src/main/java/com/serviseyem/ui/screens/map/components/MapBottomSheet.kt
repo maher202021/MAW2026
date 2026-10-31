@@ -1,10 +1,12 @@
 package com.serviseyem.ui.screens.map.components
 
 import android.content.Intent
+import com.serviseyem.ui.*
 import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -33,12 +35,10 @@ import com.serviseyem.utils.VisualThemePalette
 
 /**
  * 📋 MapBottomSheet
- * Hidden by default, appears only upon tapping a place/pin:
- * - Accurate road-snapped distance & ETA
- * - Emerald Green [بدء الملاحة] button (#10B981)
- * - [اتصال] (Call)
- * - [حجز] (Book)
- * - Glassmorphism dark styling (#0B0F19)
+ * Modern Material 3 Bottom Sheet Card displaying full details of the clicked entity:
+ * - Real-time ETA and exact distance calculation
+ * - Direct Call, WhatsApp, Navigation, and Booking actions
+ * - Distinct category badge colors (#00E5FF, #10B981, #F59E0B, #EC4899)
  */
 @Composable
 fun MapBottomSheet(
@@ -48,18 +48,20 @@ fun MapBottomSheet(
     onDismiss: () -> Unit,
     onRequestBooking: (Any) -> Unit,
     onOpenDetails: (Any) -> Unit,
+    onOpenChat: ((Any) -> Unit)? = null,
+    onOpenAleph: ((Any) -> Unit)? = null,
+    onStartNavigation: ((Double, Double, String) -> Unit)? = null,
     themeColors: VisualThemePalette,
-    onAskAleph: ((Any) -> Unit)? = null,
-    onStartNavigation: ((Any) -> Unit)? = null,
-    onAddStop: ((Any) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
+    // Extract standardized information
     var title by remember { mutableStateOf("") }
     var subtitle by remember { mutableStateOf("") }
     var categoryLabel by remember { mutableStateOf("") }
-    var badgeColor by remember { mutableStateOf(Color(0xFF10B981)) }
+    var badgeColor by remember { mutableStateOf(Color(0xFF00E5FF)) }
     var rating by remember { mutableDoubleStateOf(5.0) }
     var phone by remember { mutableStateOf("") }
     var imageUrl by remember { mutableStateOf("") }
@@ -72,7 +74,7 @@ fun MapBottomSheet(
             title = entity.name
             subtitle = entity.customCategoryName.ifEmpty { entity.specialization.ifEmpty { entity.profession } }
             categoryLabel = "👷 فني صيانة معتمد"
-            badgeColor = Color(0xFF10B981)
+            badgeColor = Color(0xFF00E5FF)
             rating = entity.rating.toDouble()
             phone = entity.phone
             imageUrl = entity.profileImage.ifEmpty { entity.coverImage }
@@ -108,16 +110,15 @@ fun MapBottomSheet(
             lng = entity.longitude
         }
     }
-    val hasValidCoords = lat != 0.0 && lng != 0.0 && !lat.isNaN() && !lng.isNaN()
-    val distanceMeters = if (hasValidCoords)
-        MapDistanceCalculator.calculateDistanceMeters(userLat, userLng, lat, lng) else 0.0
-    val distanceText = if (hasValidCoords) MapDistanceCalculator.formatDistance(distanceMeters) else "الموقع غير محدد"
-    val etaText = if (hasValidCoords) MapDistanceCalculator.computeEta(distanceMeters) else "—"
+
+    val distanceMeters = MapDistanceCalculator.calculateDistanceMeters(userLat, userLng, lat, lng)
+    val distanceText = MapDistanceCalculator.formatDistance(distanceMeters)
+    val etaText = MapDistanceCalculator.computeEta(distanceMeters)
 
     Surface(
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        color = Color(0xFF0B0F19).copy(alpha = 0.94f),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.10f)),
+        color = Color(0xFF0F172A),
+        border = BorderStroke(1.dp, Color(0xFF1E293B)),
         shadowElevation = 16.dp,
         modifier = modifier
             .fillMaxWidth()
@@ -125,7 +126,7 @@ fun MapBottomSheet(
     ) {
         Column(
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp)
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
@@ -134,7 +135,7 @@ fun MapBottomSheet(
                 modifier = Modifier
                     .size(36.dp, 4.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.2f))
+                    .background(Color(0xFF334155))
                     .align(Alignment.CenterHorizontally)
             )
 
@@ -144,11 +145,12 @@ fun MapBottomSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Image / Icon Avatar
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = Color(0xFF1E293B),
-                    border = BorderStroke(1.5.dp, badgeColor.copy(alpha = 0.6f)),
-                    modifier = Modifier.size(50.dp)
+                    border = BorderStroke(2.dp, badgeColor.copy(alpha = 0.6f)),
+                    modifier = Modifier.size(54.dp)
                 ) {
                     if (imageUrl.isNotBlank()) {
                         AsyncImage(
@@ -161,36 +163,28 @@ fun MapBottomSheet(
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                             Text(
                                 text = if (entity is ProviderEntity) "👷" else if (entity is StoreEntity) "🏪" else "🏠",
-                                fontSize = 22.sp
+                                fontSize = 24.sp
                             )
                         }
                     }
                 }
 
+                // Title & Category
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = badgeColor.copy(alpha = 0.15f),
+                        modifier = Modifier.padding(bottom = 2.dp)
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = badgeColor.copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                text = categoryLabel,
-                                color = badgeColor,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
                         Text(
-                            text = if (isAvailable) "متاح 🟢" else "غير متاح 🔴",
-                            color = if (isAvailable) Color(0xFF10B981) else Color(0xFFEF4444),
-                            fontSize = 10.sp
+                            text = categoryLabel,
+                            color = badgeColor,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
 
@@ -212,172 +206,291 @@ fun MapBottomSheet(
                     )
                 }
 
-                // Add Stop / Bookmark Action
-                IconButton(
-                    onClick = { onAddStop?.invoke(entity) },
-                    modifier = Modifier.size(36.dp).testTag("add_stop_btn")
-                ) {
-                    Icon(
-                        Icons.Default.AddLocationAlt,
-                        contentDescription = "إضافة محطة",
-                        tint = Color(0xFF38BDF8),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                // Close Button
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.size(32.dp).testTag("close_bottom_sheet_btn")
-                ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "إغلاق",
-                        tint = Color(0xFF94A3B8),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // Distance & ETA Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF111827), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(Icons.Default.Place, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(16.dp))
-                    Text(
-                        text = "المسافة المباشرة: $distanceText",
-                        color = Color.White,
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Text(
-                    text = etaText,
-                    color = Color(0xFF10B981),
-                    fontSize = 11.5.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (!hasValidCoords) {
-                Text(
-                    text = "⚠️ لا يمكن الملاحة: موقع هذا المكان غير مسجّل بإحداثيات دقيقة",
-                    color = Color(0xFFF59E0B),
-                    fontSize = 11.sp,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-            }
-
-            // Multi-Stop Waypoint Button
-            OutlinedButton(
-                onClick = { onAddStop?.invoke(entity) },
-                enabled = hasValidCoords,
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.2.dp, if (hasValidCoords) Color(0xFF38BDF8) else Color.Gray),
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = Color(0xFF0F172A), contentColor = Color(0xFF38BDF8)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp)
-                    .testTag("add_stop_main_btn")
-            ) {
-                Icon(Icons.Default.AddLocationAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("➕ إضافة هذه الوجهة كمحطة توقف للمسار", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-
-            // Action Buttons: [بدء الملاحة] Emerald Green + [اتصال] + [حجز]
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 1. [بدء الملاحة] Emerald Green (#10B981)
-                Button(
-                    onClick = { onStartNavigation?.invoke(entity) },
-                    enabled = hasValidCoords,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF10B981),
-                        contentColor = Color.White,
-                        disabledContainerColor = Color(0xFF334155),
-                        disabledContentColor = Color.Gray
-                    ),
-                    modifier = Modifier
-                        .weight(1.3f)
-                        .height(44.dp)
-                        .testTag("start_navigation_btn")
-                ) {
-                    Icon(Icons.Default.Navigation, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("بدء الملاحة", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
-                }
-
-                // 2. [اتصال] Call Action
-                if (phone.isNotBlank()) {
-                    OutlinedButton(
+                // Close & Share & Navigation Row
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Share Location
+                    IconButton(
                         onClick = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                             try {
-                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
-                                context.startActivity(intent)
+                                val mapUrl = "https://www.google.com/maps/search/?api=1&query=$lat,$lng"
+                                val shareText = "📍 $title\n$subtitle\nالموقع على الخريطة:\n$mapUrl"
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "مشاركة الموقع"))
                             } catch (e: Exception) {
                                 e.printStackTrace()
                             }
                         },
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, Color(0xFF38BDF8)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF38BDF8)),
-                        modifier = Modifier
-                            .weight(0.9f)
-                            .height(44.dp)
-                            .testTag("call_action_btn")
+                        modifier = Modifier.size(32.dp).testTag("share_location_btn")
                     ) {
-                        Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("اتصال", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Share, contentDescription = "مشاركة الموقع", tint = Color(0xFF38BDF8), modifier = Modifier.size(18.dp))
+                    }
+
+                    // Internal App Navigation
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onDismiss()
+                            onStartNavigation?.invoke(lat, lng, title)
+                        },
+                        modifier = Modifier.size(32.dp).testTag("internal_nav_btn")
+                    ) {
+                        Icon(Icons.Default.Navigation, contentDescription = "بدء الملاحة في تطبيقنا", tint = Color(0xFF10B981), modifier = Modifier.size(18.dp))
+                    }
+
+                    // Share Button (زر مشاركة البيانات)
+                    IconButton(
+                        onClick = {
+                            try {
+                                val shareText = "📍 $title\n🏷️ $subtitle ($categoryLabel)\n📞 الهاتف: $phone\n🗺️ تمت المشاركة عبر تطبيق دليل خدمات اليمن"
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                    type = "text/plain"
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, "مشاركة بيانات الخدمة"))
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        },
+                        modifier = Modifier.size(32.dp).testTag("share_entity_btn")
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = "مشاركة", tint = Color(0xFF38BDF8), modifier = Modifier.size(18.dp))
+                    }
+
+                    // Close Button
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onDismiss()
+                        },
+                        modifier = Modifier.size(32.dp).testTag("close_bottom_sheet_btn")
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color(0xFF94A3B8), modifier = Modifier.size(20.dp))
                     }
                 }
+            }
 
-                // 3. [حجز] Booking Action
-                val bookingBtnText = when (entity) {
-                    is ProviderEntity -> "حجز"
-                    is StoreEntity -> {
-                        val isMedical = entity.sectionId.contains("medical") || entity.categoryId.contains("medical") || entity.name.contains("طبي")
-                        val isRestaurant = entity.sectionId.contains("restaurant") || entity.categoryId.contains("restaurant") || entity.name.contains("مطعم")
-                        when {
-                            isMedical -> "موعد"
-                            isRestaurant -> "طاولة"
-                            else -> "طلب"
+            HorizontalDivider(color = Color(0xFF1E293B))
+
+            // Meta Info: Distance + ETA + Rating + Status
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Distance & ETA
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(Icons.Default.Place, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(16.dp))
+                    Text(
+                        text = "$distanceText ($etaText)",
+                        color = Color(0xFF00E5FF),
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Rating & Status
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "⭐ $rating",
+                        color = Color(0xFFFFD700),
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (isAvailable) "متاح 🟢" else "غير متاح 🔴",
+                        color = if (isAvailable) Color(0xFF10B981) else Color(0xFFEF4444),
+                        fontSize = 11.sp
+                    )
+                }
+            }
+
+            // Action Buttons Group (Contact & Booking & Details)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Row 1: Direct Communication (Call, WhatsApp, In-App Chat)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 1. Call Action
+                    if (phone.isNotBlank()) {
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                try {
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF3B82F6),
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .testTag("call_action_btn")
+                        ) {
+                            Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(3.dp))
+                            Text("اتصال", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        }
+
+                        // 2. WhatsApp Action
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                try {
+                                    val cleanWaPhone = phone.trim().removePrefix("+").removePrefix("00967").removePrefix("0")
+                                    val waUrl = "https://wa.me/967$cleanWaPhone?text=" + Uri.encode("مرحباً، أود الاستفسار بخصوص خدماتكم المعروضة في دليل اليمن: $title")
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    android.widget.Toast.makeText(context, "تطبيق واتساب غير متوفر", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF25D366),
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                            modifier = Modifier
+                                .weight(1.1f)
+                                .height(38.dp)
+                                .testTag("whatsapp_action_btn")
+                        ) {
+                            Text("💬", fontSize = 13.sp)
+                            Spacer(Modifier.width(3.dp))
+                            Text("واتساب", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                         }
                     }
-                    is PropertyEntity -> "معاينة"
-                    else -> "حجز"
+
+                    // 3. In-App Chat Action
+                    Button(
+                        onClick = { 
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onOpenChat?.invoke(entity) ?: onOpenDetails(entity) 
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF475569),
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(38.dp)
+                            .testTag("chat_action_btn")
+                    ) {
+                        Icon(Icons.Default.MailOutline, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(3.dp))
+                        Text("محادثة", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                    }
                 }
 
-                Button(
-                    onClick = { onRequestBooking(entity) },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF1E293B),
-                        contentColor = Color.White
-                    ),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
-                    modifier = Modifier
-                        .weight(0.9f)
-                        .height(44.dp)
-                        .testTag("book_entity_btn")
+                // Row 2: Booking/Order & Details
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(bookingBtnText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    // Booking / Request Action
+                    val bookingBtnText = when (entity) {
+                        is ProviderEntity -> "حجز موعد / طلب 🔧"
+                        is StoreEntity -> {
+                            val isMedical = entity.sectionId.contains("medical") || entity.categoryId.contains("medical") || entity.name.contains("طبي") || entity.name.contains("عياد")
+                            val isRestaurant = entity.sectionId.contains("restaurant") || entity.categoryId.contains("restaurant") || entity.name.contains("مطعم") || entity.name.contains("كافيه")
+                            when {
+                                isMedical -> "حجز موعد طبي 🩺"
+                                isRestaurant -> "حجز طاولة / وجبة 🍽️"
+                                else -> "طلب شراء بضاعة 🛒"
+                            }
+                        }
+                        is PropertyEntity -> "طلب معاينة العقار 🏡"
+                        else -> "حجز موعد / طلب 📅"
+                    }
+
+                    Button(
+                        onClick = { 
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onRequestBooking(entity) 
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF10B981),
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier
+                            .weight(1.4f)
+                            .height(40.dp)
+                            .testTag("book_entity_btn")
+                    ) {
+                        Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(bookingBtnText, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                    }
+
+                    // Details Action
+                    Button(
+                        onClick = { 
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onOpenDetails(entity) 
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = badgeColor,
+                            contentColor = Color(0xFF0F172A)
+                        ),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .testTag("view_details_action_btn")
+                    ) {
+                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(3.dp))
+                        Text("التفاصيل", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                    }
+
+                    // Aleph Vision Assistant Action
+                    Button(
+                        onClick = { 
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onOpenAleph?.invoke(entity) 
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF6366F1),
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                        modifier = Modifier
+                            .weight(0.95f)
+                            .height(40.dp)
+                            .testTag("aleph_assistant_action_btn")
+                    ) {
+                        Text("👁️ Aleph", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                    }
                 }
             }
         }

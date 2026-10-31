@@ -19,7 +19,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.serviseyem.data.*
@@ -191,32 +190,31 @@ fun ServicesBrowserLayout(
                                 border = BorderStroke(1.dp, com.serviseyem.ui.components.BespokePremiumSystem.GlassBorder),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .defaultMinSize(minHeight = 72.dp)
+                                    .height(72.dp)
                             ) {
                                 Column(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 2.dp, vertical = 6.dp),
+                                        .fillMaxSize()
+                                        .padding(4.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(32.dp)
+                                            .size(34.dp)
                                             .clip(RoundedCornerShape(10.dp))
                                             .background(cat.third),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(cat.second, fontSize = 15.sp)
+                                        Text(cat.second, fontSize = 16.sp)
                                     }
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(3.dp))
                                     Text(
                                         text = cat.first,
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
                                         maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
                                         softWrap = false
                                     )
                                 }
@@ -236,32 +234,31 @@ fun ServicesBrowserLayout(
                                 border = BorderStroke(1.dp, com.serviseyem.ui.components.BespokePremiumSystem.GlassBorder),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .defaultMinSize(minHeight = 72.dp)
+                                    .height(72.dp)
                             ) {
                                 Column(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 2.dp, vertical = 6.dp),
+                                        .fillMaxSize()
+                                        .padding(4.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(32.dp)
+                                            .size(34.dp)
                                             .clip(RoundedCornerShape(10.dp))
                                             .background(cat.third),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(cat.second, fontSize = 15.sp)
+                                        Text(cat.second, fontSize = 16.sp)
                                     }
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(3.dp))
                                     Text(
                                         text = cat.first,
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
                                         maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
                                         softWrap = false
                                     )
                                 }

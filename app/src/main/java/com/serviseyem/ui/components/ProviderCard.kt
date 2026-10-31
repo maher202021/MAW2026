@@ -79,16 +79,16 @@ fun ProviderCard(
                 )
             },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF111C30)),
         border = BorderStroke(1.dp, Color(0xFF1E2E4E)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // 1. Cover / Illustration Section
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(90.dp)
+                    .height(95.dp)
                     .background(Color(0xFF0A1220))
             ) {
                 if (coverImg.isNotBlank()) {
@@ -123,7 +123,7 @@ fun ProviderCard(
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color(0xFF0F172A).copy(alpha = 0.85f)),
+                                colors = listOf(Color.Transparent, Color(0xFF111C30).copy(alpha = 0.85f)),
                                 startY = 30f
                             )
                         )
@@ -188,12 +188,12 @@ fun ProviderCard(
                 // Header with Overlapping Avatar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Bottom
                 ) {
                     Box(
                         modifier = Modifier
-                            .offset(y = (-16).dp)
-                            .size(52.dp)
+                            .offset(y = (-20).dp)
+                            .size(54.dp)
                             .clip(CircleShape)
                             .background(Color(0xFF0F172A))
                             .border(2.dp, Color(0xFF2563EB), CircleShape)
@@ -221,7 +221,7 @@ fun ProviderCard(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .offset(y = (-4).dp)
+                            .padding(bottom = 2.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -259,7 +259,7 @@ fun ProviderCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 6.dp),
+                        .offset(y = (-10).dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -304,10 +304,11 @@ fun ProviderCard(
                     }
                 }
 
-                // 3. Action Buttons Row: [★] [حجز 📅] [التفاصيل 📋] [محادثة 💬] (Harmonious & Non-overlapping)
+                // 3. Action Buttons Row: [★] [حجز 📅] [التفاصيل 📋] [محادثة 💬] (Screenshot 1 Layout)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .offset(y = (-4).dp)
                         .padding(bottom = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically

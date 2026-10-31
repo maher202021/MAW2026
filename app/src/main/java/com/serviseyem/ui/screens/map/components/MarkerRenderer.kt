@@ -135,7 +135,7 @@ object MarkerRenderer {
             )
             // Center core
             drawScope.drawCircle(
-                color = Color(0xFF0F172A),
+                color = Color(0xFF0B0F19),
                 radius = 10f,
                 center = center
             )
@@ -147,10 +147,10 @@ object MarkerRenderer {
         } else {
             // Cluster level 1-4
             val (clusterColor, radius) = when {
-                count < 5 -> Color(0xFF00E5FF) to 18f
+                count < 5 -> Color(0xFF10B981) to 18f
                 count in 5..20 -> Color(0xFFF59E0B) to 22f
                 count in 21..50 -> Color(0xFFEC4899) to 26f
-                else -> Color(0xFFEF4444) to 30f
+                else -> Color(0xFFFF3B30) to 30f
             }
 
             // Ripple ring

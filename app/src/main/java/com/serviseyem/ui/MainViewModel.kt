@@ -237,8 +237,6 @@ class MainViewModel @Inject constructor(
     val userLatitude: StateFlow<Double> = _userLatitude.asStateFlow()
     internal val _userLongitude = MutableStateFlow(44.1910)
     val userLongitude: StateFlow<Double> = _userLongitude.asStateFlow()
-    internal val _isUserLocationReal = MutableStateFlow(false)
-    val isUserLocationReal: StateFlow<Boolean> = _isUserLocationReal.asStateFlow()
     internal val _isGpsTrackingActive = MutableStateFlow(false)
     val isGpsTrackingActive: StateFlow<Boolean> = _isGpsTrackingActive.asStateFlow()
     internal val _isProvidersLoading get() = appState._isProvidersLoading
@@ -306,16 +304,14 @@ class MainViewModel @Inject constructor(
     init {
 
         viewModelScope.launch {
-            authViewModel.adminRole
-                .collect { role ->
+            authViewModel.adminRole.collect { role ->
                 if (adminViewModel._adminRole.value != role) {
                     adminViewModel._adminRole.value = role
                 }
             }
         }
         viewModelScope.launch {
-            adminViewModel.adminRole
-                .collect { role ->
+            adminViewModel.adminRole.collect { role ->
                 if (authViewModel._adminRole.value != role) {
                     authViewModel._adminRole.value = role
                 }
@@ -341,7 +337,6 @@ class MainViewModel @Inject constructor(
     fun updateUserLocation(lat: Double, lng: Double) {
         _userLatitude.value = lat
         _userLongitude.value = lng
-        _isUserLocationReal.value = true
     }
     fun startLocationUpdates() {
         _isGpsTrackingActive.value = true
@@ -644,38 +639,6 @@ class MainViewModel @Inject constructor(
             "properties" to properties,
             "jobs" to jobs
         )
-    }
-
-    /**
-     * 🚨 جدولة نداء فزعة طوارئ للإرسال فور توفر الإنترنت
-     */
-    fun enqueueSos(lat: Double, lng: Double, note: String?, fullMsg: String) {
-        viewModelScope.launch {
-            try {
-                val sosId = "SOS_" + System.currentTimeMillis()
-                val sosData = mapOf(
-                    "id" to sosId,
-                    "uid" to (auth.currentUser?.uid ?: "GUEST"),
-                    "lat" to lat,
-                    "lng" to lng,
-                    "note" to (note ?: ""),
-                    "message" to fullMsg,
-                    "status" to "PENDING",
-                    "timestamp" to System.currentTimeMillis()
-                )
-                db.collection("sos_requests").document(sosId).set(sosData)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    fun startNavigationTracking() {
-        _isGpsTrackingActive.value = true
-    }
-
-    fun stopNavigationTracking() {
-        // Stop logic if needed
     }
 
 }

@@ -59,7 +59,7 @@ fun AppNavigator(
     val selectedCategory by viewModel.selectedCategoryId.collectAsState()
     val requestOffers by viewModel.requestOffers.collectAsState()
 
-    if (false && settingsState.isMaintenanceActive && adminRole == "GUEST") {
+    if (settingsState.isMaintenanceActive && adminRole == "GUEST") {
         MaintenanceSplashView(settingsState = settingsState, themeColors = themeColors, viewModel = viewModel)
         return
     }
@@ -362,18 +362,12 @@ fun AppNavigator(
                     }
                 )
                 AppScreens.NAVIGATION -> com.serviseyem.navigation.NavigationScreen(
-                    userLat = viewModel.userLatitude.collectAsState().value,
-                    userLng = viewModel.userLongitude.collectAsState().value,
-                    hasRealLocation = viewModel.isUserLocationReal.collectAsState().value,
-                    initialWaypoints = listOf(com.serviseyem.navigation.NavWaypoint(
-                        name = viewModel.selectedNavigationTargetName,
-                        latitude = viewModel.selectedNavigationTargetLat,
-                        longitude = viewModel.selectedNavigationTargetLng
-                    )),
-                    onFinishNavigation = { viewModel.navigateToScreen(AppScreens.USER_BROWSE) },
                     themeColors = themeColors,
-                    nearbyProviders = viewModel.providers.collectAsState().value,
-                    nearbyStores = viewModel.stores.collectAsState().value
+                    viewModel = viewModel,
+                    initialTargetLat = viewModel.selectedNavigationTargetLat,
+                    initialTargetLng = viewModel.selectedNavigationTargetLng,
+                    initialTargetName = viewModel.selectedNavigationTargetName,
+                    onBackClick = { viewModel.navigateToScreen(AppScreens.USER_BROWSE) }
                 )
                 AppScreens.FAVORITES_VIEW -> FavoritesScreenLayout(
                     viewModel = viewModel,
@@ -526,13 +520,6 @@ fun AppNavigator(
                         viewModel = viewModel,
                         themeColors = themeColors,
                         onBackClick = { viewModel.navigateToScreen(AppScreens.USER_BROWSE) }
-                    )
-                }
-                AppScreens.FIREBASE_DIAGNOSTIC -> {
-                    com.serviseyem.ui.screens.admin.FirebaseDiagnosticScreen(
-                        viewModel = viewModel,
-                        themeColors = themeColors,
-                        onBack = { viewModel.navigateToScreen(AppScreens.ADMIN_PANEL) }
                     )
                 }
                 else -> {

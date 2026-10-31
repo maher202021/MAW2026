@@ -1,13 +1,11 @@
 package com.serviseyem.ui.screens.map.utils
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
+import com.serviseyem.ui.*
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.Locale
 
 /**
  * 📦 OfflineMapManager
@@ -21,7 +19,7 @@ object OfflineMapManager {
     private const val TAG = "OfflineMapManager"
     private const val MAX_CACHE_SIZE_BYTES = 50 * 1024 * 1024L // 50 MB
     private const val PURGE_THRESHOLD_BYTES = 45 * 1024 * 1024L // 45 MB
-    private const val CACHE_TTL_MILLIS = 30L * 24 * 60 * 60 * 1000L // 30 days
+    private const val CACHE_TTL_MILLIS = 7 * 24 * 60 * 60 * 1000L // 7 days
 
     data class CityCoordinates(
         val nameAr: String,
@@ -29,8 +27,6 @@ object OfflineMapManager {
         val longitude: Double,
         val defaultZoom: Int = 13
     )
-
-    private val DEFAULT_CITY = CityCoordinates("صنعاء", 15.3694, 44.1910, 13)
 
     val MAJOR_YEMENI_CITIES = listOf(
         CityCoordinates("صنعاء", 15.3694, 44.1910, 13),
@@ -57,42 +53,20 @@ object OfflineMapManager {
         CityCoordinates("سقطرى", 12.6517, 54.0194, 12)
     )
 
-    private fun norm(s: String): String = s.trim().lowercase(Locale.ROOT)
-        .replace(Regex("[\\u064B-\\u0652\\u0640]"), "")
-        .replace(Regex("[إأآٱ]"), "ا")
-        .replace('ى', 'ي').replace('ة', 'ه')
+    fun getCityCoordinates(cityName: String): CityCoordinates {
+        val trimmed = cityName.trim()
+        val direct = MAJOR_YEMENI_CITIES.find { it.nameAr.contains(trimmed) || trimmed.contains(it.nameAr) }
+        if (direct != null) return direct
 
-    private fun matchMajor(city: String): CityCoordinates? {
-        val c = norm(city)
-        return MAJOR_YEMENI_CITIES.firstOrNull {
-            val n = norm(it.nameAr)
-            n == c || n.startsWith(c) || n.contains("($c")
-        }
-    }
-
-    /** يعيد null عند عدم وجود تطابق حقيقي (لا يفترض صنعاء). */
-    fun findCity(query: String): CityCoordinates? {
-        val q = norm(query)
-        if (q.length < 2) return null
-        MAJOR_YEMENI_CITIES.firstOrNull {
-            val n = norm(it.nameAr)
-            n == q || (n.length >= 3 && (n.contains(q) && q.length >= 3 || q.contains(n)))
-        }?.let { return it }
+        // فحص مرن عبر أسماء الأحياء والرموز في CityAliases
         for ((city, aliases) in CityAliases.ALIASES) {
-            val hit = aliases.any { a ->
-                val na = norm(a)
-                na.length >= 3 && !na.all { it.isDigit() } && !na.startsWith("ye_") &&
-                        (na == q || q.split(" ").contains(na))
+            if (aliases.any { it.equals(trimmed, ignoreCase = true) || trimmed.contains(it, ignoreCase = true) }) {
+                val matched = MAJOR_YEMENI_CITIES.find { it.nameAr.contains(city) || city.contains(it.nameAr) }
+                if (matched != null) return matched
             }
-            if (hit) matchMajor(city)?.let { return it }
         }
-        return null
+        return CityCoordinates("صنعاء", 15.3694, 44.1910, 13)
     }
-
-    fun getAllCities(): List<CityCoordinates> = MAJOR_YEMENI_CITIES
-
-    /** للتوافق: يعيد صنعاء كقيمة افتراضية فقط لأغراض مركز الخريطة، لا كموقع للمستخدم. */
-    fun getCityCoordinates(cityName: String): CityCoordinates = findCity(cityName) ?: DEFAULT_CITY
 
     /**
      * Get or create offline map tiles directory
@@ -124,31 +98,18 @@ object OfflineMapManager {
         }
     }
 
-    private fun isOnline(context: Context): Boolean {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
-        val net = cm.activeNetwork ?: return false
-        val caps = cm.getNetworkCapabilities(net) ?: return false
-        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-    }
-
     /**
-     * Inspect cache and purge expired tiles (> 30 days) or when size > 45MB
-     * لا تحذف إذا لم تتوفر شبكة حفاظاً على الخرائط أوفلاين
+     * Inspect cache and purge expired tiles (> 7 days) or when size > 45MB
      */
     suspend fun purgeCacheIfNeeded(context: Context) = withContext(Dispatchers.IO) {
         try {
-            if (!isOnline(context)) {
-                Log.d(TAG, "Skipping cache purge while offline to preserve cached tiles.")
-                return@withContext
-            }
-
             val dir = getTileCacheDir(context)
             if (!dir.exists()) return@withContext
 
             val now = System.currentTimeMillis()
             val allFiles = getAllFilesRecursive(dir)
 
-            // 1. Delete files older than 30 days
+            // 1. Delete files older than 7 days
             for (file in allFiles) {
                 if (now - file.lastModified() > CACHE_TTL_MILLIS) {
                     file.delete()

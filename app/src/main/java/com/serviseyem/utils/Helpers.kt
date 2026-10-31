@@ -382,13 +382,3 @@ fun formatPriceWithCurrency(price: Double, currency: String = "YER"): String {
     return "\u200F$cleanPrice $curLabel"
 }
 
-@androidx.compose.runtime.Composable
-fun CrashReportDialog() {
-    // Basic implementation to satisfy references
-}
-
-@androidx.compose.runtime.Composable
-fun rememberHeadingDegrees(enabled: Boolean, lat: Double, lng: Double): Float {
-    return 0f // Basic implementation
-}
-

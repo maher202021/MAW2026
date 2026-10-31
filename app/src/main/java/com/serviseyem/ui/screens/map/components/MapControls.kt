@@ -1,30 +1,27 @@
 package com.serviseyem.ui.screens.map.components
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.serviseyem.ui.screens.map.MapMode
 import com.serviseyem.utils.VisualThemePalette
 
 /**
- * 🎮 MapControls (Floating Action Dock - الشريط العائم الرأسي الموحد)
- * Capsule design: 26dp rounded corner, dark navy #0F172A at 94% opacity, elevation 14dp, width 52dp with vertical scroll.
+ * 🎮 MapControls (مطابقة للشاشة والضوابط العائمة للخريطة)
  */
 @Composable
 fun MapControls(
@@ -32,239 +29,169 @@ fun MapControls(
     onToggleRadarMode: () -> Unit,
     isHeatmapActive: Boolean,
     onToggleHeatmap: () -> Unit,
+    currentLayer: String = "satellite",
+    onSwitchLayer: (String) -> Unit,
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
     onRecenterLocation: () -> Unit,
-    onOpenLayerDialog: () -> Unit,
-    isNavigationActive: Boolean,
-    onToggleNavigation: () -> Unit,
+    onDownloadValhallaClick: () -> Unit = {},
     isGpsActive: Boolean,
+    // Vela Modes
+    currentMode: com.serviseyem.ui.screens.map.MapMode,
+    onModeChange: (com.serviseyem.ui.screens.map.MapMode) -> Unit,
+    tiltAngle: Float,
+    onToggleTilt: () -> Unit,
+    onOpenAleph: () -> Unit,
     themeColors: VisualThemePalette,
-    modifier: Modifier = Modifier,
-    currentMapMode: MapMode = MapMode.SATELLITE,
-    onSelectMapMode: (MapMode, Float) -> Unit = { _, _ -> },
-    isOfflineCached: Boolean = true,
-    onToggleOfflineCache: () -> Unit = {},
-    isDrivingMode: Boolean = true,
-    onToggleDrivingMode: () -> Unit = {},
-    compassBearing: Float = 0f,
-    onResetCompass: () -> Unit = {}
+    modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "gps_pulse")
-    val gpsPulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = 0.75f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "gps_pulse_alpha"
-    )
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     Surface(
-        shape = RoundedCornerShape(26.dp),
-        color = Color(0xFF0F172A).copy(alpha = 0.94f),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-        shadowElevation = 14.dp,
-        modifier = modifier.width(52.dp).heightIn(max = 560.dp)
+        shape = RoundedCornerShape(24.dp),
+        color = Color(0xFF0F172A).copy(alpha = 0.95f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+        shadowElevation = 12.dp,
+        modifier = modifier
+            .width(54.dp)
+            .padding(vertical = 16.dp)
     ) {
         Column(
             modifier = Modifier
-                .padding(vertical = 6.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+                .padding(vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 1. 🧭 سهم اتجاه الملاحة
+            // --- Section 1: Navigation & GPS ---
             IconButton(
-                onClick = onToggleNavigation,
-                modifier = Modifier.size(40.dp).testTag("map_nav_toggle_btn")
+                onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    onRecenterLocation()
+                },
+                modifier = Modifier.size(38.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MyLocation,
+                    contentDescription = "موقعي",
+                    tint = if (isGpsActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            val isNavActive = currentLayer == "navigation"
+            IconButton(
+                onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    if (isNavActive) onSwitchLayer("google_satellite") else onSwitchLayer("navigation")
+                },
+                modifier = Modifier.size(38.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Navigation,
-                    contentDescription = "سهم اتجاه الملاحة",
-                    tint = if (isNavigationActive) Color(0xFF38BDF8) else Color.White,
-                    modifier = Modifier.size(22.dp)
+                    contentDescription = "ملاحة",
+                    tint = if (isNavActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.width(30.dp), color = Color.White.copy(alpha = 0.08f))
+            Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.width(30.dp))
 
-            // 2. 🎯 رادار المسح والاستكشاف الحي
+            // --- Section 2: View Controls (Zoom & Layers) ---
+            IconButton(onClick = {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                onZoomIn()
+            }, modifier = Modifier.size(38.dp)) {
+                Icon(Icons.Default.Add, contentDescription = "+", tint = Color.White)
+            }
+
+            IconButton(onClick = {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                onZoomOut()
+            }, modifier = Modifier.size(38.dp)) {
+                Icon(Icons.Default.Remove, contentDescription = "-", tint = Color.White)
+            }
+
             IconButton(
-                onClick = onToggleRadarMode,
-                modifier = Modifier.size(40.dp).testTag("map_radar_btn")
+                onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    onToggleRadarMode()
+                },
+                modifier = Modifier.size(38.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.TrackChanges,
-                    contentDescription = "رادار المسح والاستكشاف الحي",
-                    tint = if (isRadarMode) Color(0xFF10B981) else Color.White,
-                    modifier = Modifier.size(22.dp)
+                    imageVector = if (isRadarMode) Icons.Default.Map else Icons.Default.Explore,
+                    contentDescription = "رادار",
+                    tint = if (isRadarMode) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.width(30.dp), color = Color.White.copy(alpha = 0.08f))
-
-            // 3. 🏙️ نمط الأبعاد الثلاثية المائل
             IconButton(
-                onClick = { onSelectMapMode(MapMode.VELA_3D, 42f) },
-                modifier = Modifier.size(40.dp).testTag("map_vela_3d_btn")
+                onClick = onToggleTilt,
+                modifier = Modifier.size(38.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.ViewInAr,
-                    contentDescription = "نمط الأبعاد الثلاثية المائل",
-                    tint = if (currentMapMode == MapMode.VELA_3D) Color(0xFF10B981) else Color.White,
-                    modifier = Modifier.size(22.dp)
+                    contentDescription = "ثلاثي الأبعاد",
+                    tint = if (tiltAngle > 0) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.width(30.dp), color = Color.White.copy(alpha = 0.08f))
-
-            // 4. 🛰️ التبديل السريع للأقمار الصناعية
             IconButton(
-                onClick = { onSelectMapMode(MapMode.SATELLITE, 0f) },
-                modifier = Modifier.size(40.dp).testTag("map_satellite_btn")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Satellite,
-                    contentDescription = "التبديل السريع للأقمار الصناعية",
-                    tint = if (currentMapMode == MapMode.SATELLITE) Color(0xFF10B981) else Color.White,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            HorizontalDivider(modifier = Modifier.width(30.dp), color = Color.White.copy(alpha = 0.08f))
-
-            // 5. 🌐 الرؤية البانورامية الشاملة
-            IconButton(
-                onClick = { onSelectMapMode(MapMode.HOT, 0f) },
-                modifier = Modifier.size(40.dp).testTag("map_pano_btn")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PanoramaHorizontal,
-                    contentDescription = "الرؤية البانورامية الشاملة",
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            HorizontalDivider(modifier = Modifier.width(30.dp), color = Color.White.copy(alpha = 0.08f))
-
-            // 6. 👁️ زاوية الرؤية والإمالة التفاعلية
-            IconButton(
-                onClick = { onSelectMapMode(MapMode.VELA_3D, 35f) },
-                modifier = Modifier.size(40.dp).testTag("map_visibility_btn")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Visibility,
-                    contentDescription = "زاوية الرؤية والإمالة التفاعلية",
-                    tint = Color(0xFF38BDF8),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            HorizontalDivider(modifier = Modifier.width(30.dp), color = Color.White.copy(alpha = 0.08f))
-
-            // 7. ☁️ مؤشر المزامنة السحابية والخريطة الحرارية
-            IconButton(
-                onClick = onToggleHeatmap,
-                modifier = Modifier.size(40.dp).testTag("map_heatmap_sync_btn")
-            ) {
-                Icon(
-                    imageVector = if (isHeatmapActive) Icons.Default.CloudDone else Icons.Default.CloudQueue,
-                    contentDescription = "مؤشر المزامنة والخريطة الحرارية",
-                    tint = if (isHeatmapActive) Color(0xFF10B981) else Color(0xFF38BDF8),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            HorizontalDivider(modifier = Modifier.width(30.dp), color = Color.White.copy(alpha = 0.08f))
-
-            // 8. Map Layers (🗺️ بلون ذهبي #FBBF24)
-            IconButton(
-                onClick = onOpenLayerDialog,
-                modifier = Modifier.size(40.dp).testTag("map_layers_btn")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Layers,
-                    contentDescription = "طبقات الخريطة",
-                    tint = Color(0xFFFBBF24), // Golden #FBBF24
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            HorizontalDivider(modifier = Modifier.width(30.dp), color = Color.White.copy(alpha = 0.08f))
-
-            // 9. GPS Button
-            IconButton(
-                onClick = onRecenterLocation,
-                modifier = Modifier.size(40.dp).testTag("recenter_location_btn")
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    if (isGpsActive) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF10B981).copy(alpha = gpsPulseAlpha))
-                        )
+                onClick = {
+                    val nextLayer = when(currentLayer) {
+                        "google_satellite" -> "osm"
+                        "osm" -> "navigation"
+                        "navigation" -> "streets"
+                        else -> "google_satellite"
                     }
-                    Icon(
-                        imageVector = if (isGpsActive) Icons.Default.GpsFixed else Icons.Default.MyLocation,
-                        contentDescription = "موقعي الحالي (GPS)",
-                        tint = if (isGpsActive) Color(0xFF10B981) else Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    onSwitchLayer(nextLayer)
+                },
+                modifier = Modifier.size(38.dp)
+            ) {
+                Icon(Icons.Default.Layers, contentDescription = "طبقات", tint = Color.White)
+            }
+
+            Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.width(30.dp))
+
+            // --- Section 3: Modes (Vela) ---
+            com.serviseyem.ui.screens.map.MapMode.values().forEach { mode ->
+                val isSelected = currentMode == mode
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        if (mode == com.serviseyem.ui.screens.map.MapMode.ALEPH_AI) onOpenAleph() else onModeChange(mode)
+                    },
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(
+                            if (isSelected) Color(0xFF10B981).copy(alpha = 0.2f) else Color.Transparent,
+                            CircleShape
+                        )
+                ) {
+                    Text(text = mode.icon, fontSize = 18.sp)
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.width(30.dp), color = Color.White.copy(alpha = 0.08f))
+            Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.width(30.dp))
 
-            // 10. Zoom In (+)
-            IconButton(
-                onClick = onZoomIn,
-                modifier = Modifier.size(40.dp).testTag("map_zoom_in_btn")
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "تكبير الخريطة", tint = Color.White, modifier = Modifier.size(20.dp))
-            }
-
-            HorizontalDivider(modifier = Modifier.width(30.dp), color = Color.White.copy(alpha = 0.08f))
-
-            // 11. Zoom Out (-)
-            IconButton(
-                onClick = onZoomOut,
-                modifier = Modifier.size(40.dp).testTag("map_zoom_out_btn")
-            ) {
-                Icon(Icons.Default.Remove, contentDescription = "تصغير الخريطة", tint = Color.White, modifier = Modifier.size(20.dp))
-            }
-
-            HorizontalDivider(modifier = Modifier.width(30.dp), color = Color.White.copy(alpha = 0.08f))
-
-            // 12. Compass
-            IconButton(
-                onClick = onResetCompass,
-                modifier = Modifier.size(40.dp).testTag("map_compass_btn")
-            ) {
+            // --- Section 4: Tools (Heatmap & Download) ---
+            IconButton(onClick = onToggleHeatmap, modifier = Modifier.size(38.dp)) {
                 Icon(
-                    imageVector = Icons.Default.Explore,
-                    contentDescription = "البوصلة وتوجيه الشمال",
-                    tint = Color(0xFF10B981),
-                    modifier = Modifier.size(20.dp).rotate(compassBearing)
+                    imageVector = if (isHeatmapActive) Icons.Default.CloudDone else Icons.Default.CloudDownload,
+                    tint = if (isHeatmapActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.5f),
+                    contentDescription = "أوفلاين",
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.width(30.dp), color = Color.White.copy(alpha = 0.08f))
-
-            // 13. Context Mode (Driving vs Walking)
-            IconButton(
-                onClick = onToggleDrivingMode,
-                modifier = Modifier.size(40.dp).testTag("map_context_mode_btn")
-            ) {
+            IconButton(onClick = onDownloadValhallaClick, modifier = Modifier.size(38.dp)) {
                 Icon(
-                    imageVector = if (isDrivingMode) Icons.Default.DirectionsCar else Icons.Default.DirectionsWalk,
-                    contentDescription = if (isDrivingMode) "وضع القيادة" else "وضع المشي",
-                    tint = if (isDrivingMode) Color(0xFF38BDF8) else Color(0xFFF59E0B),
-                    modifier = Modifier.size(19.dp)
+                    imageVector = Icons.Default.Download,
+                    tint = Color(0xFF10B981),
+                    contentDescription = "تحميل",
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }

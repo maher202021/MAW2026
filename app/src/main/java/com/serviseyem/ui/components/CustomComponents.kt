@@ -75,15 +75,16 @@ fun Luxury3DNavIcon(
     forceWhiteText: Boolean = false,
     onClick: () -> Unit
 ) {
-    val actualSize = (iconSizeDp * 0.72f).coerceIn(16f, 22f)
+    // 0.7f: معامل تصغير نسبي (30% scale reduction) للحفاظ على مساحات أشرطة التنقل
+    // 16f (حد أدنى): يمنع انكماش الأيقونة عن الحجم المرئي الأدنى
+    // 24f (حد أقصى): يمنع تضخم الأيقونة وخروجها عن شريط التنقل السفلي والعلوي
+    val actualSize = (iconSizeDp * 0.7f).coerceIn(16f, 24f)
     val sizeDp = actualSize.dp
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
         modifier = Modifier
-            .defaultMinSize(minWidth = 44.dp, minHeight = 44.dp)
             .clickable(onClick = onClick)
-            .padding(horizontal = 2.dp, vertical = 2.dp)
+            .padding(horizontal = 2.dp, vertical = 1.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
             if (isSelected) {
@@ -119,24 +120,22 @@ fun Luxury3DNavIcon(
                         )
                     )
                 ),
-                shadowElevation = if (isSelected) 4.dp else 1.dp,
+                shadowElevation = if (isSelected) 5.dp else 1.dp,
                 modifier = Modifier.size(sizeDp + 6.dp)
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    if (vectorIcon != null) {
+                    if (vectorIcon != null && (iconStyle == "MINIMAL" || forceWhiteText)) {
                         Icon(
                             imageVector = vectorIcon,
                             contentDescription = label,
-                            tint = if (forceWhiteText) Color.White else if (isSelected) Color(0xFFFFD700) else Color(0xFF00E5FF),
-                            modifier = Modifier.size((actualSize * 0.82f).dp)
+                            tint = if (forceWhiteText) Color.White else if (isSelected) Color(0xFFF59E0B) else Color.White,
+                            modifier = Modifier.size(sizeDp)
                         )
                     } else {
                         Text(
                             text = emojiIcon,
-                            fontSize = (actualSize * 0.62f).sp,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Clip
+                            fontSize = (sizeDp.value * 0.68f).sp,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -165,15 +164,14 @@ fun Luxury3DNavIcon(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(1.dp))
         Text(
             text = label,
-            fontSize = 8.sp,
+            fontSize = 7.5.sp,
             maxLines = 1,
             softWrap = false,
-            overflow = TextOverflow.Ellipsis,
             color = if (forceWhiteText) Color.White else if (isSelected) Color(0xFFFFD700) else Color.LightGray,
-            fontWeight = if (isSelected || forceWhiteText) FontWeight.Bold else FontWeight.Medium
+            fontWeight = if (isSelected || forceWhiteText) FontWeight.Bold else FontWeight.Normal
         )
     }
 }

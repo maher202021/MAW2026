@@ -230,7 +230,6 @@ fun BackdoorLoginDialog(
                                             securityManager.resetAttempts()
                                             onDismiss()
                                             viewModel.authenticateAdmin(context, "OWNER", rememberMe)
-                                            viewModel.navigateToScreen(AppScreens.ADMIN_PANEL)
                                             viewModel.triggerNotification("🔓 مرحباً بك بصلاحية المالك - تم تسجيل الدخول بنجاح!")
                                         }
                                         "ADMIN" -> {
@@ -238,7 +237,6 @@ fun BackdoorLoginDialog(
                                             securityManager.resetAttempts()
                                             onDismiss()
                                             viewModel.authenticateAdmin(context, "ADMIN", rememberMe)
-                                            viewModel.navigateToScreen(AppScreens.ADMIN_PANEL)
                                             viewModel.triggerNotification("🔓 مرحباً بك بصلاحية مدير النظام - تم تسجيل الدخول بنجاح!")
                                         }
                                         "SUPERVISOR" -> {
