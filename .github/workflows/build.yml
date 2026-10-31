@@ -38,37 +38,7 @@ jobs:
           echo "Using repository app/google-services.json"
         else
           echo "Writing fallback app/google-services.json..."
-          cat << 'EOF' > app/google-services.json
-          {
-            "project_info": {
-              "project_number": "248399837437",
-              "project_id": "gen-lang-client-0971808563",
-              "storage_bucket": "gen-lang-client-0971808563.firebasestorage.app"
-            },
-            "client": [
-              {
-                "client_info": {
-                  "mobilesdk_app_id": "1:248399837437:android:e98f77cc6c7b1df6e7e694",
-                  "android_client_info": {
-                    "package_name": "com.serviseyem"
-                  }
-                },
-                "oauth_client": [],
-                "api_key": [
-                  {
-                    "current_key": "AIzaSyC6IR5Gpb_RmAeONYQ1r93G6FMUgdFSRL8"
-                  }
-                ],
-                "services": {
-                  "appinvite_service": {
-                    "other_platform_oauth_client": []
-                  }
-                }
-              }
-            ],
-            "configuration_version": "1"
-          }
-          EOF
+          echo 'ewogICJwcm9qZWN0X2luZm8iOiB7CiAgICAicHJvamVjdF9udW1iZXIiOiAiMjQ4Mzk5ODM3NDM3IiwKICAgICJwcm9qZWN0X2lkIjogImdlbi1sYW5nLWNsaWVudC0wOTcxODA4NTYzIiwKICAgICJzdG9yYWdlX2J1Y2tldCI6ICJnZW4tbGFuZy1jbGllbnQtMDk3MTgwODU2My5maXJlYmFzZXN0b3JhZ2UuYXBwIogIH0sCiAgImNsaWVudCI6IFsKICAgIHsKICAgICAgImNsaWVudF9pbmZvIjogewogICAgICAgICJtb2JpbGVzZGtfYXBwX2lkIjogIjE6MjQ4Mzk5ODM3NDM3OmFuZHJvaWQ6ZTk4Zjc3Y2M2YzdiMWRmNmU3ZTY5NCIsCiAgICAgICAgImFuZHJvaWRfY2xpZW50X2luZm8iOiB7CiAgICAgICAgICAicGFja2FnZV9uYW1lIjogImNvbS5zZXJ2aXNleWVtIogICAgICAgIH0KICAgICAgfSwKICAgICAgIm9hdXRoX2NsaWVudCI6IFtdLAogICAgICAiYXBpX2tleSI6IFsKICAgICAgICB7CiAgICAgICAgICAiY3VycmVudF9rZXkiOiAiQUl6YVN5QzZJUjVHcGJfUm1BZU9OWVkxcjkzRzZGMVVnREZTUkw4IgogICAgICAgIH0KICAgICAgXSwKICAgICAgInNlcnZpY2VzIjogewogICAgICAgICJhcHBpbnZpdGVfc2VydmljZSI6IHsKICAgICAgICAgICJvdGhlcl9wbGF0Zm9ybV9vYXV0aF9jbGllbnQiOiBbXQogICAgICAgIH0KICAgICAgfQogICAgfQogIF0sCiAgImNvbmZpZ3VyYXRpb25fdmVyc2lvbiI6ICIxIgp9' | base64 -d > app/google-services.json
         fi
 
     - name: Setup Keystore
