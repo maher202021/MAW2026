@@ -43,9 +43,8 @@ jobs:
         fi
         if [ ! -f "app/google-services.json" ] || [ ! -s "app/google-services.json" ]; then
           echo "Writing embedded default app/google-services.json..."
-          python3 -c '
-import json
-data = {
+          cat << 'EOF' > app/google-services.json
+{
   "project_info": {
     "project_number": "954106721012",
     "project_id": "serviseyem",
@@ -77,9 +76,7 @@ data = {
   ],
   "configuration_version": "1"
 }
-with open("app/google-services.json", "w") as f:
-    json.dump(data, f, indent=2)
-'
+EOF
         fi
         echo "Verifying app/google-services.json:"
         head -n 5 app/google-services.json
