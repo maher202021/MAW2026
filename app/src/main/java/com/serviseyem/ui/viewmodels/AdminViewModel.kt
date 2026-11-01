@@ -245,22 +245,27 @@ class AdminViewModel @Inject constructor(
                     preferredRole = "OWNER"
                 )
 
-                if (verifiedRole == "OWNER") {
+                if (verifiedRole == "OWNER" || verifiedRole == "ADMIN") {
+                    val assignedRole = verifiedRole
+                    val perms = if (assignedRole == "OWNER") listOf("ALL") else emptyList()
+
                     com.serviseyem.utils.SecureAdminStorage.storeCredentials(
                         context = application,
-                        ownerEmail = trimmedEmail,
-                        ownerPassword = trimmedPass
+                        ownerEmail = if (assignedRole == "OWNER") trimmedEmail else null,
+                        ownerPassword = if (assignedRole == "OWNER") trimmedPass else null,
+                        adminEmail = if (assignedRole == "ADMIN") trimmedEmail else null,
+                        adminPassword = if (assignedRole == "ADMIN") trimmedPass else null
                     )
 
                     if (rememberMe) {
                         secureStorage.saveAdminSession(com.serviseyem.utils.AdminSession(
-                            uid = "owner_${System.currentTimeMillis()}", email = trimmedEmail,
-                            loginTime = System.currentTimeMillis(), refreshToken = "OWNER_SESSION", 
-                            role = "OWNER", permissions = listOf("ALL")
+                            uid = "${assignedRole.lowercase()}_${System.currentTimeMillis()}", email = trimmedEmail,
+                            loginTime = System.currentTimeMillis(), refreshToken = "${assignedRole}_SESSION", 
+                            role = assignedRole, permissions = perms
                         ))
                     }
-                    _adminRole.value = "OWNER"
-                    _supervisorPermissions.value = listOf("ALL")
+                    _adminRole.value = assignedRole
+                    _supervisorPermissions.value = perms
                     _isLoading.value = false
                     onResult(true, null)
                     return@launch

@@ -122,33 +122,34 @@ fun AppHeaderBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(themeColors.primary)
+            .background(com.serviseyem.ui.theme.DarkLuxuryBackground)
             .statusBarsPadding()
             .testTag("app_header_bar")
     ) {
-        // Row 1: Unified TopBar Header with Back Button (Controlled by Admin hideTopHeaderBar)
+        // Row 1: Unified Header Bar with App Logo / Title & Action Button
         if (!settingsState.hideTopHeaderBar) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (showBackButton) {
                     IconButton(
                         onClick = { viewModel.goBack() },
                         modifier = Modifier
-                            .background(Color.White.copy(alpha = 0.2f), CircleShape)
-                            .size(24.dp)
+                            .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                            .border(1.dp, com.serviseyem.ui.theme.GlassBorder, CircleShape)
+                            .size(28.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = if (isEn) "Back" else "رجوع",
                             tint = Color.White,
-                            modifier = Modifier.size(13.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
 
                 val defaultTitle = if (isEn) "Yemen Services Directory" else "دليل خدمات اليمن"
@@ -165,15 +166,31 @@ fun AppHeaderBar(
                     else -> customTitle
                 }
 
-                Text(
-                    text = titleText,
-                    fontSize = 11.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = com.serviseyem.ui.theme.CardSurface,
+                        border = BorderStroke(1.dp, com.serviseyem.ui.theme.GoldGradientStart.copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            text = "🇾🇪",
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
+
+                    Text(
+                        text = titleText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = com.serviseyem.ui.theme.TextPrimaryWhite,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
                 Spacer(modifier = Modifier.weight(1f))
 
@@ -181,13 +198,9 @@ fun AppHeaderBar(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                listOf(Color(0xFFF59E0B), Color(0xFFD97706))
-                            )
-                        )
+                        .background(com.serviseyem.ui.theme.LuxuryGoldGradient)
                         .clickable { viewModel.navigateTo("ORDERS_VIEW") }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -197,8 +210,8 @@ fun AppHeaderBar(
                         val isProvider = viewModel.selectedProvider != null || viewModel.selectedStore != null || viewModel.selectedProperty != null
                         Text(
                             text = if (isEn) (if (isProvider) "Requests" else "My Requests") else (if (isProvider) "الطلبات" else "طلباتي"),
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
                             color = Color.Black,
                             maxLines = 1,
                             softWrap = false
@@ -212,55 +225,40 @@ fun AppHeaderBar(
                 IconButton(
                     onClick = { viewModel.refreshData(showNotification = true) },
                     modifier = Modifier
-                        .background(Color.White.copy(alpha = 0.2f), CircleShape)
-                        .size(26.dp)
+                        .background(Color.White.copy(alpha = 0.08f), CircleShape)
+                        .size(28.dp)
                 ) {
                     if (isRefreshingHeader) {
                         CircularProgressIndicator(
-                            color = Color.White,
+                            color = com.serviseyem.ui.theme.GoldGradientStart,
                             strokeWidth = 1.5.dp,
-                            modifier = Modifier.size(13.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = if (isEn) "Refresh" else "تحديث البيانات",
                             tint = Color.White,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(15.dp)
                         )
                     }
                 }
             }
         }
 
-        // Row 2: Navigation Items (6 luxury icons: الرئيسية 🏠, الخرائط 🗺️, الانضمام 👤, الإشعارات 🔔, المحادثات ✉️)
+        // Row 2: Navigation Bar (الخرائط 🗺️, الانضمام 👤, الإشعارات 🔔, المحادثات ✉️)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 2.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF131D33))
-                .border(BorderStroke(1.dp, Color(0xFF1E2E4E)), RoundedCornerShape(16.dp))
-                .padding(vertical = 4.dp),
+                .padding(horizontal = 6.dp, vertical = 2.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(com.serviseyem.ui.theme.SecondaryBg)
+                .border(BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder), RoundedCornerShape(18.dp))
+                .padding(vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // 1. الرئيسية
-            val isBrowse = currentScreen == AppScreens.USER_BROWSE || currentScreen == "MAIN_DASHBOARD" || currentScreen == "HOME"
-            Luxury3DNavIcon(
-                emojiIcon = settingsState.topHomeIcon.ifEmpty { "🏠" },
-                vectorIcon = Icons.Default.Home,
-                label = if (isEn) "Home" else "الرئيسية",
-                isSelected = isBrowse,
-                iconSizeDp = settingsState.navIconSizeDp,
-                iconStyle = settingsState.topNavIconStyle,
-                onClick = {
-                    viewModel.navigateToScreen(AppScreens.USER_BROWSE)
-                    viewModel.registerBackdoorInteraction()
-                }
-            )
-
-            // 2. الخرائط
+            // 1. الخرائط
             if (settingsState.isMapFeatureEnabled) {
                 val isMap = currentScreen == AppScreens.MAP_VIEW
                 Luxury3DNavIcon(

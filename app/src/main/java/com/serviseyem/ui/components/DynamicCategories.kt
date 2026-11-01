@@ -1,36 +1,137 @@
 package com.serviseyem.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import com.serviseyem.ui.*
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.serviseyem.ui.theme.*
 import com.serviseyem.utils.VisualThemePalette
 
-data class CategoryFilterItem(
+/**
+ * 🎨 SectionFamily Data Model (عوائل الأقسام الـ5)
+ */
+data class SectionFamilyItem(
     val id: String,
     val title: String,
-    val icon: ImageVector,
-    val count: Int,
-    val color: Color
+    val emoji: String,
+    val description: String,
+    val primaryColor: Color,
+    val gradient: Brush,
+    val subTabs: List<String>
 )
 
 /**
- * 🏷️ DynamicCategories (شريط التصنيفات الديناميكية المتفاعلة)
- * يعرض التصنيفات الرئيسية مع الأيقونات وعدد العناصر المتاحة وتأثيرات التحديد المتوهجة.
+ * 🏷️ Category21Item Data Model (الـ21 قسم كاملة)
+ */
+data class Category21Item(
+    val id: String,
+    val title: String,
+    val emoji: String,
+    val familyId: String,
+    val color: Color,
+    val icon: ImageVector,
+    val count: Int
+)
+
+object CategoryDataRepository {
+
+    val SECTION_FAMILIES = listOf(
+        SectionFamilyItem(
+            id = "FOOD",
+            title = "عائلة الأطعمة والمشروبات",
+            emoji = "🍔",
+            description = "مطاعم، كافيهات، وحلويات",
+            primaryColor = FoodFamilyPrimary,
+            gradient = Brush.horizontalGradient(listOf(FoodFamilyPrimary, FoodFamilySecondary)),
+            subTabs = listOf("مطاعم", "كافيهات", "حلويات ومخابز", "عصائر ومثلجات", "توصيل طلبات")
+        ),
+        SectionFamilyItem(
+            id = "TECH",
+            title = "عائلة التقنية والمتاجر",
+            emoji = "💻",
+            description = "جوالات، حاسوب، وأجهزة منزلية",
+            primaryColor = TechFamilySecondary,
+            gradient = Brush.horizontalGradient(listOf(TechFamilyPrimary, TechFamilySecondary)),
+            subTabs = listOf("جوالات وإكسسوارات", "إلكترونيات وحاسوب", "أجهزة منزلية", "ألعاب وترفيه رقمي", "صيانة أجهزة")
+        ),
+        SectionFamilyItem(
+            id = "TRAVEL",
+            title = "عائلة السياحة والسفر",
+            emoji = "🏨",
+            description = "فنادق، مكاتب سفر، وعقارات",
+            primaryColor = TravelFamilyPrimary,
+            gradient = Brush.horizontalGradient(listOf(TravelFamilyPrimary, TravelFamilySecondary)),
+            subTabs = listOf("فنادق ومنتجعات", "مكاتب سفر وحجز", "شقق وإقامات", "معالم ورحلات سياحية", "تأجير سيارات")
+        ),
+        SectionFamilyItem(
+            id = "HEALTH",
+            title = "عائلة الصحة والأناقة",
+            emoji = "🩺",
+            description = "عيادات، صيدليات، وتجميل",
+            primaryColor = HealthFamilyPrimary,
+            gradient = Brush.horizontalGradient(listOf(HealthFamilyPrimary, HealthFamilySecondary)),
+            subTabs = listOf("عيادات وأطباء", "أسنان وتجميل", "صالونات تجميل", "حلاقة وبريم", "صيدليات", "لياقة ورياضة")
+        ),
+        SectionFamilyItem(
+            id = "SERVICES",
+            title = "عائلة الخدمات والمهنيين",
+            emoji = "⚡",
+            description = "كهرباء، سباكة، مقاولات، ونقل",
+            primaryColor = ServicesFamilyPrimary,
+            gradient = Brush.horizontalGradient(listOf(ServicesFamilyPrimary, ServicesFamilyTeal)),
+            subTabs = listOf("كهرباء وسباكة", "مقاولات وبناء", "نقليات وشحن", "تعليم وتدريب", "خدمات ٢٤ ساعة", "زراعة ومزارع")
+        )
+    )
+
+    val ALL_21_CATEGORIES = listOf(
+        Category21Item("elec_plumb", "كهرباء وسباكة", "⚡", "SERVICES", ServicesFamilyPrimary, Icons.Default.Bolt, 48),
+        Category21Item("restaurants", "مطاعم وأطعمة", "🍔", "FOOD", FoodFamilyPrimary, Icons.Default.Restaurant, 65),
+        Category21Item("tech_mobile", "جوالات وإلكترونيات", "📱", "TECH", TechFamilySecondary, Icons.Default.Smartphone, 52),
+        Category21Item("medical_clinics", "أطباء وعيادات", "🩺", "HEALTH", HealthFamilyPrimary, Icons.Default.MedicalServices, 34),
+        Category21Item("hotels_resorts", "فنادق وإقامات", "🏨", "TRAVEL", TravelFamilyPrimary, Icons.Default.Hotel, 29),
+        Category21Item("construction", "مقاولات وبناء", "🏗️", "SERVICES", ServicesFamilySecondary, Icons.Default.Construction, 22),
+        Category21Item("cafes", "كافيهات ومقاهي", "☕", "FOOD", FoodFamilySecondary, Icons.Default.Coffee, 38),
+        Category21Item("computer_maint", "صيانة حاسوب وتقنية", "💻", "TECH", TechFamilyCyan, Icons.Default.Computer, 27),
+        Category21Item("dental_beauty", "أسنان وتجميل", "🦷", "HEALTH", HealthFamilySecondary, Icons.Default.Face, 19),
+        Category21Item("travel_agency", "مكاتب سفر وحجوزات", "✈️", "TRAVEL", TravelFamilySecondary, Icons.Default.Flight, 24),
+        Category21Item("cargo_shipping", "نقليات وشحن", "🚛", "SERVICES", ServicesFamilyTeal, Icons.Default.LocalShipping, 31),
+        Category21Item("bakeries_sweets", "حلويات ومخابز", "🍰", "FOOD", FoodFamilyGold, Icons.Default.Cake, 41),
+        Category21Item("home_appliances", "أجهزة منزلية", "🧺", "TECH", TechFamilySecondary, Icons.Default.Kitchen, 26),
+        Category21Item("barber_salon", "صالونات تجميل وحلاقة", "✂️", "HEALTH", HealthFamilyPrimary, Icons.Default.ContentCut, 33),
+        Category21Item("car_rental", "تأجير سيارات", "🚗", "TRAVEL", TravelFamilySunset, Icons.Default.DirectionsCar, 18),
+        Category21Item("education", "تعليم وتدريب", "📚", "SERVICES", Color(0xFF14B8A6), Icons.Default.School, 25),
+        Category21Item("juices_icecream", "عصائر ومثلجات", "🧃", "FOOD", GlowingCoralStart, Icons.Default.LocalBar, 20),
+        Category21Item("pharmacies", "صيدليات ودواء", "💊", "HEALTH", SuccessGreen, Icons.Default.LocalPharmacy, 36),
+        Category21Item("emergency_24h", "خدمات طوارئ ٢٤ ساعة", "🚨", "SERVICES", ServicesFamilyPrimary, Icons.Default.Warning, 15),
+        Category21Item("real_estate", "عقارات وشقق", "🏢", "TRAVEL", SkyBlueStart, Icons.Default.Apartment, 28),
+        Category21Item("agriculture", "زراعة ومزارع", "🌾", "SERVICES", Color(0xFF84CC16), Icons.Default.Grass, 14)
+    )
+}
+
+/**
+ * 🏷️ DynamicCategories Bar Component
  */
 @Composable
 fun DynamicCategories(
@@ -39,29 +140,43 @@ fun DynamicCategories(
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
 ) {
-    val categories = listOf(
-        CategoryFilterItem("ALL", "الكل", Icons.Default.Home, 120, Color(0xFF00E5FF)),
-        CategoryFilterItem("PROVIDERS", "فنيون ومهنيون", Icons.Default.Engineering, 45, Color(0xFF38BDF8)),
-        CategoryFilterItem("STORES", "متاجر وأسواق", Icons.Default.Storefront, 32, Color(0xFF10B981)),
-        CategoryFilterItem("RESTAURANTS", "مطاعم وكافيهات", Icons.Default.Restaurant, 28, Color(0xFFF59E0B)),
-        CategoryFilterItem("MEDICAL", "مراكز طبية", Icons.Default.MedicalServices, 19, Color(0xFF06B6D4)),
-        CategoryFilterItem("PROPERTIES", "عقارات وشقق", Icons.Default.Apartment, 15, Color(0xFF8B5CF6)),
-        CategoryFilterItem("JOBS", "وظائف شاغرة", Icons.Default.Work, 22, Color(0xFFEC4899))
-    )
-
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(categories) { cat ->
+        item {
+            val isAll = selectedCategoryId.isEmpty() || selectedCategoryId == "ALL"
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = if (isAll) GoldGradientStart else CardSurface,
+                border = BorderStroke(1.dp, if (isAll) GoldGradientEnd else CardBorder),
+                modifier = Modifier.clickable { onCategorySelected("ALL") }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("🌟", fontSize = 13.sp)
+                    Text(
+                        text = "كل الأقسام",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isAll) Black else TextPrimaryWhite
+                    )
+                }
+            }
+        }
+
+        items(CategoryDataRepository.ALL_21_CATEGORIES) { cat ->
             val isSelected = selectedCategoryId == cat.id
 
             Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = if (isSelected) cat.color else Color(0xFF1E293B),
-                shadowElevation = if (isSelected) 4.dp else 1.dp,
+                shape = RoundedCornerShape(16.dp),
+                color = if (isSelected) cat.color else CardSurface,
+                border = BorderStroke(1.dp, if (isSelected) Color.White else CardBorder),
                 modifier = Modifier.clickable { onCategorySelected(cat.id) }
             ) {
                 Row(
@@ -69,32 +184,13 @@ fun DynamicCategories(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(
-                        imageVector = cat.icon,
-                        contentDescription = null,
-                        tint = if (isSelected) Color(0xFF0F172A) else cat.color,
-                        modifier = Modifier.size(16.dp)
-                    )
-
+                    Text(cat.emoji, fontSize = 13.sp)
                     Text(
                         text = cat.title,
-                        fontSize = 12.sp,
+                        fontSize = 11.5.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) Color(0xFF0F172A) else Color.White
+                        color = if (isSelected) Black else TextPrimaryWhite
                     )
-
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isSelected) Color.Black.copy(alpha = 0.15f) else Color(0xFF334155)
-                    ) {
-                        Text(
-                            text = "${cat.count}",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSelected) Color(0xFF0F172A) else Color(0xFF94A3B8),
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                        )
-                    }
                 }
             }
         }

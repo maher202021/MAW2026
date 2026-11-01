@@ -1,55 +1,73 @@
 package com.serviseyem.ui.theme
 
-import com.serviseyem.utils.*
-import com.serviseyem.ui.*
-
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// 💎 Luxury Yemeni Directory Color Tokens (دليل خدمات يمني فاخر)
+// 💎 Dark Luxury Yemeni Directory Color Tokens (#070A13)
+val DarkLuxuryBackground = Color(0xFF070A13)
+val SecondaryBg = Color(0xFF0C1220)
+val CardSurface = Color(0xFF121A2C)
+val CardBorder = Color(0xFF182238)
+val GlassBorder = Color.White.copy(alpha = 0.08f)
 
-// Primary Palette - Deep Royal Slate & Emerald Gold
-val DeepRoyalNavy = Color(0xFF0B1120)
-val SlateDarkBackground = Color(0xFF0F172A)
-val SlateCardSurface = Color(0xFF1E293B)
-val SlateSurfaceVariant = Color(0xFF131C2E)
-val SlateBorder = Color(0xFF334155)
+// 🌟 Accent Gradients & Neon Palette
+val GoldGradientStart = Color(0xFFFFC93C)
+val GoldGradientEnd = Color(0xFFFF9F1C)
+val EmeraldNeonStart = Color(0xFF00E676)
+val EmeraldNeonEnd = Color(0xFF00B894)
+val SkyBlueStart = Color(0xFF38B6FF)
+val SkyBlueEnd = Color(0xFF0E90FF)
+val GlowingCoralStart = Color(0xFFFF7EB3)
+val GlowingCoralEnd = Color(0xFFFF2D6F)
 
-// Accent Palette - Gold, Emerald, Cyan
-val WarmGoldAccent = Color(0xFFD97706)
-val AmberGoldHighlight = Color(0xFFF59E0B)
-val PureGold = Color(0xFFFFD700)
-val EmeraldGreen = Color(0xFF10B981)
-val DeepEmerald = Color(0xFF0D9488)
-val NeonCyan = Color(0xFF00E5FF)
+// 🎨 5 Section Family Theme Palettes (عوائل الأقسام الـ5)
+// 1. Food & Drinks (عائلة الأطعمة والمشروبات - حمراء شهية)
+val FoodFamilyPrimary = Color(0xFFFF4B4B)
+val FoodFamilySecondary = Color(0xFFFF8000)
+val FoodFamilyGold = Color(0xFFFFC93C)
 
-// Text Palette
+// 2. Tech & Stores (عائلة التقنية والمتاجر - كحلية عميقة)
+val TechFamilyPrimary = Color(0xFF102A43)
+val TechFamilySecondary = Color(0xFF38B6FF)
+val TechFamilyCyan = Color(0xFF00E5FF)
+
+// 3. Travel & Tourism (عائلة السياحة والسفر - تركواز وسفر)
+val TravelFamilyPrimary = Color(0xFF00C9A7)
+val TravelFamilySecondary = Color(0xFF0E90FF)
+val TravelFamilySunset = Color(0xFFFFC93C)
+
+// 4. Health & Elegance (عائلة الصحة والأناقة - أرجوانية فاخرة)
+val HealthFamilyPrimary = Color(0xFF8B5CF6)
+val HealthFamilySecondary = Color(0xFFFF7EB3)
+val HealthFamilyGold = Color(0xFFFFC93C)
+
+// 5. Home & Professional Services (عائلة الخدمات المنزلية والمهنية - زمردية اعتمادية)
+val ServicesFamilyPrimary = Color(0xFF00E676)
+val ServicesFamilySecondary = Color(0xFF76FF03)
+val ServicesFamilyTeal = Color(0xFF00B894)
+
+// Standard Text & UI Colors
 val TextPrimaryWhite = Color(0xFFF8FAFC)
 val TextSecondarySlate = Color(0xFF94A3B8)
 val TextMutedGray = Color(0xFF64748B)
 
-// Utility & Feedback Palette
 val White = Color(0xFFFFFFFF)
 val Black = Color(0xFF000000)
 val LightGray = Color(0xFFF1F5F9)
-val DarkGray = Color(0xFF1E293B)
+val DarkGray = Color(0xFF121A2C)
 val MediumGray = Color(0xFF64748B)
 
-val SuccessGreen = Color(0xFF10B981)
-val WarningAmber = Color(0xFFF59E0B)
-val ErrorPink = Color(0xFFEC4899)
+val SuccessGreen = Color(0xFF00E676)
+val WarningAmber = Color(0xFFFFC93C)
+val ErrorPink = Color(0xFFFF2D6F)
 
-// Luxury Glass & Border Gradients
-val GlassBorder = Color.White.copy(alpha = 0.08f)
-val LuxuryGoldGradient = Brush.horizontalGradient(
-    listOf(Color(0xFFFFFAED), Color(0xFFF59E0B), Color(0xFFD97706), Color(0xFFFEF3C7))
-)
-val LuxuryEmeraldGradient = Brush.horizontalGradient(
-    listOf(Color(0xFF0D9488), Color(0xFF10B981), Color(0xFF06B6D4))
-)
-val LuxuryNavyGradient = Brush.verticalGradient(
-    listOf(Color(0xFF131C2E), Color(0xFF0B1120))
-)
+// 🌈 Pre-configured Brushes & Gradients
+val LuxuryGoldGradient = Brush.horizontalGradient(listOf(GoldGradientStart, GoldGradientEnd))
+val LuxuryEmeraldGradient = Brush.horizontalGradient(listOf(EmeraldNeonStart, EmeraldNeonEnd))
+val LuxurySkyBlueGradient = Brush.horizontalGradient(listOf(SkyBlueStart, SkyBlueEnd))
+val LuxuryCoralGradient = Brush.horizontalGradient(listOf(GlowingCoralStart, GlowingCoralEnd))
+val LuxuryDarkNavyGradient = Brush.verticalGradient(listOf(SecondaryBg, DarkLuxuryBackground))
+
 
 
 
