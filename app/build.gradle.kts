@@ -52,12 +52,17 @@ android {
       val keyAl: String? = System.getenv("RELEASE_KEY_ALIAS") ?: System.getenv("KEY_ALIAS") ?: localProperties.getProperty("RELEASE_KEY_ALIAS")
       val keyPass: String? = System.getenv("RELEASE_KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD") ?: localProperties.getProperty("RELEASE_KEY_PASSWORD")
 
-      if ((customKeystore.exists() || releaseKeystore.exists()) && !storePass.isNullOrEmpty() && !keyAl.isNullOrEmpty() && !keyPass.isNullOrEmpty()) {
-        storeFile = if (customKeystore.exists()) customKeystore else releaseKeystore
+      if (customKeystore.exists() && customKeystore.length() > 0L && !storePass.isNullOrEmpty() && !keyAl.isNullOrEmpty() && !keyPass.isNullOrEmpty()) {
+        storeFile = customKeystore
         storePassword = storePass
         keyAlias = keyAl
         keyPassword = keyPass
-      } else if (debugKeystore.exists()) {
+      } else if (releaseKeystore.exists() && releaseKeystore.length() > 0L && !storePass.isNullOrEmpty() && !keyAl.isNullOrEmpty() && !keyPass.isNullOrEmpty()) {
+        storeFile = releaseKeystore
+        storePassword = storePass
+        keyAlias = keyAl
+        keyPassword = keyPass
+      } else if (debugKeystore.exists() && debugKeystore.length() > 0L) {
         storeFile = debugKeystore
         storePassword = "android"
         keyAlias = "androiddebugkey"
