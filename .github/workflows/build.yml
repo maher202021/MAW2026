@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android Release APK
 
 on:
   push:
@@ -42,7 +42,7 @@ jobs:
           fi
         fi
         if [ ! -f "app/google-services.json" ] || [ ! -s "app/google-services.json" ]; then
-          echo "Writing embedded default app/google-services.json..."
+          echo "Writing default app/google-services.json..."
           cat << 'EOF' > app/google-services.json
 {
   "project_info": {
@@ -56,17 +56,6 @@ jobs:
         "mobilesdk_app_id": "1:954106721012:android:5fa5e385532b08d5c0e4a1",
         "android_client_info": {
           "package_name": "com.serviseyem"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [{"current_key": "AIzaSyBq2SEhBADFGVF4sDyV3sC_t2HqQ1m8lC0"}],
-      "services": {"appinvite_service": {"other_platform_oauth_client": []}}
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:954106721012:android:5fa5e385532b08d5c0e4a1",
-        "android_client_info": {
-          "package_name": "com.Serviseyem"
         }
       },
       "oauth_client": [],
@@ -86,29 +75,32 @@ EOF
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       run: |
         if [ -n "$KEYSTORE_BASE64" ]; then
+          echo "Decoding KEYSTORE_BASE64..."
           echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > my-release-key.jks 2>/dev/null || true
+        fi
+        if [ -f my-release-key.jks ] && [ ! -s my-release-key.jks ]; then
+          rm -f my-release-key.jks
         fi
         if [ -f debug.keystore.base64 ]; then
           tr -d '\r\n ' < debug.keystore.base64 | base64 -d > debug.keystore 2>/dev/null || true
         fi
-        if [ ! -f debug.keystore ] && [ ! -f my-release-key.jks ]; then
+        if [ ! -s debug.keystore ] && [ ! -s my-release-key.jks ]; then
+          echo "Generating debug keystore..."
           keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
         fi
 
-    - name: Build APK
+    - name: Build Release APK
       env:
         RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
         RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
         RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx3072m -XX:+UseParallelGC' -Dkotlin.daemon.jvmargs='-Xmx4096m -XX:+UseParallelGC'"
       run: |
-        ./gradlew :app:assembleRelease --no-daemon --stacktrace || ./gradlew :app:assembleDebug --no-daemon --stacktrace
+        ./gradlew :app:assembleRelease --no-daemon --stacktrace
 
-    - name: Upload APK Artifact
+    - name: Upload Release APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Serviseyem-APK
-        path: |
-          app/build/outputs/apk/release/*.apk
-          app/build/outputs/apk/debug/*.apk
+        name: Serviseyem-Release-APK
+        path: app/build/outputs/apk/release/*.apk
         if-no-files-found: error
