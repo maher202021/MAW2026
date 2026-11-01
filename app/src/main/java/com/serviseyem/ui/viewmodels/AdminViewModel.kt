@@ -211,7 +211,8 @@ class AdminViewModel @Inject constructor(
                 }
 
                 _isLoading.value = false
-                onResult(false, "بيانات الدخول غير صحيحة")
+                val err = com.serviseyem.utils.AdminSecurityManager.lastAuthError ?: "بيانات الدخول غير صحيحة"
+                onResult(false, err)
             } catch (e: Exception) {
                 _isLoading.value = false
                 onResult(false, e.message ?: "فشل تسجيل الدخول")
@@ -272,7 +273,8 @@ class AdminViewModel @Inject constructor(
                 }
 
                 _isLoading.value = false
-                onResult(false, "بيانات دخول المالك غير صحيحة")
+                val err = com.serviseyem.utils.AdminSecurityManager.lastAuthError ?: "بيانات دخول المالك غير صحيحة"
+                onResult(false, err)
             } catch (e: Exception) {
                 _isLoading.value = false
                 onResult(false, e.message ?: "فشل تسجيل الدخول")

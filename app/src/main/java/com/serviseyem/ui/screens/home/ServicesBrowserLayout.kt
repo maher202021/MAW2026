@@ -94,7 +94,7 @@ fun ServicesBrowserLayout(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(com.serviseyem.ui.components.BespokePremiumSystem.DeepDark),
-        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+        contentPadding = PaddingValues(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 84.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (activeTabName == "الرئيسية") {

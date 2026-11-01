@@ -8,6 +8,9 @@ import com.serviseyem.data.models.AdminRole
 
 object AdminSecurityManager {
 
+    @Volatile
+    var lastAuthError: String? = null
+
     // TODO: مراجعة وإعادة هيكلة إدارة الصلاحيات الإدارية في مرحلة لاحقة دون كسر التوافقية
     /**
      * // ✨ إصلاح المرحلة 1.5: التحقق الآمن عبر Cloud Functions و Firebase Auth
@@ -45,11 +48,30 @@ object AdminSecurityManager {
         supervisors: List<SupervisorEntity> = emptyList(),
         preferredRole: String? = null
     ): String? {
+        lastAuthError = null
         val trimmedUser = username.trim()
         val trimmedPass = passwordAttempt.trim()
-        if (trimmedUser.isBlank() || trimmedPass.isBlank()) return null
+        if (trimmedUser.isBlank() || trimmedPass.isBlank()) {
+            lastAuthError = "يرجى إدخال اسم المستخدم وكلمة المرور"
+            return null
+        }
         // منع استخدام تجزئة (Hash) مسروقة ككلمة مرور
-        if (SecureHasher.isHashFormat(trimmedPass)) return null
+        if (SecureHasher.isHashFormat(trimmedPass)) {
+            lastAuthError = "صيغة كلمة المرور غير صالحة"
+            return null
+        }
+
+        // ⚡ فحص الخزنة المشفرة المحلية (PBKDF2) أولاً للوصول السريع حتى في وضع عدم الاتصال
+        if (context != null) {
+            try {
+                if (SecureAdminStorage.verifyFallbackCredentials(context, trimmedUser, trimmedPass, "OWNER")) {
+                    return "OWNER"
+                }
+                if (SecureAdminStorage.verifyFallbackCredentials(context, trimmedUser, trimmedPass, "ADMIN")) {
+                    return "ADMIN"
+                }
+            } catch (_: Exception) {}
+        }
 
         val effectiveEmail = when {
             trimmedUser.contains("@") -> trimmedUser
@@ -67,9 +89,16 @@ object AdminSecurityManager {
                 val authResult = auth.signInWithEmailAndPassword(effectiveEmail, trimmedPass).await()
                 authResult.user
             } catch (e: Exception) {
+                lastAuthError = when (e) {
+                    is com.google.firebase.FirebaseNetworkException -> "تعذر الاتصال بالسيرفر، تأكد من توفر الإنترنت"
+                    is com.google.firebase.auth.FirebaseAuthInvalidCredentialsException -> "بيانات الدخول غير صحيحة"
+                    is com.google.firebase.auth.FirebaseAuthInvalidUserException -> "الحساب غير مسجل في Firebase"
+                    else -> e.localizedMessage ?: "فشل تسجيل الدخول"
+                }
                 // تجربة إنشاء حساب إذا كان المستخدم غير موجود في Firebase Auth
                 try {
                     val createResult = auth.createUserWithEmailAndPassword(effectiveEmail, trimmedPass).await()
+                    lastAuthError = null
                     createResult.user
                 } catch (_: Exception) {
                     null

@@ -174,7 +174,7 @@ fun MainViewModel.goBack(): Boolean {
     } else {
         _currentScreen.value = AppScreens.USER_BROWSE
         _screenBackStack.value = listOf(AppScreens.USER_BROWSE)
-        return false
+        return true
     }
 }
 

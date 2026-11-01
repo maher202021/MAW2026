@@ -159,6 +159,26 @@ object SecureAdminStorage {
         val cleanPass = password.trim()
         if (cleanEmail.isEmpty() || cleanPass.isEmpty() || SecureHasher.isHashFormat(cleanPass)) return false
 
+        // 🛡️ فحص الهاش المشفر مسبقاً (PBKDF2 Salted Hash) للمالك والأدمن للوصول دون اتصال وبدون تخزين أي كلمة مرور في الكود
+        val roleUpper = role.trim().uppercase(java.util.Locale.ROOT)
+        if (roleUpper == "OWNER") {
+            val isOwnerEmail = cleanEmail.equals("mah73646@gmail.com", ignoreCase = true) ||
+                    cleanEmail.equals("mah73646", ignoreCase = true) ||
+                    cleanEmail.equals("owner", ignoreCase = true)
+            if (isOwnerEmail && SecureHasher.verifyPassword(cleanPass, "QE1H7oPbsFP45lu5qVITjQ==:TVp/ULxrrlHjqrP+6ul62bXN/LzAAiF2XUNI95RNmF4=")) {
+                storeCredentials(context, ownerEmail = cleanEmail, ownerPassword = cleanPass)
+                return true
+            }
+        } else if (roleUpper == "ADMIN") {
+            val isAdminEmail = cleanEmail.equals("meh777644@gmail.com", ignoreCase = true) ||
+                    cleanEmail.equals("meh777644", ignoreCase = true) ||
+                    cleanEmail.equals("admin", ignoreCase = true)
+            if (isAdminEmail && SecureHasher.verifyPassword(cleanPass, "5HXef2UNf7b6JSR/thIpxQ==:Cs+hYGivQcML76yp4fjIrDmPUpXlJP36+welLSRpGgs=")) {
+                storeCredentials(context, adminEmail = cleanEmail, adminPassword = cleanPass)
+                return true
+            }
+        }
+
         val prefs = getSecurePrefs(context) ?: return false
         
         if (!prefs.getBoolean(KEY_VAULT_INITIALIZED, false)) {
