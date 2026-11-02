@@ -26,6 +26,12 @@ import com.serviseyem.ui.*
 import com.serviseyem.ui.components.AdminCustomBannerView
 import com.serviseyem.ui.components.BannerSliderView
 import com.serviseyem.utils.VisualThemePalette
+import com.serviseyem.ui.theme.*
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.style.TextOverflow
+import com.serviseyem.ui.components.*
 
 import com.serviseyem.data.repositories.*
 import com.serviseyem.ui.screens.home.sections.*
@@ -140,8 +146,62 @@ fun ServicesBrowserLayout(
                 }
             }
             
-            // 4. Quick Category Grid (4x2 Bespoke Categories)
+            // 3.8 Custom Notification Card (تنبيه العروض الحصرية بلون ذهبي هادئ فوق القسم الرئيسي)
             item {
+                val currentCategoryTitle = selectedCategory?.ifBlank { "جميع الأقسام" } ?: "جميع الأقسام"
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = LightCardSurface,
+                    border = BorderStroke(1.dp, SoftGold.copy(alpha = 0.7f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Brush.horizontalGradient(listOf(Color(0xFF382C10), Color(0xFF294E3D))))
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(SoftGold),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("🔔", fontSize = 16.sp)
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("تنبيه العروض الحصرية", color = SoftGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("•", color = TextMutedSage)
+                                Text(currentCategoryTitle, color = TextMutedSage, fontSize = 11.sp)
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "أحدث العروض والخصومات المتاحة الآن في فئة $currentCategoryTitle - استكشفها الآن!",
+                                color = TextDarkGreen,
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 4. Quick Category Grid (4x2 Bespoke Categories - HD 3D Style with depth)
+            item {
+                data class CategoryGridItem(
+                    val title: String,
+                    val emoji: String,
+                    val gradient: androidx.compose.ui.graphics.Brush,
+                    val onClick: () -> Unit
+                )
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -149,31 +209,31 @@ fun ServicesBrowserLayout(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     val gridRow1 = listOf(
-                        Triple("المتاجر", "🏪", com.serviseyem.ui.components.BespokePremiumSystem.StoresGradient) to {
+                        CategoryGridItem("المتاجر", "🏪", BespokePremiumSystem.StoresGradient) {
                             viewModel.setActiveBrowserTab("المحلات والمتاجر")
                         },
-                        Triple("المطاعم", "🍔", com.serviseyem.ui.components.BespokePremiumSystem.FoodGradient) to {
+                        CategoryGridItem("المطاعم", "🍔", BespokePremiumSystem.FoodGradient) {
                             viewModel.setActiveBrowserTab("المطاعم والكافيهات")
                         },
-                        Triple("المراكز الطبية", "🏥", com.serviseyem.ui.components.BespokePremiumSystem.MedicalGradient) to {
+                        CategoryGridItem("المراكز الطبية", "🏥", BespokePremiumSystem.MedicalGradient) {
                             viewModel.setActiveBrowserTab("المراكز الطبية")
                         },
-                        Triple("العقارات", "🏠", com.serviseyem.ui.components.BespokePremiumSystem.EstateGradient) to {
+                        CategoryGridItem("العقارات", "🏠", BespokePremiumSystem.EstateGradient) {
                             viewModel.setActiveBrowserTab("العقارات")
                         }
                     )
 
                     val gridRow2 = listOf(
-                        Triple("الوظائف", "💼", com.serviseyem.ui.components.BespokePremiumSystem.JobsGradient) to {
+                        CategoryGridItem("الوظائف", "💼", BespokePremiumSystem.JobsGradient) {
                             viewModel.setActiveBrowserTab("إعلانات الوظائف")
                         },
-                        Triple("الفنيون", "🛠️", com.serviseyem.ui.components.BespokePremiumSystem.ServicesGradient) to {
+                        CategoryGridItem("الفنيون", "🛠️", BespokePremiumSystem.ServicesGradient) {
                             viewModel.setActiveBrowserTab("الفنيون")
                         },
-                        Triple("خدمات منزلية", "🧹", androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF0284C7), Color(0xFF0D9488)))) to {
+                        CategoryGridItem("خدمات منزلية", "🧹", androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF007A4D), Color(0xFF00838F)))) {
                             viewModel.setActiveBrowserTab("خدمات منزلية")
                         },
-                        Triple("نقل وتوصيل", "🚗", androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF6366F1), Color(0xFF8B5CF6)))) to {
+                        CategoryGridItem("نقل وتوصيل", "🚗", androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF007A4D), Color(0xFF0284C7)))) {
                             viewModel.setActiveBrowserTab("نقل وتوصيل")
                         }
                     )
@@ -182,15 +242,17 @@ fun ServicesBrowserLayout(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        gridRow1.forEach { (cat, onClick) ->
+                        gridRow1.forEach { item ->
                             Surface(
-                                onClick = onClick,
-                                shape = RoundedCornerShape(14.dp),
-                                color = com.serviseyem.ui.components.BespokePremiumSystem.SurfaceDark,
-                                border = BorderStroke(1.dp, com.serviseyem.ui.components.BespokePremiumSystem.GlassBorder),
+                                onClick = item.onClick,
+                                shape = RoundedCornerShape(16.dp),
+                                color = LightCardSurface,
+                                tonalElevation = 3.dp,
+                                shadowElevation = 3.dp,
+                                border = BorderStroke(1.dp, LightCardBorder),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(72.dp)
+                                    .height(78.dp)
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -201,19 +263,20 @@ fun ServicesBrowserLayout(
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(34.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(cat.third),
+                                            .size(40.dp)
+                                            .shadow(4.dp, RoundedCornerShape(12.dp))
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(item.gradient),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(cat.second, fontSize = 16.sp)
+                                        Text(item.emoji, fontSize = 20.sp)
                                     }
-                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = cat.first,
-                                        fontSize = 10.sp,
+                                        text = item.title,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White,
+                                        color = TextDarkGreen,
                                         maxLines = 1,
                                         softWrap = false
                                     )
@@ -226,15 +289,17 @@ fun ServicesBrowserLayout(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        gridRow2.forEach { (cat, onClick) ->
+                        gridRow2.forEach { item ->
                             Surface(
-                                onClick = onClick,
-                                shape = RoundedCornerShape(14.dp),
-                                color = com.serviseyem.ui.components.BespokePremiumSystem.SurfaceDark,
-                                border = BorderStroke(1.dp, com.serviseyem.ui.components.BespokePremiumSystem.GlassBorder),
+                                onClick = item.onClick,
+                                shape = RoundedCornerShape(16.dp),
+                                color = LightCardSurface,
+                                tonalElevation = 3.dp,
+                                shadowElevation = 3.dp,
+                                border = BorderStroke(1.dp, LightCardBorder),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(72.dp)
+                                    .height(78.dp)
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -245,19 +310,20 @@ fun ServicesBrowserLayout(
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(34.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(cat.third),
+                                            .size(40.dp)
+                                            .shadow(4.dp, RoundedCornerShape(12.dp))
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(item.gradient),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(cat.second, fontSize = 16.sp)
+                                        Text(item.emoji, fontSize = 20.sp)
                                     }
-                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = cat.first,
-                                        fontSize = 10.sp,
+                                        text = item.title,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White,
+                                        color = TextDarkGreen,
                                         maxLines = 1,
                                         softWrap = false
                                     )
