@@ -63,8 +63,7 @@ android {
         keyAlias = keyAl
         keyPassword = keyPass
       } else {
-        val ks = if (debugKeystore.exists() && debugKeystore.length() > 0L) debugKeystore else customKeystore
-        storeFile = ks
+        storeFile = if (debugKeystore.exists()) debugKeystore else customKeystore
         storePassword = if (!storePass.isNullOrEmpty()) storePass else "android"
         keyAlias = if (!keyAl.isNullOrEmpty()) keyAl else "androiddebugkey"
         keyPassword = if (!keyPass.isNullOrEmpty()) keyPass else "android"
@@ -72,12 +71,10 @@ android {
     }
     create("debugConfig") {
       val debugKeystore = file("${rootDir}/debug.keystore")
-      if (debugKeystore.exists()) {
-        storeFile = debugKeystore
-        storePassword = "android"
-        keyAlias = "androiddebugkey"
-        keyPassword = "android"
-      }
+      storeFile = debugKeystore
+      storePassword = "android"
+      keyAlias = "androiddebugkey"
+      keyPassword = "android"
     }
   }
 
