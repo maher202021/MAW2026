@@ -383,7 +383,7 @@ class MainActivity : ComponentActivity() {
                         finish()
                     } else {
                         lastBackPressTime = now
-                        Toast.makeText(context, "اضغط مرة أخرى للخروج", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Press again to exit / اضغط مرة أخرى للخروج", Toast.LENGTH_SHORT).show()
                     }
                 }
             }

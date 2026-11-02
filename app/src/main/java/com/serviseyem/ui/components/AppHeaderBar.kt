@@ -246,7 +246,7 @@ fun AppHeaderBar(
             }
         }
 
-        // Row 2: Navigation Bar (الخرائط 🗺️, الانضمام 👤, الإشعارات 🔔, المحادثات ✉️)
+        // Row 2: Strict Order Navigation Bar (الرئيسية 🏠, الخرائط 🗺️, الانضمام 👤, الإشعارات 🔔, المحادثات ✉️)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -258,7 +258,22 @@ fun AppHeaderBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // 1. الخرائط
+            // 1. الرئيسية
+            val isBrowse = currentScreen == AppScreens.USER_BROWSE || currentScreen == "MAIN_DASHBOARD" || currentScreen == "HOME"
+            Luxury3DNavIcon(
+                emojiIcon = settingsState.topHomeIcon.ifEmpty { "🏠" },
+                vectorIcon = Icons.Default.Home,
+                label = if (isEn) "Home" else "الرئيسية",
+                isSelected = isBrowse,
+                iconSizeDp = settingsState.navIconSizeDp,
+                iconStyle = settingsState.topNavIconStyle,
+                onClick = {
+                    viewModel.navigateToScreen(AppScreens.USER_BROWSE)
+                    viewModel.registerBackdoorInteraction()
+                }
+            )
+
+            // 2. الخرائط
             if (settingsState.isMapFeatureEnabled) {
                 val isMap = currentScreen == AppScreens.MAP_VIEW
                 Luxury3DNavIcon(

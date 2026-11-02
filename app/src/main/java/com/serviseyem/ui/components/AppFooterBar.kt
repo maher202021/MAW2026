@@ -28,14 +28,12 @@ import androidx.compose.ui.unit.sp
 import com.serviseyem.ui.MainViewModel
 import com.serviseyem.utils.VisualThemePalette
 
-import androidx.compose.material.icons.filled.Home
-
 /**
- * 👑 AppFooterBar (الشريط السفلي الذهبي مع زر الرئيسية البارز في المنتصف)
+ * 👑 AppFooterBar (الشريط السفلي الذهبي مع زر الطلبات البارز)
  * الترتيب الصارم:
  * 1. الحماية (Protection / Admin)
  * 2. اللغة (Language Switcher)
- * 3. [الرئيسية] (Floating Home button in Center)
+ * 3. [الطلبات] (Floating Orders button in Center - بارز بارتفاع 26.dp وتوهج ذهبي)
  * 4. الباقات (Packages / Membership)
  * 5. معلومات (Info / About)
  */
@@ -45,8 +43,6 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
     val currentLang by viewModel.currentLanguage.collectAsState()
     val currentScreen by viewModel.currentScreen.collectAsState()
     val isEn = currentLang == "en"
-
-    val isHome = currentScreen == AppScreens.USER_BROWSE || currentScreen == AppScreens.HOME
 
     Box(
         modifier = Modifier
@@ -99,7 +95,7 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                     }
                 )
 
-                // Spacer for the Center Floating Button (الرئيسية)
+                // Spacer for the Center Floating Button (الطلبات)
                 Spacer(modifier = Modifier.width(56.dp))
 
                 // 4. الباقات (Packages / Membership)
@@ -130,7 +126,7 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
             }
         }
 
-        // 3. Center Floating Home Button (الرئيسية) - Protruding 26.dp with Gold Gradient Glow
+        // 3. Center Floating Orders Button (الطلبات) - Protruding 26.dp with Gold Gradient Glow
         Box(
             modifier = Modifier
                 .offset(y = (-18).dp)
@@ -138,10 +134,7 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                 .clip(CircleShape)
                 .background(com.serviseyem.ui.theme.LuxuryGoldGradient)
                 .border(2.5.dp, com.serviseyem.ui.theme.DarkLuxuryBackground, CircleShape)
-                .clickable {
-                    viewModel.navigateToScreen(AppScreens.USER_BROWSE)
-                    viewModel.registerBackdoorInteraction()
-                },
+                .clickable { viewModel.navigateTo("ORDERS_VIEW") },
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -149,13 +142,13 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                 verticalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Home,
-                    contentDescription = if (isEn) "Home" else "الرئيسية",
+                    imageVector = Icons.Default.ListAlt,
+                    contentDescription = if (isEn) "Orders" else "الطلبات",
                     tint = Color.Black,
                     modifier = Modifier.size(22.dp)
                 )
                 Text(
-                    text = if (isEn) "Home" else "الرئيسية",
+                    text = if (isEn) "Orders" else "الطلبات",
                     fontSize = 8.5.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.Black

@@ -141,150 +141,6 @@ fun OrdersScreenLayout(viewModel: MainViewModel, themeColors: VisualThemePalette
             }
         }
 
-        // 📊 صف الإحصائيات الفوري (Stats Row)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // كرت طلبات المتاجر (Store Orders)
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { selectedTab = 1 },
-                color = if (selectedTab == 1) Color(0xFF1E293B) else themeColors.surface,
-                border = BorderStroke(1.dp, if (selectedTab == 1) com.serviseyem.ui.theme.GoldGradientStart else Color.White.copy(alpha = 0.08f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text("🛍️", fontSize = 20.sp)
-                    Column {
-                        Text(
-                            text = "مشتريات المتاجر",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.LightGray
-                        )
-                        Text(
-                            text = "${myOrders.size} طلب",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = com.serviseyem.ui.theme.GoldGradientStart
-                        )
-                    }
-                }
-            }
-
-            // كرت الطلبات العاجلة (Urgent Requests)
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { selectedTab = 0 },
-                color = if (selectedTab == 0) Color(0xFF1E293B) else themeColors.surface,
-                border = BorderStroke(1.dp, if (selectedTab == 0) Color(0xFFFF5E7A) else Color.White.copy(alpha = 0.08f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text("⚡", fontSize = 20.sp)
-                    Column {
-                        Text(
-                            text = "طلبات الخدمات العاجلة",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.LightGray
-                        )
-                        Text(
-                            text = "${myInstantRequests.size} طلب",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFF5E7A)
-                        )
-                    }
-                }
-            }
-        }
-
-        // 🚨 بطاقة الطوارئ وخدمة العملاء (Emergency Hotline Card)
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            shape = RoundedCornerShape(12.dp),
-            color = Color(0xFF200F17),
-            border = BorderStroke(1.dp, Color(0xFFFF5E7A).copy(alpha = 0.5f))
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text("🚨", fontSize = 18.sp)
-                    Column {
-                        Text(
-                            text = "طوارئ المتابعة وخدمة العملاء",
-                            fontSize = 11.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFF5E7A)
-                        )
-                        Text(
-                            text = "اتصال مباشر أو نسخ الرقم: 777644",
-                            fontSize = 10.sp,
-                            color = Color.LightGray
-                        )
-                    }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    // زر نسخ الرقم
-                    IconButton(
-                        onClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                            val clip = android.content.ClipData.newPlainText("Hotline", "777644")
-                            clipboard.setPrimaryClip(clip)
-                            Toast.makeText(context, "تم نسخ الرقم: 777644 📋", Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier
-                            .size(30.dp)
-                            .background(Color.White.copy(alpha = 0.1f), CircleShape)
-                    ) {
-                        Text("📋", fontSize = 12.sp)
-                    }
-
-                    // زر الاتصال المباشر
-                    IconButton(
-                        onClick = {
-                            try {
-                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:777644"))
-                                context.startActivity(intent)
-                            } catch (_: Exception) {
-                                Toast.makeText(context, "تعذر فتح تطبيق الاتصال", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier
-                            .size(30.dp)
-                            .background(Color.White, CircleShape)
-                    ) {
-                        Icon(Icons.Default.Phone, contentDescription = "اتصال", tint = Color(0xFFBE123C), modifier = Modifier.size(16.dp))
-                    }
-                }
-            }
-        }
-
         // Navigation Tabs: ⚡ طلبات الخدمات العاجلة vs 🛍️ مشتريات المتاجر
         TabRow(
             selectedTabIndex = selectedTab,
@@ -403,7 +259,6 @@ fun OrdersScreenLayout(viewModel: MainViewModel, themeColors: VisualThemePalette
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(bottom = 84.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(myInstantRequests) { req ->
@@ -614,7 +469,6 @@ fun OrdersScreenLayout(viewModel: MainViewModel, themeColors: VisualThemePalette
 
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(bottom = 84.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(paginatedOrders) { order ->
