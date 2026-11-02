@@ -14,12 +14,12 @@ plugins {
 
 android {
   namespace = "com.serviseyem"
-  compileSdk = 36
+  compileSdk = 34
 
   defaultConfig {
     applicationId = "com.serviseyem"
     minSdk = 24
-    targetSdk = 35
+    targetSdk = 34
     versionCode = 5
     versionName = "1.2.0"
 
