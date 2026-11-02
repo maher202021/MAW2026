@@ -78,16 +78,11 @@ EOF
           echo "Decoding KEYSTORE_BASE64..."
           echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > my-release-key.jks 2>/dev/null || true
         fi
-        if [ -f my-release-key.jks ] && [ ! -s my-release-key.jks ]; then
-          rm -f my-release-key.jks
+        if [ ! -f my-release-key.jks ] || [ ! -s my-release-key.jks ]; then
+          echo "Generating default signing keystore..."
+          keytool -genkeypair -v -keystore my-release-key.jks -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
         fi
-        if [ -f debug.keystore.base64 ]; then
-          tr -d '\r\n ' < debug.keystore.base64 | base64 -d > debug.keystore 2>/dev/null || true
-        fi
-        if [ ! -s debug.keystore ] && [ ! -s my-release-key.jks ]; then
-          echo "Generating debug keystore..."
-          keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-        fi
+        cp my-release-key.jks debug.keystore || true
 
     - name: Build Release APK
       env:

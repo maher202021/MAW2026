@@ -36,42 +36,14 @@ android {
   }
 
   signingConfigs {
-    val localProperties = Properties()
-    val localPropertiesFile = rootProject.file("local.properties")
-    if (localPropertiesFile.exists()) {
-        localProperties.load(FileInputStream(localPropertiesFile))
-    }
-
     create("releaseConfig") {
-      val ksPath = System.getenv("KEYSTORE_PATH") ?: localProperties.getProperty("KEYSTORE_PATH") ?: "${rootDir}/my-release-key.jks"
-      val customKeystore = file(ksPath)
-      val releaseKeystore = file("${rootDir}/release.keystore")
-      val debugKeystore = file("${rootDir}/debug.keystore")
-      
-      val storePass: String? = System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: System.getenv("STORE_PASSWORD") ?: localProperties.getProperty("RELEASE_KEYSTORE_PASSWORD")
-      val keyAl: String? = System.getenv("RELEASE_KEY_ALIAS") ?: System.getenv("KEY_ALIAS") ?: localProperties.getProperty("RELEASE_KEY_ALIAS")
-      val keyPass: String? = System.getenv("RELEASE_KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD") ?: localProperties.getProperty("RELEASE_KEY_PASSWORD")
-
-      if (customKeystore.exists() && customKeystore.length() > 0L && !storePass.isNullOrEmpty() && !keyAl.isNullOrEmpty() && !keyPass.isNullOrEmpty()) {
-        storeFile = customKeystore
-        storePassword = storePass
-        keyAlias = keyAl
-        keyPassword = keyPass
-      } else if (releaseKeystore.exists() && releaseKeystore.length() > 0L && !storePass.isNullOrEmpty() && !keyAl.isNullOrEmpty() && !keyPass.isNullOrEmpty()) {
-        storeFile = releaseKeystore
-        storePassword = storePass
-        keyAlias = keyAl
-        keyPassword = keyPass
-      } else {
-        storeFile = if (debugKeystore.exists()) debugKeystore else customKeystore
-        storePassword = if (!storePass.isNullOrEmpty()) storePass else "android"
-        keyAlias = if (!keyAl.isNullOrEmpty()) keyAl else "androiddebugkey"
-        keyPassword = if (!keyPass.isNullOrEmpty()) keyPass else "android"
-      }
+      storeFile = file("${rootDir}/my-release-key.jks")
+      storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: "android"
+      keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: "androiddebugkey"
+      keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: "android"
     }
     create("debugConfig") {
-      val debugKeystore = file("${rootDir}/debug.keystore")
-      storeFile = debugKeystore
+      storeFile = file("${rootDir}/debug.keystore")
       storePassword = "android"
       keyAlias = "androiddebugkey"
       keyPassword = "android"
