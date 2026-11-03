@@ -6,21 +6,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-// 🌊 Elegant Light Icy-Blue + Deep Emerald & Gold Shine Color Scheme (Strictly NO Pure White or Pure Black)
+// 💎 World-Class Light Luxury Color Scheme with High Contrast
 private val LightLuxuryColorScheme = androidx.compose.material3.lightColorScheme(
-    primary = DarkCyanPrimary,
-    onPrimary = CardSurface,
-    primaryContainer = SecondaryTeal,
-    onPrimaryContainer = CardSurface,
+    primary = PrimaryBlue,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFEFF6FF),
+    onPrimaryContainer = PrimaryBlue,
     secondary = GoldShine,
-    onSecondary = Black,
+    onSecondary = Color.White,
     background = AppBackground,
-    onBackground = TextLightMint,
+    onBackground = TextDarkTitle,
     surface = CardSurface,
-    onSurface = TextLightMint,
+    onSurface = TextDarkTitle,
     outline = CardBorder,
     error = ErrorCoral
 )

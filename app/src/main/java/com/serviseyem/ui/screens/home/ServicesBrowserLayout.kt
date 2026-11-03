@@ -98,16 +98,7 @@ fun ServicesBrowserLayout(
         list.toList()
     }
 
-    val activeTabBg = remember(activeTabName) {
-        when (activeTabName) {
-            "المطاعم والكافيهات", "المطاعم" -> com.serviseyem.ui.theme.FoodScreenBg
-            "المحلات والمتاجر", "المحلات" -> com.serviseyem.ui.theme.StoreScreenBg
-            "المراكز الطبية", "المراكز الطبية والعيادات" -> com.serviseyem.ui.theme.MedicalScreenBg
-            "العقارات" -> com.serviseyem.ui.theme.EstateScreenBg
-            "إعلانات الوظائف", "الوظائف" -> com.serviseyem.ui.theme.JobsScreenBg
-            else -> com.serviseyem.ui.theme.AppBackground
-        }
-    }
+    val activeTabBg = Color(0xFFF8FAFC)
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(activeTabBg),
@@ -258,13 +249,13 @@ fun ServicesBrowserLayout(
                             Surface(
                                 onClick = item.onClick,
                                 shape = RoundedCornerShape(16.dp),
-                                color = LightCardSurface,
-                                tonalElevation = 3.dp,
-                                shadowElevation = 3.dp,
-                                border = BorderStroke(1.dp, LightCardBorder),
+                                color = Color.White,
+                                tonalElevation = 2.dp,
+                                shadowElevation = 2.dp,
+                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(78.dp)
+                                    .height(82.dp)
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -275,9 +266,9 @@ fun ServicesBrowserLayout(
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(40.dp)
-                                            .shadow(4.dp, RoundedCornerShape(12.dp))
-                                            .clip(RoundedCornerShape(12.dp))
+                                            .size(42.dp)
+                                            .shadow(2.dp, CircleShape)
+                                            .clip(CircleShape)
                                             .background(item.gradient),
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -286,9 +277,9 @@ fun ServicesBrowserLayout(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = item.title,
-                                        fontSize = 11.sp,
+                                        fontSize = 11.5.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = TextDarkGreen,
+                                        color = Color(0xFF1E293B),
                                         maxLines = 1,
                                         softWrap = false
                                     )
@@ -305,13 +296,13 @@ fun ServicesBrowserLayout(
                             Surface(
                                 onClick = item.onClick,
                                 shape = RoundedCornerShape(16.dp),
-                                color = LightCardSurface,
-                                tonalElevation = 3.dp,
-                                shadowElevation = 3.dp,
-                                border = BorderStroke(1.dp, LightCardBorder),
+                                color = Color.White,
+                                tonalElevation = 2.dp,
+                                shadowElevation = 2.dp,
+                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(78.dp)
+                                    .height(82.dp)
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -322,9 +313,9 @@ fun ServicesBrowserLayout(
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(40.dp)
-                                            .shadow(4.dp, RoundedCornerShape(12.dp))
-                                            .clip(RoundedCornerShape(12.dp))
+                                            .size(42.dp)
+                                            .shadow(2.dp, CircleShape)
+                                            .clip(CircleShape)
                                             .background(item.gradient),
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -333,9 +324,9 @@ fun ServicesBrowserLayout(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = item.title,
-                                        fontSize = 11.sp,
+                                        fontSize = 11.5.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = TextDarkGreen,
+                                        color = Color(0xFF1E293B),
                                         maxLines = 1,
                                         softWrap = false
                                     )

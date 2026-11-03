@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -75,7 +76,7 @@ fun StoresSectionView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(com.serviseyem.ui.theme.StoreScreenBg)
+            .background(Color(0xFFF8FAFC))
             .padding(bottom = 20.dp)
     ) {
         // 0. Top Back Header
@@ -89,7 +90,7 @@ fun StoresSectionView(
             title = "المتاجر والمعارض",
             subtitle = "تسوق من أفضل العلامات التجارية في اليمن",
             icon = Icons.Default.Storefront,
-            accentColor = BespokePremiumSystem.EmeraldAccent,
+            accentColor = Color(0xFF059669),
             actionLabel = "إضافة متجر +",
             onActionClick = onCreateStoreClick
         )
@@ -97,23 +98,34 @@ fun StoresSectionView(
         // 2. Promotional Carousel (Simulated with a prominent Box)
         Surface(
             modifier = Modifier.fillMaxWidth().height(160.dp).padding(horizontal = 8.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = com.serviseyem.ui.theme.StoreCardSurface,
-            border = BorderStroke(1.dp, com.serviseyem.ui.theme.StoreCardBorder)
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+            shadowElevation = 3.dp
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 AsyncImage(
                     model = "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=800&q=80",
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().alpha(0.6f)
+                    modifier = Modifier.fillMaxSize().alpha(0.85f)
                 )
-                Column(modifier = Modifier.align(Alignment.BottomStart).padding(20.dp)) {
-                    Surface(shape = RoundedCornerShape(8.dp), color = BespokePremiumSystem.EmeraldAccent) {
-                        Text("خصم 30%", color = com.serviseyem.ui.components.BespokePremiumSystem.ButtonLightText, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Transparent, Color(0xCC0F172A))
+                            )
+                        )
+                )
+                Column(modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)) {
+                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF059669)) {
+                        Text("خصم 30%", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                     }
-                    Text("عروض المتاجر الأسبوعية 🔥", color = com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("على كافة الأجهزة والمنتجات المحلية", color = com.serviseyem.ui.components.BespokePremiumSystem.CardMutedText, fontSize = 12.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("عروض المتاجر الأسبوعية 🔥", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("على كافة الأجهزة والمنتجات المحلية", color = Color(0xFFCBD5E1), fontSize = 11.5.sp)
                 }
             }
         }
@@ -132,8 +144,9 @@ fun StoresSectionView(
                         selectedSubCat = if (label == "الكل") "الكل" else label
                     },
                     shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) BespokePremiumSystem.EmeraldAccent else com.serviseyem.ui.theme.StoreCardSurface,
-                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else com.serviseyem.ui.theme.StoreCardBorder)
+                    color = if (isSelected) Color(0xFF059669) else Color.White,
+                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else Color(0xFFE2E8F0)),
+                    shadowElevation = if (isSelected) 3.dp else 1.dp
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -143,9 +156,9 @@ fun StoresSectionView(
                         Text(emoji, fontSize = 14.sp)
                         Text(
                             label,
-                            color = if (isSelected) com.serviseyem.ui.components.BespokePremiumSystem.ButtonLightText else com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle,
+                            color = if (isSelected) Color.White else Color(0xFF1E293B),
                             fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold
                         )
                     }
                 }

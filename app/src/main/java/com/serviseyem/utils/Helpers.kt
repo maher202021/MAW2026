@@ -177,16 +177,16 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
             )
         }
         else -> {
-            // Default: Light Luxury Sky-Blue Theme (Strictly NO #FFFFFF or #000000)
-            val primary = com.serviseyem.ui.theme.DarkCyanPrimary
-            val secondary = com.serviseyem.ui.theme.SecondaryTeal
+            // Default: World-Class Light Luxury High-Contrast Theme
+            val primary = com.serviseyem.ui.theme.PrimaryBlue
+            val secondary = com.serviseyem.ui.theme.GoldShine
             val background = com.serviseyem.ui.theme.AppBackground
             val surface = com.serviseyem.ui.theme.CardSurface
-            val textPrimary = com.serviseyem.ui.theme.TextLightMint
-            val textSecondary = com.serviseyem.ui.theme.TextMutedMint
+            val textPrimary = Color(0xFF0F172A)
+            val textSecondary = Color(0xFF475569)
             val accent = com.serviseyem.ui.theme.GoldShine
             VisualThemePalette(
-                activeId = "YEMEN_SKY_LUXURY",
+                activeId = "YEMEN_CLEAN_LUXURY",
                 primary = primary,
                 secondary = secondary,
                 background = background,
@@ -195,14 +195,14 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
                 textSecondary = textSecondary,
                 accent = accent,
                 border = com.serviseyem.ui.theme.CardBorder,
-                gradientBrush = Brush.verticalGradient(listOf(background, com.serviseyem.ui.theme.CardSurface)),
+                gradientBrush = Brush.verticalGradient(listOf(Color(0xFFFFFFFF), Color(0xFFF8FAFC))),
                 scheme = androidx.compose.material3.lightColorScheme(
                     primary = primary,
                     secondary = secondary,
                     background = background,
                     surface = surface,
-                    onPrimary = com.serviseyem.ui.theme.ButtonLightText,
-                    onSecondary = com.serviseyem.ui.theme.ButtonLightText,
+                    onPrimary = Color.White,
+                    onSecondary = Color.White,
                     onBackground = textPrimary,
                     onSurface = textPrimary
                 )

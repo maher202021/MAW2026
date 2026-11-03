@@ -3,70 +3,73 @@ package com.serviseyem.ui.theme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// 🌊 Elegant Light Sky-Blue + Emerald & Soft Gold Theme (Strictly NO Pure White #FFFFFF or Black #000000)
-// The main background is distinctly sky-blue (سماوي فاتح أنيق ومميز ومبهر)
-val AppBackground = Color(0xFFAFE0F8)
-val CardSurface = Color(0xFFD6EEFA)
-val CardBorder = Color(0xFF8FD2F8)
-val GlassBorder = Color(0xFF75C7F5)
+// 💎 World-Class Clean Design System (High Contrast & Professional Aesthetics)
+// Clean neutral backgrounds and crisp white cards for maximum readability and visual polish
+val AppBackground = Color(0xFFF8FAFC)        // Clean ultra-light neutral background (#F8FAFC / Slate-50)
+val CardSurface = Color(0xFFFFFFFF)          // Pure crisp white cards
+val CardBorder = Color(0xFFE2E8F0)           // Subtle border (#E2E8F0 / Slate-200)
+val GlassBorder = Color(0xFFCBD5E1)          // Slate-300
 
-// 🌟 Accent Palette
-val GoldShine = Color(0xFFD4A017)
-val DarkCyanPrimary = Color(0xFF0D5C3A)      // Deep Elegant Emerald Green
-val SecondaryTeal = Color(0xFF147D72)        // Muted Teal
-val MutedGold = Color(0xFFB8860B)
-val RichBlueTeal = Color(0xFF0284C7)
-val SoftIndigo = Color(0xFF4F46E5)
-val MutedPurple = Color(0xFF9333EA)
+// 🌟 Core Brand Colors (Trust & Reliability)
+val PrimaryBlue = Color(0xFF2563EB)          // Professional Indigo/Royal Blue (#2563EB)
+val DarkCyanPrimary = PrimaryBlue            // Backward-compatible alias
+val SecondaryTeal = Color(0xFF0D9488)        // Medical/Teal accent
+val GoldShine = Color(0xFFF59E0B)            // Warm Golden Amber / CTA accent
+val MutedGold = Color(0xFFD97706)            // Deep Amber
+val RichBlueTeal = Color(0xFF0284C7)         // Deep Sky Blue
+val SoftIndigo = Color(0xFF4F46E5)           // Royal Indigo
+val MutedPurple = Color(0xFF7C3AED)          // Violet
 
-// Text Colors (Deep Midnight Navy & Slate - NO Pure Black #000000)
-val TextLightMint = Color(0xFF0F2B48)        // Primary Text: Crisp Deep Navy
-val TextMutedMint = Color(0xFF3B648B)        // Secondary Text: Elegant Muted Slate
-val White = Color(0xFFD6EEFA)                // Tinted Sky-Off-White (Never #FFFFFF)
-val Black = Color(0xFF0F2B48)                // Deep Navy Slate (Never #000000)
+// 🖋️ High-Contrast Typography (Crisp Deep Navy / Charcoal - Zero eye-strain)
+val TextLightMint = Color(0xFF1E293B)        // Primary Text: Royal Dark Navy (#1E293B / Slate-800)
+val TextDarkTitle = Color(0xFF0F172A)        // Headings: Deepest Navy (#0F172A / Slate-900)
+val TextMutedMint = Color(0xFF475569)        // Secondary Text: Muted Slate (#475569 / Slate-600)
+val TextMutedLight = Color(0xFF64748B)       // Tertiary Text: (#64748B / Slate-500)
+val White = Color(0xFFFFFFFF)                // Pure White
+val Black = Color(0xFF0F172A)                // Deep Navy Slate
+val ButtonLightText = Color(0xFFFFFFFF)      // Pure White for buttons over dark/accent backgrounds
 
-val SuccessGreen = Color(0xFF0D5C3A)
-val WarningAmber = Color(0xFFD97706)
-val ErrorCoral = Color(0xFFE11D48)
-val ButtonLightText = Color(0xFFE0F2FE)
+// 🟢 Status Colors
+val SuccessGreen = Color(0xFF059669)         // Emerald Green (#059669)
+val WarningAmber = Color(0xFFF59E0B)         // Warm Amber (#F59E0B)
+val ErrorCoral = Color(0xFFDC2626)           // Red-600
 
-// 🎨 Distinct Category Department Themes (Strictly Tinted, Never White / Black)
-// 🍔 1. المطاعم والكافيهات (Warm Appetizing Peach/Apricot)
-val FoodScreenBg = Color(0xFFFDE8D4)
-val FoodCardSurface = Color(0xFFFFF2E6)
-val FoodCardBorder = Color(0xFFFDBA74)
+// 🎨 Sector-Specific Identities (Cards stay pure white #FFFFFF, sector accents highlight buttons & badges)
+// 🏪 1. المحلات والمتاجر (Emerald Green - التجارة والنمو)
+val StoreAccent = Color(0xFF059669)
+val StoreBorder = Color(0xFFA7F3D0)
+val StoreSurface = Color(0xFFFFFFFF)
+val StoreScreenBg = Color(0xFFF8FAFC)
+
+// 🍔 2. المطاعم والكافيهات (Warm Orange / Coral - الضيافة والأغذية)
 val FoodAccent = Color(0xFFEA580C)
+val FoodBorder = Color(0xFFFED7AA)
+val FoodSurface = Color(0xFFFFFFFF)
+val FoodScreenBg = Color(0xFFF8FAFC)
 
-// 🏪 2. المحلات والمتاجر (Modern Azure Sky Tint)
-val StoreScreenBg = Color(0xFFD3E8FA)
-val StoreCardSurface = Color(0xFFE5F2FC)
-val StoreCardBorder = Color(0xFF93C5FD)
-val StoreAccent = Color(0xFF0284C7)
-
-// 🏥 3. المراكز الطبية والعيادات (Calming Seafoam Mint)
-val MedicalScreenBg = Color(0xFFCEF2E8)
-val MedicalCardSurface = Color(0xFFE4FAF4)
-val MedicalCardBorder = Color(0xFF86EFAC)
+// 🏥 3. المراكز الطبية والعيادات (Medical Teal / Cyan - النظافة والأمان)
 val MedicalAccent = Color(0xFF0D9488)
+val MedicalBorder = Color(0xFF99F6E4)
+val MedicalSurface = Color(0xFFFFFFFF)
+val MedicalScreenBg = Color(0xFFF8FAFC)
 
-// 🏢 4. العقارات والمباني (Prestigious Cashmere Desert Sand)
-val EstateScreenBg = Color(0xFFEFE8DA)
-val EstateCardSurface = Color(0xFFF9F4EB)
-val EstateCardBorder = Color(0xFFD4C3AC)
-val EstateAccent = Color(0xFFB45309)
+// 🏢 4. العقارات والوظائف (Royal Indigo / Deep Blue - الاحترافية والعمل)
+val EstateAccent = Color(0xFF4F46E5)
+val EstateBorder = Color(0xFFC7D2FE)
+val EstateSurface = Color(0xFFFFFFFF)
+val EstateScreenBg = Color(0xFFF8FAFC)
 
-// 💼 5. إعلانات الوظائف والفنيين (Periwinkle Violet Slate)
-val JobsScreenBg = Color(0xFFDFE2F7)
-val JobsCardSurface = Color(0xFFECEEFC)
-val JobsCardBorder = Color(0xFFC7D2FE)
-val JobsAccent = Color(0xFF6366F1)
+val JobsAccent = Color(0xFF4F46E5)
+val JobsBorder = Color(0xFFC7D2FE)
+val JobsSurface = Color(0xFFFFFFFF)
+val JobsScreenBg = Color(0xFFF8FAFC)
 
-// 🔗 Compatibility Aliases
+// 🔗 Legacy & Compatibility Aliases
 val SoftLightSageBg = AppBackground
 val LightCardSurface = CardSurface
 val LightCardBorder = CardBorder
-val DeepEmerald = DarkCyanPrimary
-val EmeraldLight = Color(0xFF15803D)
+val DeepEmerald = StoreAccent
+val EmeraldLight = Color(0xFF10B981)
 val SoftGold = GoldShine
 val MutedTeal = SecondaryTeal
 val VividCoralRed = ErrorCoral
@@ -80,14 +83,14 @@ val ErrorPinkLegacy = ErrorCoral
 
 // Section Families
 val FoodFamilyPrimary = FoodAccent
-val FoodFamilySecondary = FoodCardBorder
+val FoodFamilySecondary = FoodBorder
 val FoodFamilyGold = GoldShine
 
 val TechFamilyPrimary = StoreAccent
 val TechFamilySecondary = RichBlueTeal
 val TechFamilyCyan = SecondaryTeal
 
-val TravelFamilyPrimary = DarkCyanPrimary
+val TravelFamilyPrimary = PrimaryBlue
 val TravelFamilySecondary = SecondaryTeal
 val TravelFamilySunset = GoldShine
 
@@ -95,11 +98,10 @@ val HealthFamilyPrimary = MedicalAccent
 val HealthFamilySecondary = SecondaryTeal
 val HealthFamilyGold = GoldShine
 
-val ServicesFamilyPrimary = DarkCyanPrimary
+val ServicesFamilyPrimary = PrimaryBlue
 val ServicesFamilySecondary = GoldShine
 val ServicesFamilyTeal = SecondaryTeal
 
-// Legacy Aliases for Full Compatibility
 val DarkLuxuryBackground = AppBackground
 val SecondaryBg = CardSurface
 val TextPrimaryWhite = TextLightMint
@@ -111,15 +113,15 @@ val MediumGray = TextMutedMint
 
 // 🌈 Pre-configured Brushes & Gradients
 val GoldGradientStart = GoldShine
-val GoldGradientEnd = Color(0xFFF59E0B)
-val GlowingCoralStart = ErrorCoral
-val SkyBlueStart = RichBlueTeal
+val GoldGradientEnd = Color(0xFFD97706)
+val GlowingCoralStart = FoodAccent
+val SkyBlueStart = PrimaryBlue
 
 val GoldShineGradient = Brush.horizontalGradient(listOf(GoldGradientStart, GoldGradientEnd))
-val DarkCyanGradient = Brush.horizontalGradient(listOf(DarkCyanPrimary, SecondaryTeal))
-val DarkCyanBackgroundGradient = Brush.verticalGradient(listOf(AppBackground, Color(0xFFC5E8FA)))
+val DarkCyanGradient = Brush.horizontalGradient(listOf(PrimaryBlue, Color(0xFF1D4ED8)))
+val DarkCyanBackgroundGradient = Brush.verticalGradient(listOf(Color(0xFFF8FAFC), Color(0xFFF1F5F9)))
 val LuxuryGoldGradient = GoldShineGradient
-val LuxuryEmeraldGradient = DarkCyanGradient
-val LuxurySkyBlueGradient = Brush.horizontalGradient(listOf(SkyBlueStart, SecondaryTeal))
-val LuxuryCoralGradient = Brush.horizontalGradient(listOf(GlowingCoralStart, GlowingCoralStart))
+val LuxuryEmeraldGradient = Brush.horizontalGradient(listOf(Color(0xFF059669), Color(0xFF047857)))
+val LuxurySkyBlueGradient = Brush.horizontalGradient(listOf(PrimaryBlue, Color(0xFF0284C7)))
+val LuxuryCoralGradient = Brush.horizontalGradient(listOf(FoodAccent, Color(0xFFC2410C)))
 val LuxuryDarkNavyGradient = DarkCyanBackgroundGradient

@@ -105,22 +105,12 @@ fun Luxury3DNavIcon(
 
             Surface(
                 shape = CircleShape,
-                color = if (isSelected) Color(0xFF1E293B) else Color(0xFF0F172A),
+                color = if (isSelected) Color(0xFFEFF6FF) else Color(0xFFF1F5F9),
                 border = BorderStroke(
-                    width = if (isSelected) 1.4.dp else 0.8.dp,
-                    brush = Brush.linearGradient(
-                        colors = if (isSelected) listOf(
-                            Color(0xFFFFFAED),
-                            Color(0xFFF59E0B),
-                            Color(0xFFD97706),
-                            Color(0xFFFEF3C7)
-                        ) else listOf(
-                            Color(0xFFCBD5E1).copy(alpha = 0.6f),
-                            Color(0xFF475569).copy(alpha = 0.3f)
-                        )
-                    )
+                    width = if (isSelected) 1.5.dp else 1.dp,
+                    color = if (isSelected) Color(0xFF2563EB) else Color(0xFFE2E8F0)
                 ),
-                shadowElevation = if (isSelected) 5.dp else 1.dp,
+                shadowElevation = if (isSelected) 3.dp else 1.dp,
                 modifier = Modifier.size(sizeDp + 6.dp)
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -128,7 +118,7 @@ fun Luxury3DNavIcon(
                         Icon(
                             imageVector = vectorIcon,
                             contentDescription = label,
-                            tint = if (forceWhiteText) Color.White else if (isSelected) Color(0xFFF59E0B) else Color.White,
+                            tint = if (forceWhiteText) Color.White else if (isSelected) Color(0xFF2563EB) else Color(0xFF1E293B),
                             modifier = Modifier.size(sizeDp)
                         )
                     } else {
@@ -144,9 +134,9 @@ fun Luxury3DNavIcon(
             if (badgeCount > 0) {
                 Surface(
                     shape = CircleShape,
-                    color = Color(0xFF10B981), // Emerald Green
-                    border = BorderStroke(1.dp, Color(0xFFFFD700)), // Gold border
-                    shadowElevation = 3.dp,
+                    color = Color(0xFFEF4444), // Vibrant Red Badge
+                    border = BorderStroke(1.dp, Color(0xFFFFFFFF)), // White border
+                    shadowElevation = 2.dp,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .offset(x = 4.dp, y = (-2).dp)
@@ -155,23 +145,23 @@ fun Luxury3DNavIcon(
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Text(
                             text = if (badgeCount > 99) "99+" else badgeCount.toString(),
-                            color = Color(0xFFFFD700), // Gold text
+                            color = Color.White,
                             fontSize = 8.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Black,
                             textAlign = TextAlign.Center
                         )
                     }
                 }
             }
         }
-        Spacer(modifier = Modifier.height(1.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = label,
-            fontSize = 7.5.sp,
+            fontSize = 8.5.sp,
             maxLines = 1,
             softWrap = false,
-            color = if (forceWhiteText) Color.White else if (isSelected) Color(0xFFFFD700) else Color.LightGray,
-            fontWeight = if (isSelected || forceWhiteText) FontWeight.Bold else FontWeight.Normal
+            color = if (forceWhiteText) Color.White else if (isSelected) Color(0xFF2563EB) else Color(0xFF1E293B),
+            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold
         )
     }
 }

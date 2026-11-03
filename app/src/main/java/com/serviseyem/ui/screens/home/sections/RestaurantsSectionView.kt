@@ -74,7 +74,7 @@ fun RestaurantsSectionView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(com.serviseyem.ui.theme.FoodScreenBg)
+            .background(Color(0xFFF8FAFC))
             .padding(bottom = 20.dp)
     ) {
         // 0. Top Back Header
@@ -88,7 +88,7 @@ fun RestaurantsSectionView(
             title = "المطاعم والكافيهات",
             subtitle = "اكتشف أشهى المأكولات والوجبات في مدينتك",
             icon = Icons.Default.Restaurant,
-            accentColor = BespokePremiumSystem.WarmOrange,
+            accentColor = Color(0xFFEA580C),
             actionLabel = "تسجيل مطعمك",
             onActionClick = onCreateRestaurantClick
         )
@@ -108,9 +108,10 @@ fun RestaurantsSectionView(
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = if (isSelected) glowColor.copy(alpha = 0.35f) else glowColor.copy(alpha = 0.12f),
-                        border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) glowColor else glowColor.copy(alpha = 0.3f)),
-                        modifier = Modifier.size(60.dp)
+                        color = if (isSelected) glowColor.copy(alpha = 0.18f) else Color.White,
+                        border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) glowColor else Color(0xFFE2E8F0)),
+                        shadowElevation = if (isSelected) 3.dp else 1.dp,
+                        modifier = Modifier.size(58.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(emoji, fontSize = 24.sp)
@@ -119,8 +120,8 @@ fun RestaurantsSectionView(
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         label,
-                        color = if (isSelected) glowColor else com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle,
-                        fontSize = 11.sp,
+                        color = if (isSelected) glowColor else Color(0xFF1E293B),
+                        fontSize = 11.5.sp,
                         fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold
                     )
                 }

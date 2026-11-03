@@ -51,7 +51,7 @@ fun PropertiesSectionView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(com.serviseyem.ui.theme.EstateScreenBg)
+            .background(Color(0xFFF8FAFC))
             .padding(bottom = 20.dp)
     ) {
         // 0. Top Back Header
@@ -65,7 +65,7 @@ fun PropertiesSectionView(
             title = "العقارات والاستثمارات",
             subtitle = "اكتشف أفخم العقارات والأراضي في اليمن",
             icon = Icons.Default.Apartment,
-            accentColor = com.serviseyem.ui.theme.EstateAccent,
+            accentColor = Color(0xFF4F46E5),
             actionLabel = "أضف عقارك",
             onActionClick = onCreatePropertyClick
         )
@@ -80,14 +80,15 @@ fun PropertiesSectionView(
                 Surface(
                     onClick = { selectedSubCategory = cat },
                     shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) com.serviseyem.ui.theme.EstateAccent else com.serviseyem.ui.theme.EstateCardSurface,
-                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else com.serviseyem.ui.theme.EstateCardBorder)
+                    color = if (isSelected) Color(0xFF4F46E5) else Color.White,
+                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else Color(0xFFE2E8F0)),
+                    shadowElevation = if (isSelected) 3.dp else 1.dp
                 ) {
                     Text(
                         cat,
-                        color = if (isSelected) com.serviseyem.ui.components.BespokePremiumSystem.ButtonLightText else com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) Color.White else Color(0xFF1E293B),
+                        fontSize = 11.5.sp,
+                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)
                     )
                 }

@@ -59,7 +59,7 @@ fun MedicalCentersSectionView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(com.serviseyem.ui.theme.MedicalScreenBg)
+            .background(Color(0xFFF8FAFC))
             .padding(bottom = 20.dp)
     ) {
         // 0. Top Back Header
@@ -73,26 +73,27 @@ fun MedicalCentersSectionView(
             title = "الرعاية والمراكز الطبية",
             subtitle = "أفضل الخدمات الطبية المعتمدة في متناول يدك",
             icon = Icons.Default.HealthAndSafety,
-            accentColor = BespokePremiumSystem.CyanMedical,
+            accentColor = Color(0xFF0D9488),
             actionLabel = "إضافة منشأة",
             onActionClick = onCreateMedicalClick
         )
 
-        // 2. Emergency 24/7 Pill (Glassmorphic)
+        // 2. Emergency 24/7 Pill
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFFEF4444).copy(alpha = 0.15f),
-            border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.4f))
+            color = Color.White,
+            border = BorderStroke(1.dp, Color(0xFFFECACA)),
+            shadowElevation = 2.dp
         ) {
             Row(
                 modifier = Modifier.padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Surface(shape = CircleShape, color = Color(0xFFEF4444), modifier = Modifier.size(10.dp)) {}
-                Text("صيدليات ومراكز الطوارئ المناوبة (24/7)", color = com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle)
+                Surface(shape = CircleShape, color = Color(0xFFDC2626), modifier = Modifier.size(10.dp)) {}
+                Text("صيدليات ومراكز الطوارئ المناوبة (24/7)", color = Color(0xFF1E293B), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = Color(0xFF1E293B))
             }
         }
 
@@ -106,14 +107,15 @@ fun MedicalCentersSectionView(
                 Surface(
                     onClick = { selectedSubCategory = cat },
                     shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) BespokePremiumSystem.CyanMedical.copy(alpha = 0.25f) else com.serviseyem.ui.theme.MedicalCardSurface,
-                    border = BorderStroke(1.dp, if (isSelected) BespokePremiumSystem.CyanMedical else com.serviseyem.ui.theme.MedicalCardBorder)
+                    color = if (isSelected) Color(0xFF0D9488) else Color.White,
+                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else Color(0xFFE2E8F0)),
+                    shadowElevation = if (isSelected) 3.dp else 1.dp
                 ) {
                     Text(
                         cat,
-                        color = if (isSelected) BespokePremiumSystem.CyanMedical else com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) Color.White else Color(0xFF1E293B),
+                        fontSize = 11.5.sp,
+                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                     )
                 }

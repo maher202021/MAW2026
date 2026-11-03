@@ -156,7 +156,7 @@ fun RealLeafletMapView(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
                         )
-                        setBackgroundColor(android.graphics.Color.parseColor("#AFE0F8"))
+                        setBackgroundColor(android.graphics.Color.parseColor("#F8FAFC"))
 
                         settings.apply {
                             javaScriptEnabled = true

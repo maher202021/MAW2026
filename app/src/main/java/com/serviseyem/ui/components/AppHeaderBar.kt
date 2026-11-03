@@ -122,7 +122,7 @@ fun AppHeaderBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(com.serviseyem.ui.theme.DarkLuxuryBackground)
+            .background(Color.White)
             .statusBarsPadding()
             .testTag("app_header_bar")
     ) {
@@ -138,14 +138,14 @@ fun AppHeaderBar(
                     IconButton(
                         onClick = { viewModel.goBack() },
                         modifier = Modifier
-                            .background(com.serviseyem.ui.theme.CardSurface, CircleShape)
-                            .border(1.dp, com.serviseyem.ui.theme.CardBorder, CircleShape)
+                            .background(Color(0xFFF1F5F9), CircleShape)
+                            .border(1.dp, Color(0xFFE2E8F0), CircleShape)
                             .size(28.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = if (isEn) "Back" else "رجوع",
-                            tint = com.serviseyem.ui.theme.TextLightMint,
+                            tint = Color(0xFF1E293B),
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -172,8 +172,8 @@ fun AppHeaderBar(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = com.serviseyem.ui.theme.CardSurface,
-                        border = BorderStroke(1.dp, com.serviseyem.ui.theme.GoldGradientStart.copy(alpha = 0.5f))
+                        color = Color(0xFFF8FAFC),
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0))
                     ) {
                         Text(
                             text = "🇾🇪",
@@ -184,17 +184,17 @@ fun AppHeaderBar(
 
                     Text(
                         text = titleText,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = com.serviseyem.ui.theme.TextPrimaryWhite,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF1E293B),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
 
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = com.serviseyem.ui.theme.CardSurface,
-                        border = BorderStroke(0.8.dp, com.serviseyem.ui.theme.CardBorder)
+                        color = Color(0xFFF1F5F9),
+                        border = BorderStroke(0.8.dp, Color(0xFFE2E8F0))
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -206,7 +206,7 @@ fun AppHeaderBar(
                                 text = "صنعاء ▾",
                                 fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = com.serviseyem.ui.theme.GoldGradientStart
+                                color = Color(0xFF2563EB)
                             )
                         }
                     }
@@ -219,7 +219,7 @@ fun AppHeaderBar(
                 Surface(
                     onClick = { viewModel.navigateTo("ORDERS_VIEW") },
                     shape = RoundedCornerShape(12.dp),
-                    color = if (isOrdersActive) com.serviseyem.ui.theme.DarkCyanPrimary else Color(0xFFF59E0B),
+                    color = if (isOrdersActive) Color(0xFF2563EB) else Color(0xFFF59E0B),
                     border = BorderStroke(1.dp, Color(0xFFD97706)),
                     shadowElevation = 2.dp,
                     modifier = Modifier.height(28.dp)
@@ -233,8 +233,8 @@ fun AppHeaderBar(
                         Text(
                             text = if (isEn) "My Orders" else "طلباتي",
                             fontSize = 11.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isOrdersActive) com.serviseyem.ui.theme.CardSurface else com.serviseyem.ui.theme.Black
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
                         )
                     }
                 }
@@ -245,13 +245,13 @@ fun AppHeaderBar(
                 IconButton(
                     onClick = { viewModel.refreshData(showNotification = true) },
                     modifier = Modifier
-                        .background(com.serviseyem.ui.theme.CardSurface, CircleShape)
-                        .border(1.dp, com.serviseyem.ui.theme.CardBorder, CircleShape)
+                        .background(Color(0xFFF1F5F9), CircleShape)
+                        .border(1.dp, Color(0xFFE2E8F0), CircleShape)
                         .size(28.dp)
                 ) {
                     if (isRefreshingHeader) {
                         CircularProgressIndicator(
-                            color = com.serviseyem.ui.theme.DarkCyanPrimary,
+                            color = Color(0xFF2563EB),
                             strokeWidth = 1.5.dp,
                             modifier = Modifier.size(14.dp)
                         )
@@ -259,7 +259,7 @@ fun AppHeaderBar(
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = if (isEn) "Refresh" else "تحديث البيانات",
-                            tint = com.serviseyem.ui.theme.TextLightMint,
+                            tint = Color(0xFF1E293B),
                             modifier = Modifier.size(15.dp)
                         )
                     }
@@ -272,10 +272,10 @@ fun AppHeaderBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 2.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(com.serviseyem.ui.theme.CardSurface)
-                .border(BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder), RoundedCornerShape(16.dp))
+                .padding(horizontal = 6.dp, vertical = 3.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color(0xFFF8FAFC))
+                .border(BorderStroke(1.dp, Color(0xFFE2E8F0)), RoundedCornerShape(14.dp))
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly
