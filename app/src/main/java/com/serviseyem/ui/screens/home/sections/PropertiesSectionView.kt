@@ -51,7 +51,7 @@ fun PropertiesSectionView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(BespokePremiumSystem.DeepDark)
+            .background(com.serviseyem.ui.theme.EstateScreenBg)
             .padding(bottom = 20.dp)
     ) {
         // 0. Top Back Header
@@ -65,7 +65,7 @@ fun PropertiesSectionView(
             title = "العقارات والاستثمارات",
             subtitle = "اكتشف أفخم العقارات والأراضي في اليمن",
             icon = Icons.Default.Apartment,
-            accentColor = BespokePremiumSystem.EmeraldAccent,
+            accentColor = com.serviseyem.ui.theme.EstateAccent,
             actionLabel = "أضف عقارك",
             onActionClick = onCreatePropertyClick
         )
@@ -80,12 +80,12 @@ fun PropertiesSectionView(
                 Surface(
                     onClick = { selectedSubCategory = cat },
                     shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) BespokePremiumSystem.EmeraldAccent else Color.White.copy(alpha = 0.05f),
-                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else BespokePremiumSystem.GlassBorder)
+                    color = if (isSelected) com.serviseyem.ui.theme.EstateAccent else com.serviseyem.ui.theme.EstateCardSurface,
+                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else com.serviseyem.ui.theme.EstateCardBorder)
                 ) {
                     Text(
                         cat,
-                        color = if (isSelected) BespokePremiumSystem.DeepDark else Color.White,
+                        color = if (isSelected) com.serviseyem.ui.components.BespokePremiumSystem.ButtonLightText else com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)

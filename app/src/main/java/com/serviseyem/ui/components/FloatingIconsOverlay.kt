@@ -32,10 +32,9 @@ import com.serviseyem.utils.VisualThemePalette
 
 /**
  * 🌟 High-Craft Floating Action Buttons (FABs)
- * - Perfectly circular, glossy, and eye-catching.
- * - "المساعد الذكي" on the left side (BottomStart) in rich teal-blue, name underneath.
- * - "اطلب خدمتك الآن" on the right side (BottomEnd) in strong emerald, name underneath.
- * - Includes smooth scale animation and haptic feedback on click.
+ * - "المساعد الذكي" on one side (BottomStart) in rich teal-blue, name underneath.
+ * - "اطلب خدمتك الآن" on the opposite side (BottomEnd) in vivid coral-emerald, name underneath.
+ * - Includes smooth subtle pulse animation and haptic feedback on click.
  */
 @Composable
 fun BoxScope.FloatingIconsOverlay(
@@ -47,93 +46,104 @@ fun BoxScope.FloatingIconsOverlay(
 ) {
     val haptic = LocalHapticFeedback.current
     val infiniteTransition = rememberInfiniteTransition(label = "floating_anim")
-    val scale by infiniteTransition.animateFloat(
+    val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.06f,
+        targetValue = 1.05f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
+            animation = tween(1400, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "pulse"
     )
 
-    // Stacked vertically on the left side (BottomStart) above bottom bar with 16dp margin
-    Column(
-        modifier = Modifier
-            .align(Alignment.BottomStart)
-            .padding(start = 16.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // 1. «المساعد الذكي» - 48dp circular button
-        if (!settings.assistantHidden) {
+    // 1. «المساعد الذكي» - on the Start side (BottomStart)
+    if (!settings.assistantHidden) {
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 16.dp, bottom = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             Box(
                 modifier = Modifier
-                    .scale(scale)
-                    .size(48.dp)
-                    .shadow(12.dp, CircleShape, ambientColor = Color(0xFF0EA5E9), spotColor = Color(0xFF0284C7))
+                    .scale(pulseScale)
+                    .size(50.dp)
+                    .shadow(10.dp, CircleShape, ambientColor = Color(0xFF0284C7), spotColor = Color(0xFF0E7490))
                     .clip(CircleShape)
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color(0xFF5ED3FF), Color(0xFF0E90FF))
+                            listOf(Color(0xFF0284C7), Color(0xFF0E7490))
                         )
                     )
-                    .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)), CircleShape)
+                    .border(BorderStroke(1.2.dp, Color(0xFF7DD3FC)), CircleShape)
                     .clickable {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onAssistantClick()
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text("🤖", fontSize = 18.sp)
-                    Text(
-                        text = "المساعد",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF001B3A),
-                        lineHeight = 10.sp
-                    )
-                }
+                Text("🤖", fontSize = 22.sp)
+            }
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = com.serviseyem.ui.theme.CardSurface,
+                border = BorderStroke(0.8.dp, com.serviseyem.ui.theme.CardBorder),
+                shadowElevation = 2.dp
+            ) {
+                Text(
+                    text = "المساعد الذكي",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = com.serviseyem.ui.theme.TextLightMint,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
             }
         }
+    }
 
-        // 2. «اطلب خدمتك الآن» - 48dp circular button
-        if (!settings.footerMessage.contains("hide_urgent_fab")) {
+    // 2. «اطلب خدمتك الآن» - on the Opposite side (BottomEnd)
+    if (!settings.footerMessage.contains("hide_urgent_fab")) {
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             Box(
                 modifier = Modifier
-                    .scale(scale)
-                    .size(48.dp)
-                    .shadow(12.dp, CircleShape, ambientColor = Color(0xFFFF2D6F), spotColor = Color(0xFFFF7EB3))
+                    .scale(pulseScale)
+                    .size(50.dp)
+                    .shadow(10.dp, CircleShape, ambientColor = Color(0xFFE11D48), spotColor = Color(0xFF0D5C3A))
                     .clip(CircleShape)
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color(0xFFFF7EB3), Color(0xFFFF2D6F))
+                            listOf(Color(0xFFE11D48), Color(0xFF0D5C3A))
                         )
                     )
-                    .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)), CircleShape)
+                    .border(BorderStroke(1.2.dp, Color(0xFFFDA4AF)), CircleShape)
                     .clickable {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onRequestServiceClick()
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text("⚡", fontSize = 18.sp)
-                    Text(
-                        text = "اطلب الآن",
-                        fontSize = 8.5.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White,
-                        lineHeight = 9.5.sp
-                    )
-                }
+                Text("⚡", fontSize = 22.sp)
+            }
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = com.serviseyem.ui.theme.CardSurface,
+                border = BorderStroke(0.8.dp, com.serviseyem.ui.theme.CardBorder),
+                shadowElevation = 2.dp
+            ) {
+                Text(
+                    text = "اطلب خدمتك",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = com.serviseyem.ui.theme.TextLightMint,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
             }
         }
     }

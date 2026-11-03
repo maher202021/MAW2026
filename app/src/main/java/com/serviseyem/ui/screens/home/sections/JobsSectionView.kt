@@ -68,7 +68,7 @@ fun JobsSectionView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(com.serviseyem.ui.components.BespokePremiumSystem.DeepDark)
+            .background(com.serviseyem.ui.theme.JobsScreenBg)
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -83,7 +83,7 @@ fun JobsSectionView(
             title = "فرص العمل المتاحة",
             subtitle = "اكتشف مسارك المهني القادم في أفضل الشركات اليمنية",
             icon = Icons.Default.BusinessCenter,
-            accentColor = com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent,
+            accentColor = com.serviseyem.ui.theme.JobsAccent,
             onActionClick = {
                 haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                 onCreateJobClick()
@@ -106,8 +106,8 @@ fun JobsSectionView(
                         selectedSubCat = subCat 
                     },
                     shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent else Color.White.copy(alpha = 0.05f),
-                    border = BorderStroke(1.dp, if (isSelected) Color.White.copy(alpha = 0.2f) else com.serviseyem.ui.components.BespokePremiumSystem.GlassBorder)
+                    color = if (isSelected) com.serviseyem.ui.theme.JobsAccent else com.serviseyem.ui.theme.JobsCardSurface,
+                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else com.serviseyem.ui.theme.JobsCardBorder)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
@@ -119,7 +119,7 @@ fun JobsSectionView(
                             subCat.label,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isSelected) com.serviseyem.ui.components.BespokePremiumSystem.DeepDark else Color.White
+                            color = if (isSelected) com.serviseyem.ui.components.BespokePremiumSystem.ButtonLightText else com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle
                         )
                     }
                 }

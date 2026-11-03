@@ -153,28 +153,14 @@
         var destinationMarker = null;
 
         function drawRoute(lat1, lng1, lat2, lng2, color, destName) {
-            clearRoute();
-            var midLat = (lat1 + lat2) / 2;
-            var midLng = (lng1 + lng2) / 2;
-            var deltaLat = Math.abs(lat1 - lat2);
-            var deltaLng = Math.abs(lng1 - lng2);
-            
-            var waypoints = [
-                [lat1, lng1],
-                [midLat + (deltaLng * 0.05), midLng - (deltaLat * 0.05)],
-                [lat2, lng2]
-            ];
-            
-            activeRouteLine = L.polyline(waypoints, {
-                color: color || '#00E5FF',
-                weight: 7,
-                opacity: 0.95,
-                dashArray: '12, 8',
-                lineJoin: 'round',
-                lineCap: 'round'
-            }).addTo(map);
+            drawRealRoute(lat1, lng1, lat2, lng2, color, destName);
+        }
 
-            var destHtml = '<div style="background:#EF4444; color:white; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow:0 0 16px #EF4444; font-size:18px;">🏁</div>';
+        function drawRealRoute(lat1, lng1, lat2, lng2, color, destName) {
+            clearRoute();
+            var routeColor = color || '#0D5C3A';
+
+            var destHtml = '<div style="background:#0D5C3A; color:#E0F2FE; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; border:2px solid #D4A017; box-shadow:0 0 12px #0D5C3A; font-size:18px;">🏁</div>';
             destinationMarker = L.marker([lat2, lng2], {
                 icon: L.divIcon({ className: '', html: destHtml, iconSize: [36, 36], iconAnchor: [18, 18] })
             }).addTo(map);
@@ -183,7 +169,47 @@
                 destinationMarker.bindTooltip(destName, { permanent: true, direction: 'top', className: 'custom-pin-label' });
             }
 
-            map.fitBounds(activeRouteLine.getBounds(), { padding: [70, 70], maxZoom: 19 });
+            // Real Road Routing via OSRM Demo API
+            var osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' + lng1 + ',' + lat1 + ';' + lng2 + ',' + lat2 + '?overview=full&geometries=geojson';
+
+            fetch(osrmUrl)
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data && data.routes && data.routes.length > 0) {
+                        var coordinates = data.routes[0].geometry.coordinates;
+                        var latLngs = coordinates.map(function(pt) { return [pt[1], pt[0]]; });
+                        activeRouteLine = L.polyline(latLngs, {
+                            color: routeColor,
+                            weight: 6,
+                            opacity: 0.95,
+                            lineJoin: 'round',
+                            lineCap: 'round'
+                        }).addTo(map);
+                        map.fitBounds(activeRouteLine.getBounds(), { padding: [60, 60], maxZoom: 18 });
+                    } else {
+                        drawFallbackStraightRoute(lat1, lng1, lat2, lng2, routeColor);
+                    }
+                })
+                .catch(function(e) {
+                    drawFallbackStraightRoute(lat1, lng1, lat2, lng2, routeColor);
+                });
+        }
+
+        function drawFallbackStraightRoute(lat1, lng1, lat2, lng2, color) {
+            var midLat = (lat1 + lat2) / 2;
+            var midLng = (lng1 + lng2) / 2;
+            var waypoints = [
+                [lat1, lng1],
+                [midLat, midLng],
+                [lat2, lng2]
+            ];
+            activeRouteLine = L.polyline(waypoints, {
+                color: color || '#0D5C3A',
+                weight: 5,
+                opacity: 0.9,
+                dashArray: '10, 8'
+            }).addTo(map);
+            map.fitBounds(activeRouteLine.getBounds(), { padding: [60, 60], maxZoom: 18 });
         }
 
         function clearRoute() {

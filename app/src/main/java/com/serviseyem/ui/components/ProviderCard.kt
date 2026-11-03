@@ -79,9 +79,9 @@ fun ProviderCard(
                 )
             },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF111C30)),
-        border = BorderStroke(1.dp, Color(0xFF1E2E4E)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        colors = CardDefaults.cardColors(containerColor = com.serviseyem.ui.theme.CardSurface),
+        border = BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // 1. Cover / Illustration Section
@@ -89,7 +89,7 @@ fun ProviderCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(95.dp)
-                    .background(Color(0xFF0A1220))
+                    .background(Color(0xFFDCE8F2))
             ) {
                 if (coverImg.isNotBlank()) {
                     SmartAsyncImage(
@@ -103,7 +103,7 @@ fun ProviderCard(
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
-                                    listOf(Color(0xFF0E1A2E), Color(0xFF09111E))
+                                    listOf(Color(0xFFD6E4F0), Color(0xFFC8DCED))
                                 )
                             ),
                         contentAlignment = Alignment.Center
@@ -111,19 +111,19 @@ fun ProviderCard(
                         Icon(
                             imageVector = Icons.Default.Handyman,
                             contentDescription = null,
-                            tint = Color(0xFF38BDF8).copy(alpha = 0.5f),
+                            tint = com.serviseyem.ui.theme.DarkCyanPrimary.copy(alpha = 0.6f),
                             modifier = Modifier.size(38.dp)
                         )
                     }
                 }
 
-                // Subtle dark gradient overlay
+                // Subtle light gradient overlay
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color(0xFF111C30).copy(alpha = 0.85f)),
+                                colors = listOf(Color.Transparent, com.serviseyem.ui.theme.CardSurface.copy(alpha = 0.75f)),
                                 startY = 30f
                             )
                         )
@@ -137,11 +137,11 @@ fun ProviderCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Rating Badge (⭐ 5.0 in black capsule with gold star)
+                    // Rating Badge (⭐ 5.0 in capsule with gold star)
                     Surface(
-                        color = Color.Black.copy(alpha = 0.8f),
+                        color = com.serviseyem.ui.theme.CardSurface.copy(alpha = 0.95f),
                         shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, Color(0xFF1E2E4E)),
+                        border = BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder),
                         shadowElevation = 2.dp,
                         modifier = Modifier.clickable { showReviewsListDialog = true }
                     ) {
@@ -150,17 +150,17 @@ fun ProviderCard(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text(String.format("%.1f", provider.rating), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(String.format("%.1f", provider.rating), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = com.serviseyem.ui.theme.TextLightMint)
                             Icon(Icons.Default.Star, contentDescription = "Rating", tint = Color(0xFFF59E0B), modifier = Modifier.size(13.dp))
                         }
                     }
 
-                    // Verified Badge (موثق ✓ in dark capsule)
+                    // Verified Badge (موثق ✓ in capsule)
                     if (isVerified || provider.isVip) {
                         Surface(
-                            color = Color.Black.copy(alpha = 0.8f),
+                            color = com.serviseyem.ui.theme.CardSurface.copy(alpha = 0.95f),
                             shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, Color(0xFF1E2E4E))
+                            border = BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
@@ -171,7 +171,7 @@ fun ProviderCard(
                                     text = if (provider.isVip) "VIP موثق" else "موثق ✓",
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = com.serviseyem.ui.theme.DarkCyanPrimary
                                 )
                             }
                         }
@@ -228,7 +228,7 @@ fun ProviderCard(
                                 text = provider.name,
                                 fontSize = 14.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = com.serviseyem.ui.theme.TextLightMint,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f, fill = false)
@@ -238,7 +238,7 @@ fun ProviderCard(
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
                                     contentDescription = "Verified",
-                                    tint = Color(0xFF10B981),
+                                    tint = com.serviseyem.ui.theme.DarkCyanPrimary,
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
@@ -248,7 +248,7 @@ fun ProviderCard(
                             text = profText,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color(0xFF38BDF8),
+                            color = com.serviseyem.ui.theme.SecondaryTeal,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -267,13 +267,13 @@ fun ProviderCard(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = com.serviseyem.ui.theme.TextMutedMint, modifier = Modifier.size(13.dp))
                         Spacer(modifier = Modifier.width(3.dp))
                         val locText = if (provider.localNeighborhood.isNotBlank()) "${provider.area} - ${provider.localNeighborhood}" else provider.area.ifBlank { "صنعاء - الجمهورية اليمنية" }
                         Text(
                             text = locText,
                             fontSize = 10.5.sp,
-                            color = Color(0xFF94A3B8),
+                            color = com.serviseyem.ui.theme.TextMutedMint,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -281,8 +281,8 @@ fun ProviderCard(
 
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF064E3B).copy(alpha = 0.5f),
-                        border = BorderStroke(0.5.dp, Color(0xFF10B981))
+                        color = (if (provider.isAvailable) com.serviseyem.ui.theme.DarkCyanPrimary else Color(0xFFE11D48)).copy(alpha = 0.12f),
+                        border = BorderStroke(0.8.dp, if (provider.isAvailable) com.serviseyem.ui.theme.DarkCyanPrimary else Color(0xFFE11D48))
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp),
@@ -292,19 +292,19 @@ fun ProviderCard(
                             Box(
                                 modifier = Modifier
                                     .size(6.dp)
-                                    .background(if (provider.isAvailable) Color(0xFF10B981) else Color(0xFFEF4444), CircleShape)
+                                    .background(if (provider.isAvailable) com.serviseyem.ui.theme.DarkCyanPrimary else Color(0xFFE11D48), CircleShape)
                             )
                             Text(
                                 text = if (provider.isAvailable) "متاح الآن" else "مشغول",
                                 fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (provider.isAvailable) Color(0xFF34D399) else Color(0xFFF87171)
+                                color = if (provider.isAvailable) com.serviseyem.ui.theme.DarkCyanPrimary else Color(0xFFE11D48)
                             )
                         }
                     }
                 }
 
-                // 3. Action Buttons Row: [★] [حجز 📅] [التفاصيل 📋] [محادثة 💬] (Screenshot 1 Layout)
+                // 3. Action Buttons Row: [★] [حجز 📅] [التفاصيل 📋] [محادثة 💬] (Screenshot Layout)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -317,8 +317,8 @@ fun ProviderCard(
                     Surface(
                         onClick = { viewModel.toggleFavorite(provider.id) },
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFF1E2E4E),
-                        border = BorderStroke(1.dp, Color(0xFF283B63)),
+                        color = com.serviseyem.ui.theme.CardSurface,
+                        border = BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder),
                         modifier = Modifier.size(36.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -326,7 +326,7 @@ fun ProviderCard(
                         }
                     }
 
-                    // زر حجز الموعد (Green 📅)
+                    // زر حجز الموعد (Deep Emerald 📅)
                     Button(
                         onClick = {
                             if (currentUserIdState.isEmpty()) {
@@ -335,7 +335,7 @@ fun ProviderCard(
                                 showBookingDialog = true
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        colors = ButtonDefaults.buttonColors(containerColor = com.serviseyem.ui.theme.DarkCyanPrimary),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.weight(1f).height(36.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
@@ -345,14 +345,14 @@ fun ProviderCard(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text("📅", fontSize = 11.sp)
-                            Text("حجز", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            Text("حجز", color = com.serviseyem.ui.theme.CardSurface, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                         }
                     }
 
-                    // زر التفاصيل الكاملة (Silver/Light 📋)
+                    // زر التفاصيل الكاملة (Tinted Ice-Blue 📋)
                     Button(
                         onClick = { showDetailsDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE2E8F0)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8F2)),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.weight(1f).height(36.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
@@ -362,14 +362,14 @@ fun ProviderCard(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text("📋", fontSize = 11.sp)
-                            Text("التفاصيل", color = Color(0xFF0F172A), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            Text("التفاصيل", color = com.serviseyem.ui.theme.TextLightMint, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                         }
                     }
 
-                    // زر المحادثة الفورية (Blue 💬)
+                    // زر محادثة فورية (Rich Blue 💬)
                     Button(
-                        onClick = { onChatOpen(provider.id.ifBlank { provider.phone }) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                        onClick = { onChatOpen(provider.id) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.weight(1f).height(36.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
@@ -379,7 +379,7 @@ fun ProviderCard(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text("💬", fontSize = 11.sp)
-                            Text("محادثة", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            Text("محادثة", color = com.serviseyem.ui.theme.CardSurface, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                         }
                     }
                 }

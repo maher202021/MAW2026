@@ -138,14 +138,14 @@ fun AppHeaderBar(
                     IconButton(
                         onClick = { viewModel.goBack() },
                         modifier = Modifier
-                            .background(Color.White.copy(alpha = 0.1f), CircleShape)
-                            .border(1.dp, com.serviseyem.ui.theme.GlassBorder, CircleShape)
+                            .background(com.serviseyem.ui.theme.CardSurface, CircleShape)
+                            .border(1.dp, com.serviseyem.ui.theme.CardBorder, CircleShape)
                             .size(28.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = if (isEn) "Back" else "رجوع",
-                            tint = Color.White,
+                            tint = com.serviseyem.ui.theme.TextLightMint,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -214,16 +214,44 @@ fun AppHeaderBar(
 
                 Spacer(modifier = Modifier.weight(1f))
 
+                // Move 'My Orders' (طلباتي) directly beside the refresh/sync arrow icon
+                val isOrdersActive = currentScreen == "ORDERS_VIEW"
+                Surface(
+                    onClick = { viewModel.navigateTo("ORDERS_VIEW") },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isOrdersActive) com.serviseyem.ui.theme.DarkCyanPrimary else Color(0xFFF59E0B),
+                    border = BorderStroke(1.dp, Color(0xFFD97706)),
+                    shadowElevation = 2.dp,
+                    modifier = Modifier.height(28.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("📋", fontSize = 11.sp)
+                        Text(
+                            text = if (isEn) "My Orders" else "طلباتي",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isOrdersActive) com.serviseyem.ui.theme.CardSurface else com.serviseyem.ui.theme.Black
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(6.dp))
+
                 val isRefreshingHeader by viewModel.isRefreshing.collectAsState()
                 IconButton(
                     onClick = { viewModel.refreshData(showNotification = true) },
                     modifier = Modifier
-                        .background(Color.White.copy(alpha = 0.08f), CircleShape)
+                        .background(com.serviseyem.ui.theme.CardSurface, CircleShape)
+                        .border(1.dp, com.serviseyem.ui.theme.CardBorder, CircleShape)
                         .size(28.dp)
                 ) {
                     if (isRefreshingHeader) {
                         CircularProgressIndicator(
-                            color = com.serviseyem.ui.theme.GoldGradientStart,
+                            color = com.serviseyem.ui.theme.DarkCyanPrimary,
                             strokeWidth = 1.5.dp,
                             modifier = Modifier.size(14.dp)
                         )
@@ -231,7 +259,7 @@ fun AppHeaderBar(
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = if (isEn) "Refresh" else "تحديث البيانات",
-                            tint = Color.White,
+                            tint = com.serviseyem.ui.theme.TextLightMint,
                             modifier = Modifier.size(15.dp)
                         )
                     }
@@ -239,35 +267,20 @@ fun AppHeaderBar(
             }
         }
 
-        // Row 2: Strict 6-Element Navigation Bar:
-        // 1. الرئيسية (بيت) | 2. الخرائط | 3. الانضمام (شخص) | 4. الإشعارات (جرس) | 5. المحادثات (مغلف) | 6. طلباتي (حافظة)
+        // Row 2: Clean 4-Element Navigation Bar (Home removed, Orders moved to top bar):
+        // 1. الخرائط | 2. الانضمام | 3. الإشعارات (جرس + عداد) | 4. المحادثات (مغلف + عداد)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 2.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(com.serviseyem.ui.theme.SecondaryBg)
-                .border(BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder), RoundedCornerShape(18.dp))
+                .padding(horizontal = 6.dp, vertical = 2.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(com.serviseyem.ui.theme.CardSurface)
+                .border(BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder), RoundedCornerShape(16.dp))
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // 1. الرئيسية (بيت)
-            val isBrowse = currentScreen == AppScreens.USER_BROWSE || currentScreen == "MAIN_DASHBOARD" || currentScreen == "HOME"
-            Luxury3DNavIcon(
-                emojiIcon = settingsState.topHomeIcon.ifEmpty { "🏠" },
-                vectorIcon = Icons.Default.Home,
-                label = if (isEn) "Home" else "الرئيسية",
-                isSelected = isBrowse,
-                iconSizeDp = settingsState.navIconSizeDp,
-                iconStyle = settingsState.topNavIconStyle,
-                onClick = {
-                    viewModel.navigateToScreen(AppScreens.USER_BROWSE)
-                    viewModel.registerBackdoorInteraction()
-                }
-            )
-
-            // 2. الخرائط (خريطة)
+            // 1. الخرائط (خريطة)
             val isMap = currentScreen == AppScreens.MAP_VIEW
             Luxury3DNavIcon(
                 emojiIcon = settingsState.topMapsIcon.ifEmpty { "🗺️" },
@@ -279,7 +292,7 @@ fun AppHeaderBar(
                 onClick = { viewModel.navigateToScreen(AppScreens.MAP_VIEW) }
             )
 
-            // 3. الانضمام (شخص)
+            // 2. الانضمام (شخص)
             val isJoin = currentScreen == AppScreens.REGISTER_FORM || currentScreen == AppScreens.JOIN_REQUEST_STATUS
             Luxury3DNavIcon(
                 emojiIcon = settingsState.topJoinIcon.ifEmpty { "👤" },
@@ -291,7 +304,7 @@ fun AppHeaderBar(
                 onClick = { viewModel.navigateToScreen(AppScreens.REGISTER_FORM) }
             )
 
-            // 4. الإشعارات (جرس + نقطة حمراء نابضة)
+            // 3. الإشعارات (جرس + نقطة حمراء نابضة)
             val isNotifScreen = currentScreen == AppScreens.NOTIFICATIONS_VIEW
             Luxury3DNavIcon(
                 emojiIcon = settingsState.topNotifIcon.ifEmpty { "🔔" },
@@ -306,7 +319,7 @@ fun AppHeaderBar(
                 }
             )
 
-            // 5. المحادثات (مغلف + شارة عداد)
+            // 4. المحادثات (مغلف + شارة عداد)
             val isChatsScreen = currentScreen == AppScreens.CHAT_LIST || currentScreen == AppScreens.CHAT_DIRECT
             Luxury3DNavIcon(
                 emojiIcon = settingsState.topChatsIcon.ifEmpty { "✉️" },
@@ -317,18 +330,6 @@ fun AppHeaderBar(
                 iconSizeDp = settingsState.navIconSizeDp,
                 iconStyle = settingsState.topNavIconStyle,
                 onClick = { onChatsClick() }
-            )
-
-            // 6. طلباتي (حافظة / clipboard)
-            val isOrdersScreen = currentScreen == "ORDERS_VIEW"
-            Luxury3DNavIcon(
-                emojiIcon = "📋",
-                vectorIcon = Icons.Default.Assignment,
-                label = if (isEn) "Orders" else "طلباتي",
-                isSelected = isOrdersScreen,
-                iconSizeDp = settingsState.navIconSizeDp,
-                iconStyle = settingsState.topNavIconStyle,
-                onClick = { viewModel.navigateTo("ORDERS_VIEW") }
             )
         }
     }

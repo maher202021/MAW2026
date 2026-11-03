@@ -116,10 +116,11 @@ object MapScreenFilters {
         var angle = 0.0
 
         filteredProviders.forEach { p ->
-            val coords = getProviderCoords(p)
-            val d = MapDistanceCalculator.calculateDistanceMeters(safeUserLat, safeUserLng, coords.first, coords.second)
-            val r = (d / 1000.0).coerceIn(1.0, 30.0).toFloat() * 10f
-            val rad = Math.toRadians(angle)
+            val resolved = com.serviseyem.ui.screens.map.utils.MapCoordinateResolver.resolveProvider(p)
+            val d = MapDistanceCalculator.calculateDistanceMeters(safeUserLat, safeUserLng, resolved.latitude, resolved.longitude)
+            val bearing = com.serviseyem.ui.screens.map.utils.MapCoordinateResolver.calculateBearing(safeUserLat, safeUserLng, resolved.latitude, resolved.longitude)
+            val r = (d / 1000.0).coerceIn(0.5, 30.0).toFloat() * 10f
+            val rad = Math.toRadians(bearing.toDouble() - 90.0)
             list.add(
                 MarkerRenderer.MapItemPoint(
                     id = p.id,
@@ -132,17 +133,17 @@ object MapScreenFilters {
                     originalItem = p
                 )
             )
-            angle += 40.0
         }
 
         filteredStores.forEach { s ->
-            val coords = getStoreCoords(s)
+            val resolved = com.serviseyem.ui.screens.map.utils.MapCoordinateResolver.resolveStore(s)
             val isMedical = s.isMedicalCenter()
             val isRestaurant = s.isRestaurantOrCafe()
             val typeStr = if (isMedical) "MEDICAL" else if (isRestaurant) "RESTAURANT" else "STORE"
-            val d = MapDistanceCalculator.calculateDistanceMeters(safeUserLat, safeUserLng, coords.first, coords.second)
-            val r = (d / 1000.0).coerceIn(1.0, 30.0).toFloat() * 10f
-            val rad = Math.toRadians(angle)
+            val d = MapDistanceCalculator.calculateDistanceMeters(safeUserLat, safeUserLng, resolved.latitude, resolved.longitude)
+            val bearing = com.serviseyem.ui.screens.map.utils.MapCoordinateResolver.calculateBearing(safeUserLat, safeUserLng, resolved.latitude, resolved.longitude)
+            val r = (d / 1000.0).coerceIn(0.5, 30.0).toFloat() * 10f
+            val rad = Math.toRadians(bearing.toDouble() - 90.0)
             list.add(
                 MarkerRenderer.MapItemPoint(
                     id = s.id,
@@ -155,14 +156,14 @@ object MapScreenFilters {
                     originalItem = s
                 )
             )
-            angle += 35.0
         }
 
         filteredProperties.forEach { pr ->
-            val coords = getPropertyCoords(pr)
-            val d = MapDistanceCalculator.calculateDistanceMeters(safeUserLat, safeUserLng, coords.first, coords.second)
-            val r = (d / 1000.0).coerceIn(1.0, 30.0).toFloat() * 10f
-            val rad = Math.toRadians(angle)
+            val resolved = com.serviseyem.ui.screens.map.utils.MapCoordinateResolver.resolveProperty(pr)
+            val d = MapDistanceCalculator.calculateDistanceMeters(safeUserLat, safeUserLng, resolved.latitude, resolved.longitude)
+            val bearing = com.serviseyem.ui.screens.map.utils.MapCoordinateResolver.calculateBearing(safeUserLat, safeUserLng, resolved.latitude, resolved.longitude)
+            val r = (d / 1000.0).coerceIn(0.5, 30.0).toFloat() * 10f
+            val rad = Math.toRadians(bearing.toDouble() - 90.0)
             list.add(
                 MarkerRenderer.MapItemPoint(
                     id = pr.id,
@@ -175,7 +176,6 @@ object MapScreenFilters {
                     originalItem = pr
                 )
             )
-            angle += 45.0
         }
         return list
     }

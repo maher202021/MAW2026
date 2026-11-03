@@ -74,7 +74,7 @@ fun RestaurantsSectionView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(BespokePremiumSystem.DeepDark)
+            .background(com.serviseyem.ui.theme.FoodScreenBg)
             .padding(bottom = 20.dp)
     ) {
         // 0. Top Back Header
@@ -119,7 +119,7 @@ fun RestaurantsSectionView(
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         label,
-                        color = if (isSelected) glowColor else Color.White,
+                        color = if (isSelected) glowColor else com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle,
                         fontSize = 11.sp,
                         fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold
                     )
@@ -132,7 +132,7 @@ fun RestaurantsSectionView(
         // 3. Popular Picks Label
         Text(
             if (selectedSubCat == "الكل" || selectedSubCat == null) "الأكثر طلباً حالياً 🔥" else "نتائج قسم $selectedSubCat",
-            color = Color.White,
+            color = com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle,
             fontSize = 15.sp,
             fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)

@@ -48,10 +48,10 @@ object MapJsonBuilder {
 
         // 1. Providers
         nearbyProviders.forEach { p ->
-            val baseCoords = getProviderCoords(p)
-            val rawLat = baseCoords.first
-            val rawLng = baseCoords.second
-            val isApproximate = p.latitude == 0.0 || p.longitude == 0.0
+            val resolved = MapCoordinateResolver.resolveProvider(p)
+            val rawLat = resolved.latitude
+            val rawLng = resolved.longitude
+            val isApproximate = !resolved.isExact
 
             val categoryEmoji = when {
                 p.categoryId.contains("spaka") || p.profession.contains("سباك") -> "🔧"
@@ -88,7 +88,7 @@ object MapJsonBuilder {
 
         // 2. Stores & Medical Centers & Restaurants
         nearbyStores.forEach { s ->
-            val coords = getStoreCoords(s)
+            val resolved = MapCoordinateResolver.resolveStore(s)
             val isMedical = s.isMedicalCenter()
             val isRestaurant = s.isRestaurantOrCafe()
 
@@ -99,9 +99,9 @@ object MapJsonBuilder {
                 else -> "🏪"
             }
 
-            val rawLat = coords.first
-            val rawLng = coords.second
-            val isApproximate = s.latitude == 0.0 || s.longitude == 0.0
+            val rawLat = resolved.latitude
+            val rawLng = resolved.longitude
+            val isApproximate = !resolved.isExact
 
             val (badgeColor, categoryLabel) = when {
                 isMedical -> Pair("#EF4444", "مراكز طبية وصيدليات") // أحمر للمراكز الطبية
@@ -131,10 +131,10 @@ object MapJsonBuilder {
 
         // 3. Properties
         nearbyProperties.forEach { pr ->
-            val coords = getPropertyCoords(pr)
-            val rawLat = coords.first
-            val rawLng = coords.second
-            val isApproximate = pr.latitude == 0.0 || pr.longitude == 0.0
+            val resolved = MapCoordinateResolver.resolveProperty(pr)
+            val rawLat = resolved.latitude
+            val rawLng = resolved.longitude
+            val isApproximate = !resolved.isExact
 
             val priceFormatted = if (pr.price > 0) "${pr.price} ${pr.currency.ifEmpty { "ريال" }}" else "حسب الاتفاق"
             val cleanDesc = pr.description.ifBlank { "عقار معروض" }.take(60)

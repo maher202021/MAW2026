@@ -177,16 +177,16 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
             )
         }
         else -> {
-            // Default: Dark Modern Theme for Yemen Smart Map
-            val primary = Color(0xFF10B981)
-            val secondary = Color(0xFF047857)
-            val background = Color(0xFF0B0F19)
-            val surface = Color(0xFF161C2C)
-            val textPrimary = Color(0xFFFFFFFF)
-            val textSecondary = Color(0xFF94A3B8)
-            val accent = Color(0xFF00F2FE)
+            // Default: Light Luxury Sky-Blue Theme (Strictly NO #FFFFFF or #000000)
+            val primary = com.serviseyem.ui.theme.DarkCyanPrimary
+            val secondary = com.serviseyem.ui.theme.SecondaryTeal
+            val background = com.serviseyem.ui.theme.AppBackground
+            val surface = com.serviseyem.ui.theme.CardSurface
+            val textPrimary = com.serviseyem.ui.theme.TextLightMint
+            val textSecondary = com.serviseyem.ui.theme.TextMutedMint
+            val accent = com.serviseyem.ui.theme.GoldShine
             VisualThemePalette(
-                activeId = "YEMEN_SMART_DARK",
+                activeId = "YEMEN_SKY_LUXURY",
                 primary = primary,
                 secondary = secondary,
                 background = background,
@@ -194,9 +194,18 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
                 textPrimary = textPrimary,
                 textSecondary = textSecondary,
                 accent = accent,
-                border = Color(0xFF1E2E4A),
-                gradientBrush = Brush.verticalGradient(listOf(Color(0xFF161C2C), Color(0xFF0B0F19))),
-                scheme = darkColorScheme(primary = primary, secondary = secondary, background = background, surface = surface)
+                border = com.serviseyem.ui.theme.CardBorder,
+                gradientBrush = Brush.verticalGradient(listOf(background, com.serviseyem.ui.theme.CardSurface)),
+                scheme = androidx.compose.material3.lightColorScheme(
+                    primary = primary,
+                    secondary = secondary,
+                    background = background,
+                    surface = surface,
+                    onPrimary = com.serviseyem.ui.theme.ButtonLightText,
+                    onSecondary = com.serviseyem.ui.theme.ButtonLightText,
+                    onBackground = textPrimary,
+                    onSurface = textPrimary
+                )
             )
         }
     }

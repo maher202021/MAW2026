@@ -98,8 +98,19 @@ fun ServicesBrowserLayout(
         list.toList()
     }
 
+    val activeTabBg = remember(activeTabName) {
+        when (activeTabName) {
+            "المطاعم والكافيهات", "المطاعم" -> com.serviseyem.ui.theme.FoodScreenBg
+            "المحلات والمتاجر", "المحلات" -> com.serviseyem.ui.theme.StoreScreenBg
+            "المراكز الطبية", "المراكز الطبية والعيادات" -> com.serviseyem.ui.theme.MedicalScreenBg
+            "العقارات" -> com.serviseyem.ui.theme.EstateScreenBg
+            "إعلانات الوظائف", "الوظائف" -> com.serviseyem.ui.theme.JobsScreenBg
+            else -> com.serviseyem.ui.theme.AppBackground
+        }
+    }
+
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(com.serviseyem.ui.components.BespokePremiumSystem.DeepDark),
+        modifier = Modifier.fillMaxSize().background(activeTabBg),
         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -152,7 +163,8 @@ fun ServicesBrowserLayout(
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = LightCardSurface,
-                    border = BorderStroke(1.dp, SoftGold.copy(alpha = 0.7f)),
+                    border = BorderStroke(1.dp, SoftGold.copy(alpha = 0.5f)),
+                    shadowElevation = 2.dp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp, vertical = 2.dp)
@@ -160,7 +172,7 @@ fun ServicesBrowserLayout(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Brush.horizontalGradient(listOf(Color(0xFF382C10), Color(0xFF294E3D))))
+                            .background(Brush.horizontalGradient(listOf(Color(0xFFFEF3C7), Color(0xFFE6F4EA))))
                             .padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -176,7 +188,7 @@ fun ServicesBrowserLayout(
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text("تنبيه العروض الحصرية", color = SoftGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("تنبيه العروض الحصرية", color = Color(0xFFB45309), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 Text("•", color = TextMutedSage)
                                 Text(currentCategoryTitle, color = TextMutedSage, fontSize = 11.sp)
                             }

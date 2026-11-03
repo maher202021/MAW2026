@@ -59,7 +59,7 @@ fun MedicalCentersSectionView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(BespokePremiumSystem.DeepDark)
+            .background(com.serviseyem.ui.theme.MedicalScreenBg)
             .padding(bottom = 20.dp)
     ) {
         // 0. Top Back Header
@@ -82,7 +82,7 @@ fun MedicalCentersSectionView(
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF991B1B).copy(alpha = 0.2f),
+            color = Color(0xFFEF4444).copy(alpha = 0.15f),
             border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.4f))
         ) {
             Row(
@@ -91,8 +91,8 @@ fun MedicalCentersSectionView(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Surface(shape = CircleShape, color = Color(0xFFEF4444), modifier = Modifier.size(10.dp)) {}
-                Text("صيدليات ومراكز الطوارئ المناوبة (24/7)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = Color.White)
+                Text("صيدليات ومراكز الطوارئ المناوبة (24/7)", color = com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle)
             }
         }
 
@@ -106,12 +106,12 @@ fun MedicalCentersSectionView(
                 Surface(
                     onClick = { selectedSubCategory = cat },
                     shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) BespokePremiumSystem.CyanMedical.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f),
-                    border = BorderStroke(1.dp, if (isSelected) BespokePremiumSystem.CyanMedical else BespokePremiumSystem.GlassBorder)
+                    color = if (isSelected) BespokePremiumSystem.CyanMedical.copy(alpha = 0.25f) else com.serviseyem.ui.theme.MedicalCardSurface,
+                    border = BorderStroke(1.dp, if (isSelected) BespokePremiumSystem.CyanMedical else com.serviseyem.ui.theme.MedicalCardBorder)
                 ) {
                     Text(
                         cat,
-                        color = if (isSelected) BespokePremiumSystem.CyanMedical else Color.LightGray,
+                        color = if (isSelected) BespokePremiumSystem.CyanMedical else com.serviseyem.ui.components.BespokePremiumSystem.CardDarkTitle,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)

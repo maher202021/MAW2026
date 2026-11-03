@@ -52,13 +52,13 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
     ) {
         // Main Footer Container Surface (Glassmorphism with rounded top corners 20dp)
         Surface(
-            color = com.serviseyem.ui.theme.DarkLuxuryBackground.copy(alpha = 0.95f),
+            color = com.serviseyem.ui.theme.CardSurface,
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-            shadowElevation = 16.dp,
+            shadowElevation = 10.dp,
             border = BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder),
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 62.dp)
+                .heightIn(min = 60.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -76,7 +76,7 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                     isSelected = isAdmin,
                     iconSizeDp = settingsState.navIconSizeDp,
                     iconStyle = settingsState.topNavIconStyle,
-                    forceWhiteText = true,
+                    forceWhiteText = false,
                     onClick = { viewModel.navigateTo("ADMIN_PANEL") }
                 )
 
@@ -88,7 +88,7 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                     isSelected = false,
                     iconSizeDp = settingsState.navIconSizeDp,
                     iconStyle = settingsState.topNavIconStyle,
-                    forceWhiteText = true,
+                    forceWhiteText = false,
                     onClick = {
                         viewModel.switchLanguage()
                         viewModel.triggerNotification(
@@ -109,7 +109,7 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                     isSelected = isBookings,
                     iconSizeDp = settingsState.navIconSizeDp,
                     iconStyle = settingsState.topNavIconStyle,
-                    forceWhiteText = true,
+                    forceWhiteText = false,
                     onClick = { viewModel.navigateTo("BOOKINGS_VIEW") }
                 )
 
@@ -122,7 +122,7 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                     isSelected = isAbout,
                     iconSizeDp = settingsState.navIconSizeDp,
                     iconStyle = settingsState.topNavIconStyle,
-                    forceWhiteText = true,
+                    forceWhiteText = false,
                     onClick = { onInfoClick() }
                 )
             }

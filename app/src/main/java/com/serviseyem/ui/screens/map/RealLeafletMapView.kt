@@ -146,7 +146,7 @@ fun RealLeafletMapView(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0F172A))
+            .background(com.serviseyem.ui.theme.AppBackground)
     ) {
         if (!hasLoadError) {
             AndroidView(
@@ -156,7 +156,7 @@ fun RealLeafletMapView(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
                         )
-                        setBackgroundColor(android.graphics.Color.parseColor("#0F172A"))
+                        setBackgroundColor(android.graphics.Color.parseColor("#AFE0F8"))
 
                         settings.apply {
                             javaScriptEnabled = true

@@ -136,7 +136,7 @@ fun TechniciansSectionView(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("اختر التخصص المطلوب:", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("اختر التخصص المطلوب:", color = com.serviseyem.ui.theme.TextLightMint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Surface(
                 onClick = { selectedSubCat = "الكل" },
                 shape = RoundedCornerShape(10.dp),
@@ -147,7 +147,7 @@ fun TechniciansSectionView(
                     text = "عرض الكل (${allProviders.size})",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (selectedSubCat == "الكل") BespokePremiumSystem.DeepDark else Color.White,
+                    color = if (selectedSubCat == "الكل") com.serviseyem.ui.theme.CardSurface else com.serviseyem.ui.theme.TextLightMint,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                 )
             }
@@ -169,9 +169,9 @@ fun TechniciansSectionView(
                     Surface(
                         onClick = { selectedSubCat = if (isSelected) "الكل" else item.title },
                         shape = RoundedCornerShape(16.dp),
-                        color = Color(0xFFFFFFFF),
-                        border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) Color(0xFF00E676) else Color(0xFFE2E8F0)),
-                        shadowElevation = if (isSelected) 6.dp else 2.dp,
+                        color = com.serviseyem.ui.theme.CardSurface,
+                        border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) com.serviseyem.ui.theme.DarkCyanPrimary else com.serviseyem.ui.theme.CardBorder),
+                        shadowElevation = if (isSelected) 4.dp else 2.dp,
                         modifier = Modifier
                             .weight(1f)
                             .height(58.dp)
@@ -197,13 +197,13 @@ fun TechniciansSectionView(
                                     text = item.title,
                                     fontSize = 12.5.sp,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFF18222F),
+                                    color = com.serviseyem.ui.theme.TextLightMint,
                                     maxLines = 1
                                 )
                                 Text(
                                     text = if (isSelected) "محدد ✓" else "تصفح الفنيين",
                                     fontSize = 9.5.sp,
-                                    color = if (isSelected) Color(0xFF00B894) else Color(0xFF5A6A7E)
+                                    color = if (isSelected) com.serviseyem.ui.theme.DarkCyanPrimary else com.serviseyem.ui.theme.TextMutedMint
                                 )
                             }
                         }

@@ -205,7 +205,7 @@ fun MapScreenContent(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF0B0F19))
+                .background(com.serviseyem.ui.theme.AppBackground)
                 .padding(paddingValues)
         ) {
             // Main Map View (Radar-First 100% by default; WebView only on explicit user toggle)

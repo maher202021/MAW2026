@@ -9,14 +9,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-// 🌊 Elegant Dark Cyan + Gold Shine Color Scheme (Strictly NO White)
-private val DarkCyanColorScheme = darkColorScheme(
-    primary = GoldShine,
-    onPrimary = AppBackground,
-    primaryContainer = DarkCyanPrimary,
-    onPrimaryContainer = TextLightMint,
-    secondary = SecondaryTeal,
-    onSecondary = TextLightMint,
+// 🌊 Elegant Light Icy-Blue + Deep Emerald & Gold Shine Color Scheme (Strictly NO Pure White or Pure Black)
+private val LightLuxuryColorScheme = androidx.compose.material3.lightColorScheme(
+    primary = DarkCyanPrimary,
+    onPrimary = CardSurface,
+    primaryContainer = SecondaryTeal,
+    onPrimaryContainer = CardSurface,
+    secondary = GoldShine,
+    onSecondary = Black,
     background = AppBackground,
     onBackground = TextLightMint,
     surface = CardSurface,
@@ -36,12 +36,12 @@ val YemenShapes = Shapes(
 
 @Composable
 fun YemenLuxuryTheme(
-    darkTheme: Boolean = true, // Force Dark Theme for Elegant Cyan Identity
+    darkTheme: Boolean = false,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = DarkCyanColorScheme,
+        colorScheme = LightLuxuryColorScheme,
         typography = YemenTypography,
         shapes = YemenShapes,
         content = content
