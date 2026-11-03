@@ -4,9 +4,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 // 🌊 Elegant Dark Cyan + Gold Shine Theme (Strictly NO White/Black)
-val AppBackground = Color(0xFF0A191D)
-val CardSurface = Color(0xFF112328)
-val CardBorder = Color(0xFF1D3B42)
+val AppBackground = Color(0xFF070A13)
+val CardSurface = Color(0xFF0C1220)
+val CardBorder = Color(0xFF121A2C)
 val GlassBorder = Color(0xFF26525C)
 
 // 🌟 Accent Palette

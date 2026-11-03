@@ -190,36 +190,29 @@ fun AppHeaderBar(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                }
 
-                Spacer(modifier = Modifier.weight(1f))
-
-                // [ طلباتي 📋 ] Action Button in Header
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(com.serviseyem.ui.theme.LuxuryGoldGradient)
-                        .clickable { viewModel.navigateTo("ORDERS_VIEW") }
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = com.serviseyem.ui.theme.CardSurface,
+                        border = BorderStroke(0.8.dp, com.serviseyem.ui.theme.CardBorder)
                     ) {
-                        Text("📋", fontSize = 10.sp)
-                        val isProvider = viewModel.selectedProvider != null || viewModel.selectedStore != null || viewModel.selectedProperty != null
-                        Text(
-                            text = if (isEn) (if (isProvider) "Requests" else "My Requests") else (if (isProvider) "الطلبات" else "طلباتي"),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.Black,
-                            maxLines = 1,
-                            softWrap = false
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text("📍", fontSize = 9.sp)
+                            Text(
+                                text = "صنعاء ▾",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = com.serviseyem.ui.theme.GoldGradientStart
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.weight(1f))
 
                 val isRefreshingHeader by viewModel.isRefreshing.collectAsState()
                 IconButton(
@@ -246,19 +239,20 @@ fun AppHeaderBar(
             }
         }
 
-        // Row 2: Strict Order Navigation Bar (الرئيسية 🏠, الخرائط 🗺️, الانضمام 👤, الإشعارات 🔔, المحادثات ✉️)
+        // Row 2: Strict 6-Element Navigation Bar:
+        // 1. الرئيسية (بيت) | 2. الخرائط | 3. الانضمام (شخص) | 4. الإشعارات (جرس) | 5. المحادثات (مغلف) | 6. طلباتي (حافظة)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 2.dp)
+                .padding(horizontal = 4.dp, vertical = 2.dp)
                 .clip(RoundedCornerShape(18.dp))
                 .background(com.serviseyem.ui.theme.SecondaryBg)
                 .border(BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder), RoundedCornerShape(18.dp))
-                .padding(vertical = 5.dp),
+                .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // 1. الرئيسية
+            // 1. الرئيسية (بيت)
             val isBrowse = currentScreen == AppScreens.USER_BROWSE || currentScreen == "MAIN_DASHBOARD" || currentScreen == "HOME"
             Luxury3DNavIcon(
                 emojiIcon = settingsState.topHomeIcon.ifEmpty { "🏠" },
@@ -273,21 +267,19 @@ fun AppHeaderBar(
                 }
             )
 
-            // 2. الخرائط
-            if (settingsState.isMapFeatureEnabled) {
-                val isMap = currentScreen == AppScreens.MAP_VIEW
-                Luxury3DNavIcon(
-                    emojiIcon = settingsState.topMapsIcon.ifEmpty { "🗺️" },
-                    vectorIcon = Icons.Default.Place,
-                    label = if (isEn) "Maps" else "الخرائط",
-                    isSelected = isMap,
-                    iconSizeDp = settingsState.navIconSizeDp,
-                    iconStyle = settingsState.topNavIconStyle,
-                    onClick = { viewModel.navigateToScreen(AppScreens.MAP_VIEW) }
-                )
-            }
+            // 2. الخرائط (خريطة)
+            val isMap = currentScreen == AppScreens.MAP_VIEW
+            Luxury3DNavIcon(
+                emojiIcon = settingsState.topMapsIcon.ifEmpty { "🗺️" },
+                vectorIcon = Icons.Default.Place,
+                label = if (isEn) "Maps" else "الخرائط",
+                isSelected = isMap,
+                iconSizeDp = settingsState.navIconSizeDp,
+                iconStyle = settingsState.topNavIconStyle,
+                onClick = { viewModel.navigateToScreen(AppScreens.MAP_VIEW) }
+            )
 
-            // 3. الانضمام
+            // 3. الانضمام (شخص)
             val isJoin = currentScreen == AppScreens.REGISTER_FORM || currentScreen == AppScreens.JOIN_REQUEST_STATUS
             Luxury3DNavIcon(
                 emojiIcon = settingsState.topJoinIcon.ifEmpty { "👤" },
@@ -299,7 +291,7 @@ fun AppHeaderBar(
                 onClick = { viewModel.navigateToScreen(AppScreens.REGISTER_FORM) }
             )
 
-            // 4. الإشعارات
+            // 4. الإشعارات (جرس + نقطة حمراء نابضة)
             val isNotifScreen = currentScreen == AppScreens.NOTIFICATIONS_VIEW
             Luxury3DNavIcon(
                 emojiIcon = settingsState.topNotifIcon.ifEmpty { "🔔" },
@@ -314,7 +306,7 @@ fun AppHeaderBar(
                 }
             )
 
-            // 5. المحادثات
+            // 5. المحادثات (مغلف + شارة عداد)
             val isChatsScreen = currentScreen == AppScreens.CHAT_LIST || currentScreen == AppScreens.CHAT_DIRECT
             Luxury3DNavIcon(
                 emojiIcon = settingsState.topChatsIcon.ifEmpty { "✉️" },
@@ -325,6 +317,18 @@ fun AppHeaderBar(
                 iconSizeDp = settingsState.navIconSizeDp,
                 iconStyle = settingsState.topNavIconStyle,
                 onClick = { onChatsClick() }
+            )
+
+            // 6. طلباتي (حافظة / clipboard)
+            val isOrdersScreen = currentScreen == "ORDERS_VIEW"
+            Luxury3DNavIcon(
+                emojiIcon = "📋",
+                vectorIcon = Icons.Default.Assignment,
+                label = if (isEn) "Orders" else "طلباتي",
+                isSelected = isOrdersScreen,
+                iconSizeDp = settingsState.navIconSizeDp,
+                iconStyle = settingsState.topNavIconStyle,
+                onClick = { viewModel.navigateTo("ORDERS_VIEW") }
             )
         }
     }

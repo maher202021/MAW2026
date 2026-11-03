@@ -9,10 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.ListAlt
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -20,6 +17,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -51,12 +50,15 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
             .testTag("app_footer_bar"),
         contentAlignment = Alignment.BottomCenter
     ) {
-        // Main Footer Container Surface
+        // Main Footer Container Surface (Glassmorphism with rounded top corners 20dp)
         Surface(
-            color = com.serviseyem.ui.theme.DarkLuxuryBackground,
-            shadowElevation = 12.dp,
+            color = com.serviseyem.ui.theme.DarkLuxuryBackground.copy(alpha = 0.95f),
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+            shadowElevation = 16.dp,
             border = BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 62.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -65,12 +67,12 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
-                // 1. الحماية (Protection / Admin)
+                // 1. الإدارة (قفل)
                 val isAdmin = currentScreen == AppScreens.ADMIN_PANEL
                 Luxury3DNavIcon(
-                    emojiIcon = settingsState.bottomAdminIcon.ifEmpty { "🛡️" },
+                    emojiIcon = "🔒",
                     vectorIcon = Icons.Default.Lock,
-                    label = if (isEn) "Protection" else "الحماية",
+                    label = if (isEn) "Admin" else "الإدارة",
                     isSelected = isAdmin,
                     iconSizeDp = settingsState.navIconSizeDp,
                     iconStyle = settingsState.topNavIconStyle,
@@ -78,11 +80,11 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                     onClick = { viewModel.navigateTo("ADMIN_PANEL") }
                 )
 
-                // 2. اللغة (Language Switcher)
+                // 2. English (كرة أرضية)
                 Luxury3DNavIcon(
-                    emojiIcon = settingsState.bottomLangIcon.ifEmpty { if (isEn) "🌐" else "EN" },
+                    emojiIcon = "🌐",
                     vectorIcon = null,
-                    label = if (isEn) "اللغة" else "English",
+                    label = if (isEn) "العربية" else "English",
                     isSelected = false,
                     iconSizeDp = settingsState.navIconSizeDp,
                     iconStyle = settingsState.topNavIconStyle,
@@ -95,15 +97,15 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                     }
                 )
 
-                // Spacer for the Center Floating Button (الطلبات)
-                Spacer(modifier = Modifier.width(56.dp))
+                // Spacer for the Center Floating Button (ASH)
+                Spacer(modifier = Modifier.width(54.dp))
 
-                // 4. الباقات (Packages / Membership)
+                // 4. الحجوزات (تقويم)
                 val isBookings = currentScreen == AppScreens.BOOKINGS_VIEW
                 Luxury3DNavIcon(
-                    emojiIcon = settingsState.bottomBookingsIcon.ifEmpty { "📦" },
-                    vectorIcon = Icons.Default.Star,
-                    label = if (isEn) "Packages" else "الباقات",
+                    emojiIcon = "📅",
+                    vectorIcon = Icons.Default.DateRange,
+                    label = if (isEn) "Bookings" else "الحجوزات",
                     isSelected = isBookings,
                     iconSizeDp = settingsState.navIconSizeDp,
                     iconStyle = settingsState.topNavIconStyle,
@@ -111,12 +113,12 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                     onClick = { viewModel.navigateTo("BOOKINGS_VIEW") }
                 )
 
-                // 5. معلومات (Info / About)
+                // 5. عن التطبيق (معلومات)
                 val isAbout = currentScreen == AppScreens.ABOUT_APP
                 Luxury3DNavIcon(
-                    emojiIcon = settingsState.bottomInfoIcon.ifEmpty { "ℹ️" },
+                    emojiIcon = "ℹ️",
                     vectorIcon = Icons.Default.Info,
-                    label = if (isEn) "Info" else "معلومات",
+                    label = if (isEn) "About" else "عن التطبيق",
                     isSelected = isAbout,
                     iconSizeDp = settingsState.navIconSizeDp,
                     iconStyle = settingsState.topNavIconStyle,
@@ -126,15 +128,20 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
             }
         }
 
-        // 3. Center Floating Orders Button (الطلبات) - Protruding 26.dp with Gold Gradient Glow
+        // 3. ASH (الزر المركزي: دائري 54dp بارز يرتفع 26dp فوق الشريط بتدرج ذهبي #FFC93C→#FF9F1C وحلقة بلون الخلفية وتوهج ذهبي ناعم)
         Box(
             modifier = Modifier
-                .offset(y = (-18).dp)
-                .size(58.dp)
+                .offset(y = (-26).dp)
+                .size(54.dp)
+                .shadow(16.dp, CircleShape, ambientColor = Color(0xFFFFC93C), spotColor = Color(0xFFFF9F1C))
                 .clip(CircleShape)
-                .background(com.serviseyem.ui.theme.LuxuryGoldGradient)
-                .border(2.5.dp, com.serviseyem.ui.theme.DarkLuxuryBackground, CircleShape)
-                .clickable { viewModel.navigateTo("ORDERS_VIEW") },
+                .background(
+                    Brush.linearGradient(
+                        listOf(Color(0xFFFFC93C), Color(0xFFFF9F1C))
+                    )
+                )
+                .border(3.dp, com.serviseyem.ui.theme.DarkLuxuryBackground, CircleShape)
+                .clickable { viewModel.navigateToScreen(AppScreens.USER_BROWSE) },
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -142,16 +149,16 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                 verticalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.ListAlt,
-                    contentDescription = if (isEn) "Orders" else "الطلبات",
-                    tint = Color.Black,
-                    modifier = Modifier.size(22.dp)
+                    imageVector = Icons.Default.Home,
+                    contentDescription = "ASH",
+                    tint = Color(0xFF1A1000),
+                    modifier = Modifier.size(20.dp)
                 )
                 Text(
-                    text = if (isEn) "Orders" else "الطلبات",
-                    fontSize = 8.5.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.Black
+                    text = "ASH",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF1A1000)
                 )
             }
         }

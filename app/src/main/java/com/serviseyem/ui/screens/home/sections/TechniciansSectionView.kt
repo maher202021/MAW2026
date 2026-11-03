@@ -13,6 +13,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -26,6 +28,12 @@ import com.serviseyem.ui.components.BespokePremiumSystem
 import com.serviseyem.ui.navigateTo
 import com.serviseyem.ui.setActiveBrowserTab
 import com.serviseyem.utils.VisualThemePalette
+
+data class TechSubCategoryItem(
+    val title: String,
+    val emoji: String,
+    val gradient: Brush
+)
 
 /**
  * 🛠️ TechniciansSectionView - قسم الفنيين والحرفيين المعتمدين مع تصفية الأقسام الفرعية وزر العودة المباشر
@@ -111,35 +119,98 @@ fun TechniciansSectionView(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // 2. Sub-Category Quick Links
+        // 2. Sub-Category 2-Column Grid (شبكة عمودين للأقسام الفرعية ببطاقات أيقونية ملونة)
+        val subCategoryCards = listOf(
+            TechSubCategoryItem("كهرباء", "⚡", Brush.horizontalGradient(listOf(Color(0xFFF59E0B), Color(0xFFD97706)))),
+            TechSubCategoryItem("سباكة", "🔧", Brush.horizontalGradient(listOf(Color(0xFF0284C7), Color(0xFF0369A1)))),
+            TechSubCategoryItem("تكييف", "❄️", Brush.horizontalGradient(listOf(Color(0xFF06B6D4), Color(0xFF0891B2)))),
+            TechSubCategoryItem("نجارة", "🪚", Brush.horizontalGradient(listOf(Color(0xFFD97706), Color(0xFFB45309)))),
+            TechSubCategoryItem("صيانة", "📱", Brush.horizontalGradient(listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9)))),
+            TechSubCategoryItem("حدادة ونجارة", "🔩", Brush.horizontalGradient(listOf(Color(0xFF475569), Color(0xFF334155)))),
+            TechSubCategoryItem("بستنة", "🌱", Brush.horizontalGradient(listOf(Color(0xFF10B981), Color(0xFF059669))))
+        )
+
+        // All Filter Pill
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 6.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            subCategories.forEach { (catName, emoji) ->
-                val isSelected = selectedSubCat == catName
-                Surface(
-                    onClick = { selectedSubCat = catName },
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) BespokePremiumSystem.EmeraldAccent else BespokePremiumSystem.SurfaceDark,
-                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else BespokePremiumSystem.GlassBorder)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+            Text("اختر التخصص المطلوب:", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Surface(
+                onClick = { selectedSubCat = "الكل" },
+                shape = RoundedCornerShape(10.dp),
+                color = if (selectedSubCat == "الكل") BespokePremiumSystem.EmeraldAccent else BespokePremiumSystem.SurfaceDark,
+                border = BorderStroke(1.dp, if (selectedSubCat == "الكل") Color.Transparent else BespokePremiumSystem.GlassBorder)
+            ) {
+                Text(
+                    text = "عرض الكل (${allProviders.size})",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selectedSubCat == "الكل") BespokePremiumSystem.DeepDark else Color.White,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // 2-Column Grid of subcategories using for loops for clean Composable context
+        val chunkedSubCats = subCategoryCards.chunked(2)
+        for (pair in chunkedSubCats) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                for (item in pair) {
+                    val isSelected = selectedSubCat == item.title
+                    Surface(
+                        onClick = { selectedSubCat = if (isSelected) "الكل" else item.title },
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFFFFFFFF),
+                        border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) Color(0xFF00E676) else Color(0xFFE2E8F0)),
+                        shadowElevation = if (isSelected) 6.dp else 2.dp,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(58.dp)
                     ) {
-                        Text(emoji, fontSize = 13.sp)
-                        Text(
-                            text = catName,
-                            fontSize = 11.5.sp,
-                            fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold,
-                            color = if (isSelected) BespokePremiumSystem.DeepDark else Color.White
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(item.gradient),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(item.emoji, fontSize = 18.sp)
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = item.title,
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFF18222F),
+                                    maxLines = 1
+                                )
+                                Text(
+                                    text = if (isSelected) "محدد ✓" else "تصفح الفنيين",
+                                    fontSize = 9.5.sp,
+                                    color = if (isSelected) Color(0xFF00B894) else Color(0xFF5A6A7E)
+                                )
+                            }
+                        }
                     }
+                }
+                if (pair.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }

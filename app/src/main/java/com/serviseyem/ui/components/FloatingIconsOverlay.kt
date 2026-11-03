@@ -57,99 +57,83 @@ fun BoxScope.FloatingIconsOverlay(
         label = "pulse"
     )
 
-    // 1. "المساعد الذكي" - Left Side (BottomStart)
-    if (!settings.assistantHidden) {
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 16.dp, bottom = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+    // Stacked vertically on the left side (BottomStart) above bottom bar with 16dp margin
+    Column(
+        modifier = Modifier
+            .align(Alignment.BottomStart)
+            .padding(start = 16.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // 1. «المساعد الذكي» - 48dp circular button
+        if (!settings.assistantHidden) {
             Box(
                 modifier = Modifier
                     .scale(scale)
-                    .size(56.dp)
-                    .shadow(12.dp, CircleShape)
+                    .size(48.dp)
+                    .shadow(12.dp, CircleShape, ambientColor = Color(0xFF0EA5E9), spotColor = Color(0xFF0284C7))
                     .clip(CircleShape)
                     .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFF0EA5E9), Color(0xFF06B6D4)) // Rich teal-blue
+                        Brush.verticalGradient(
+                            listOf(Color(0xFF5ED3FF), Color(0xFF0E90FF))
                         )
                     )
+                    .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)), CircleShape)
                     .clickable {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onAssistantClick()
-                    }
-                    .border(2.dp, SoftGold.copy(alpha = 0.8f), CircleShape),
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                Text("🤖", fontSize = 24.sp)
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = LightCardSurface,
-                border = BorderStroke(1.dp, LightCardBorder),
-                shadowElevation = 2.dp
-            ) {
-                Text(
-                    text = "المساعد الذكي",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextDarkGreen,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("🤖", fontSize = 18.sp)
+                    Text(
+                        text = "المساعد",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF001B3A),
+                        lineHeight = 10.sp
+                    )
+                }
             }
         }
-    }
 
-    // 2. "اطلب خدمتك الآن" - Right Side (BottomEnd)
-    if (!settings.footerMessage.contains("hide_urgent_fab")) {
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        // 2. «اطلب خدمتك الآن» - 48dp circular button
+        if (!settings.footerMessage.contains("hide_urgent_fab")) {
             Box(
                 modifier = Modifier
                     .scale(scale)
-                    .size(56.dp)
-                    .shadow(12.dp, CircleShape)
+                    .size(48.dp)
+                    .shadow(12.dp, CircleShape, ambientColor = Color(0xFFFF2D6F), spotColor = Color(0xFFFF7EB3))
                     .clip(CircleShape)
                     .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFF10B981), Color(0xFF059669)) // Strong emerald
+                        Brush.verticalGradient(
+                            listOf(Color(0xFFFF7EB3), Color(0xFFFF2D6F))
                         )
                     )
+                    .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)), CircleShape)
                     .clickable {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onRequestServiceClick()
-                    }
-                    .border(2.dp, SoftGold.copy(alpha = 0.8f), CircleShape),
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Send,
-                    contentDescription = "اطلب خدمتك الآن",
-                    tint = TextDarkGreen,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = LightCardSurface,
-                border = BorderStroke(1.dp, LightCardBorder),
-                shadowElevation = 2.dp
-            ) {
-                Text(
-                    text = "اطلب خدمتك الآن",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextDarkGreen,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("⚡", fontSize = 18.sp)
+                    Text(
+                        text = "اطلب الآن",
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White,
+                        lineHeight = 9.5.sp
+                    )
+                }
             }
         }
     }
