@@ -93,7 +93,7 @@ fun CategoriesScreen(
 
         // 3-Column Responsive Grid for 21 Categories
         LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+            columns = GridCells.Adaptive(minSize = 100.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier

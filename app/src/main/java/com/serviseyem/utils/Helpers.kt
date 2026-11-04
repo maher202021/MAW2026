@@ -177,13 +177,13 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
             )
         }
         else -> {
-            // Default: World-Class Light Luxury High-Contrast Theme
+            // Default: Dark Luxury High-Contrast Theme (#0F172A background, #1E293B card surface, crisp white text)
             val primary = com.serviseyem.ui.theme.PrimaryBlue
             val secondary = com.serviseyem.ui.theme.GoldShine
             val background = com.serviseyem.ui.theme.AppBackground
             val surface = com.serviseyem.ui.theme.CardSurface
-            val textPrimary = Color(0xFF0F172A)
-            val textSecondary = Color(0xFF475569)
+            val textPrimary = Color(0xFFFFFFFF)
+            val textSecondary = Color(0xFFCBD5E1)
             val accent = com.serviseyem.ui.theme.GoldShine
             VisualThemePalette(
                 activeId = "YEMEN_CLEAN_LUXURY",
@@ -195,16 +195,16 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
                 textSecondary = textSecondary,
                 accent = accent,
                 border = com.serviseyem.ui.theme.CardBorder,
-                gradientBrush = Brush.verticalGradient(listOf(Color(0xFFFFFFFF), Color(0xFFF8FAFC))),
-                scheme = androidx.compose.material3.lightColorScheme(
+                gradientBrush = Brush.verticalGradient(listOf(Color(0xFF1E293B), Color(0xFF0F172A))),
+                scheme = androidx.compose.material3.darkColorScheme(
                     primary = primary,
                     secondary = secondary,
                     background = background,
                     surface = surface,
                     onPrimary = Color.White,
                     onSecondary = Color.White,
-                    onBackground = textPrimary,
-                    onSurface = textPrimary
+                    onBackground = Color.White,
+                    onSurface = Color.White
                 )
             )
         }

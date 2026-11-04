@@ -59,7 +59,7 @@ fun MedicalCentersSectionView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFF8FAFC))
+            .background(com.serviseyem.ui.theme.AppBackground)
             .padding(bottom = 20.dp)
     ) {
         // 0. Top Back Header
@@ -82,8 +82,8 @@ fun MedicalCentersSectionView(
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
-            border = BorderStroke(1.dp, Color(0xFFFECACA)),
+            color = Color(0xFF1E293B),
+            border = BorderStroke(1.dp, Color(0xFF7F1D1D)),
             shadowElevation = 2.dp
         ) {
             Row(
@@ -92,8 +92,8 @@ fun MedicalCentersSectionView(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Surface(shape = CircleShape, color = Color(0xFFDC2626), modifier = Modifier.size(10.dp)) {}
-                Text("صيدليات ومراكز الطوارئ المناوبة (24/7)", color = Color(0xFF1E293B), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = Color(0xFF1E293B))
+                Text("صيدليات ومراكز الطوارئ المناوبة (24/7)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = Color.White)
             }
         }
 
@@ -107,13 +107,13 @@ fun MedicalCentersSectionView(
                 Surface(
                     onClick = { selectedSubCategory = cat },
                     shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) Color(0xFF0D9488) else Color.White,
-                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else Color(0xFFE2E8F0)),
+                    color = if (isSelected) Color(0xFF0D9488) else Color(0xFF1E293B),
+                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else Color(0xFF334155)),
                     shadowElevation = if (isSelected) 3.dp else 1.dp
                 ) {
                     Text(
                         cat,
-                        color = if (isSelected) Color.White else Color(0xFF1E293B),
+                        color = if (isSelected) Color.White else Color(0xFFCBD5E1),
                         fontSize = 11.5.sp,
                         fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)

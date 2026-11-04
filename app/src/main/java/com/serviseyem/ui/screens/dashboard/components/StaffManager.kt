@@ -32,11 +32,16 @@ import java.util.UUID
  */
 @Composable
 fun StaffManager(
-    ownerId: String = "",
-    viewModel: DashboardExtensionsViewModel = viewModel(factory = object : ViewModelProvider.Factory { override fun <T : ViewModel> create(modelClass: Class<T>): T { return DashboardExtensionsViewModel(ownerId) as T } }),
+    ownerId: String,
+    viewModel: DashboardExtensionsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
 ) {
+    LaunchedEffect(ownerId) {
+        if (ownerId.isNotBlank()) {
+            viewModel.setOwnerId(ownerId)
+        }
+    }
     val staffList by viewModel.staff.collectAsState()
 
     var showAddDialog by remember { mutableStateOf(false) }

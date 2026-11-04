@@ -31,21 +31,12 @@ import com.serviseyem.utils.VisualThemePalette
 
 @Composable
 fun EmptyStateBox(msg: String, themeColors: VisualThemePalette) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = BespokePremiumSystem.SurfaceDark,
-        border = BorderStroke(1.dp, BespokePremiumSystem.GlassBorder)
-    ) {
-        Box(
-            modifier = Modifier.padding(20.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = msg, color = Color(0xFF94A3B8), fontSize = 12.5.sp, textAlign = TextAlign.Center)
-        }
-    }
+    com.serviseyem.ui.screens.dashboard.components.UnifiedEmptyState(
+        title = msg,
+        description = "",
+        iconText = "📦",
+        themeColors = themeColors
+    )
 }
 
 @Composable
@@ -275,8 +266,7 @@ private fun StoreTabContent(
         6 -> { // الفروع
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("فروع المتجر المعتمدة 📍", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                BranchCard(name = "الفرع الرئيسي - صنعاء", address = store?.localNeighborhood?.ifEmpty { "شارع حدة - تقاطع القدس" } ?: "شارع حدة", hours = "9:00 ص - 11:00 م")
-                BranchCard(name = "فرع عدن", address = "المنصورة - ريمي", hours = "8:30 ص - 10:30 م")
+                BranchCard(name = "الفرع الرئيسي", address = store?.localNeighborhood?.ifEmpty { "اليمن" } ?: "اليمن", hours = "9:00 ص - 11:00 م")
             }
         }
     }
@@ -432,9 +422,14 @@ private fun MedicalTabContent(
         1 -> { // الأطباء
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("نخبة الأطباء والاستشاريين 👨‍⚕️", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                DoctorCard(name = "د. أحمد القدسي", specialty = "استشاري أمراض القلب والأوعية الدموية", exp = "خبرة 15 عاماً", rating = "4.9")
-                DoctorCard(name = "د. نادية الشامي", specialty = "أخصائية طب الأطفال وحديثي الولادة", exp = "خبرة 10 أعوام", rating = "5.0")
-                DoctorCard(name = "د. طارق الحكيمي", specialty = "استشاري جراحة العظام والمفاصل", exp = "خبرة 18 عاماً", rating = "4.8")
+                com.serviseyem.ui.screens.dashboard.components.UnifiedEmptyState(
+                    title = "لا يوجد أطباء مسجلون حالياً",
+                    description = "يمكن للمنشأة الطبية إضافة كادرها الطبي والاستشاريين المعتمدين.",
+                    iconText = "👨‍⚕️",
+                    actionLabel = if (isOwner) "أضف طبيباً ➕" else null,
+                    onActionClick = { /* noop */ },
+                    themeColors = themeColors
+                )
             }
         }
         2 -> { // الأقسام والتخصصات
@@ -475,9 +470,12 @@ private fun MedicalTabContent(
         4 -> { // المختبر والأشعة
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("باقات الفحوصات والتحاليل المخبرية 🧪", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                LabPackageCard(title = "باقة الفحص الشامل", tests = "سكر، وظائف كبد وكلى، دهون، دم كامل CBC", price = "18,000 ر.ي")
-                LabPackageCard(title = "باقة صحة القلب", tests = "تخطيط قلب، إنزيمات، دهون ثلاثية، كوليسترول", price = "22,000 ر.ي")
-                LabPackageCard(title = "خدمة السحب المنزلي للعينات", tests = "فريق تمريضي متخصص يصل لمنزلك", price = "مجاناً مع الباقات")
+                com.serviseyem.ui.screens.dashboard.components.UnifiedEmptyState(
+                    title = "لا توجد باقات مخبرية محددة حالياً",
+                    description = "تواصل مع المركز مباشرة للاستفسار عن التحاليل والفحوصات المتاحة.",
+                    iconText = "🧪",
+                    themeColors = themeColors
+                )
             }
         }
         5 -> { // التقييمات
@@ -494,8 +492,7 @@ private fun MedicalTabContent(
         7 -> { // الفروع
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("المستشفيات والعيادات التابعة 📍", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                BranchCard(name = "المركز الرئيسي والمستشفى", address = store?.localNeighborhood?.ifEmpty { "صنعاء - شارع الزبيري" } ?: "صنعاء", hours = "طوارئ 24/7")
-                BranchCard(name = "مجمع العيادات الخارجية", address = "صنعاء - شارع بغداد", hours = "8:00 ص - 9:00 م")
+                BranchCard(name = "المركز الرئيسي والمستشفى", address = store?.localNeighborhood?.ifEmpty { "اليمن" } ?: "اليمن", hours = "طوارئ 24/7")
             }
         }
     }

@@ -125,7 +125,13 @@ fun ClientPersonalAccountDashboard(
 
         // Bookings section
         Text("📅 طلبات وحجوزات الخدمة الخاصة بك:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
-        val myBookings = remember(bookings, currentUserPhone) { bookings.filter { it.customerPhone == currentUserPhone } }
+        val myBookings = remember(bookings, currentUserId, currentUserPhone) { 
+            bookings.filter { 
+                (it.clientUserId.isNotBlank() && it.clientUserId == currentUserId) ||
+                (it.clientId.isNotBlank() && it.clientId == currentUserId) ||
+                (it.customerPhone.isNotBlank() && it.customerPhone == currentUserPhone)
+            } 
+        }
 
         if (myBookings.isEmpty()) {
             Card(

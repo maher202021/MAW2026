@@ -32,11 +32,16 @@ import java.util.UUID
  */
 @Composable
 fun InventoryManager(
-    ownerId: String = "",
-    viewModel: DashboardExtensionsViewModel = viewModel(factory = object : ViewModelProvider.Factory { override fun <T : ViewModel> create(modelClass: Class<T>): T { return DashboardExtensionsViewModel(ownerId) as T } }),
+    ownerId: String,
+    viewModel: DashboardExtensionsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
 ) {
+    LaunchedEffect(ownerId) {
+        if (ownerId.isNotBlank()) {
+            viewModel.setOwnerId(ownerId)
+        }
+    }
     val inventoryList by viewModel.inventory.collectAsState()
 
     var showAddItemDialog by remember { mutableStateOf(false) }

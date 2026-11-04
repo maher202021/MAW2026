@@ -131,8 +131,8 @@ fun ProfileActions(
                     ProfileEntityType.STORE, ProfileEntityType.RESTAURANT -> {
                         // Floating action pill replacement for STORE & RESTAURANT
                         Row(
-                            modifier = Modifier.fillMaxWidth().height(46.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Button(
                                 onClick = onOrderProduct,
@@ -167,10 +167,7 @@ fun ProfileActions(
                             }
                             if (entityPhone.isNotBlank()) {
                                 Button(
-                                    onClick = {
-                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$entityPhone"))
-                                        context.startActivity(intent)
-                                    },
+                                    onClick = { com.serviseyem.utils.PhoneDialerHelper.dial(context, entityPhone) },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                                     shape = RoundedCornerShape(24.dp),
                                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
@@ -185,8 +182,8 @@ fun ProfileActions(
                     }
                     ProfileEntityType.TECHNICIAN -> {
                         Row(
-                            modifier = Modifier.fillMaxWidth().height(46.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Button(
                                 onClick = onRequestBooking,
@@ -212,10 +209,7 @@ fun ProfileActions(
                             }
                             if (entityPhone.isNotBlank()) {
                                 Button(
-                                    onClick = {
-                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$entityPhone"))
-                                        context.startActivity(intent)
-                                    },
+                                    onClick = { com.serviseyem.utils.PhoneDialerHelper.dial(context, entityPhone) },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                                     shape = RoundedCornerShape(24.dp),
                                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
@@ -230,8 +224,8 @@ fun ProfileActions(
                     }
                     ProfileEntityType.MEDICAL -> {
                         Row(
-                            modifier = Modifier.fillMaxWidth().height(46.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Button(
                                 onClick = onRequestBooking,
@@ -257,10 +251,7 @@ fun ProfileActions(
                             }
                             if (entityPhone.isNotBlank()) {
                                 Button(
-                                    onClick = {
-                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$entityPhone"))
-                                        context.startActivity(intent)
-                                    },
+                                    onClick = { com.serviseyem.utils.PhoneDialerHelper.dial(context, entityPhone) },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                                     shape = RoundedCornerShape(24.dp),
                                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),

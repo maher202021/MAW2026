@@ -25,6 +25,8 @@ data class PropertyEntity(
     val latitude: Double = 15.3694,
     val longitude: Double = 44.1910,
     val images: List<String> = emptyList(),
+    val rooms: Int = 3,
+    val areaSqm: Double = 120.0,
     val isDeleted: Boolean = false,
     val deletedAt: Long? = null,
     val paymentEnabled: Boolean = true,

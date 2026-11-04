@@ -46,3 +46,17 @@ fun StoreEntity.isMedicalCenter(): Boolean {
 fun StoreEntity.isCommercialStore(): Boolean {
     return !isMedicalCenter() && !isRestaurantOrCafe()
 }
+
+enum class StoreCategory {
+    RESTAURANT,
+    MEDICAL,
+    COMMERCIAL
+}
+
+fun StoreEntity.classify(): StoreCategory {
+    return when {
+        isRestaurantOrCafe() -> StoreCategory.RESTAURANT
+        isMedicalCenter() -> StoreCategory.MEDICAL
+        else -> StoreCategory.COMMERCIAL
+    }
+}

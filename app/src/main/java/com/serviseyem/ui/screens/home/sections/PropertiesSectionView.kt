@@ -51,7 +51,7 @@ fun PropertiesSectionView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFF8FAFC))
+            .background(com.serviseyem.ui.theme.AppBackground)
             .padding(bottom = 20.dp)
     ) {
         // 0. Top Back Header
@@ -80,13 +80,13 @@ fun PropertiesSectionView(
                 Surface(
                     onClick = { selectedSubCategory = cat },
                     shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) Color(0xFF4F46E5) else Color.White,
-                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else Color(0xFFE2E8F0)),
+                    color = if (isSelected) Color(0xFF4F46E5) else Color(0xFF1E293B),
+                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else Color(0xFF334155)),
                     shadowElevation = if (isSelected) 3.dp else 1.dp
                 ) {
                     Text(
                         cat,
-                        color = if (isSelected) Color.White else Color(0xFF1E293B),
+                        color = if (isSelected) Color.White else Color(0xFFCBD5E1),
                         fontSize = 11.5.sp,
                         fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)
@@ -103,8 +103,8 @@ fun PropertiesSectionView(
                 title = prop.title,
                 price = formatPriceWithCurrency(prop.price, prop.currency),
                 location = "${prop.cityId} - ${prop.localNeighborhood}",
-                rooms = 3, // Fallback as PropertyEntity doesn't have rooms yet
-                area = "120 لبنة",
+                rooms = prop.rooms,
+                area = "${prop.areaSqm.toInt()} م²",
                 imageUrl = prop.images.firstOrNull() ?: "https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&w=800&q=80",
                 onBookmark = { /* Bookmark Logic */ },
                 onShare = { /* Share Logic */ },

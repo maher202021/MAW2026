@@ -76,7 +76,7 @@ fun StoresSectionView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFF8FAFC))
+            .background(com.serviseyem.ui.theme.AppBackground)
             .padding(bottom = 20.dp)
     ) {
         // 0. Top Back Header
@@ -99,8 +99,8 @@ fun StoresSectionView(
         Surface(
             modifier = Modifier.fillMaxWidth().height(160.dp).padding(horizontal = 8.dp),
             shape = RoundedCornerShape(20.dp),
-            color = Color.White,
-            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+            color = Color(0xFF1E293B),
+            border = BorderStroke(1.dp, Color(0xFF334155)),
             shadowElevation = 3.dp
         ) {
             Box(modifier = Modifier.fillMaxSize()) {

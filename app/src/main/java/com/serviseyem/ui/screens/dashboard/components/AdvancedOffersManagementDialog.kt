@@ -21,11 +21,16 @@ import java.util.UUID
 
 @Composable
 fun AdvancedOffersManagementDialog(
-    ownerId: String = "",
-    viewModel: com.serviseyem.ui.screens.dashboard.viewmodels.DashboardExtensionsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory { override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T { return com.serviseyem.ui.screens.dashboard.viewmodels.DashboardExtensionsViewModel(ownerId) as T } }),
+    ownerId: String,
+    viewModel: com.serviseyem.ui.screens.dashboard.viewmodels.DashboardExtensionsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     themeColors: VisualThemePalette,
     onDismiss: () -> Unit
 ) {
+    LaunchedEffect(ownerId) {
+        if (ownerId.isNotBlank()) {
+            viewModel.setOwnerId(ownerId)
+        }
+    }
     val offers by viewModel.specialOffers.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var newTitle by remember { mutableStateOf("") }

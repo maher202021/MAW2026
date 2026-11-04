@@ -10,19 +10,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-// 💎 World-Class Light Luxury Color Scheme with High Contrast
-private val LightLuxuryColorScheme = androidx.compose.material3.lightColorScheme(
+// 💎 World-Class Dark Luxury Color Scheme (#0F172A background, #1E293B surface)
+private val LightLuxuryColorScheme = androidx.compose.material3.darkColorScheme(
     primary = PrimaryBlue,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFEFF6FF),
-    onPrimaryContainer = PrimaryBlue,
+    primaryContainer = Color(0xFF1E293B),
+    onPrimaryContainer = Color.White,
     secondary = GoldShine,
     onSecondary = Color.White,
-    background = AppBackground,
-    onBackground = TextDarkTitle,
-    surface = CardSurface,
-    onSurface = TextDarkTitle,
-    outline = CardBorder,
+    background = Color(0xFF0F172A),
+    onBackground = Color.White,
+    surface = Color(0xFF1E293B),
+    onSurface = Color.White,
+    surfaceVariant = Color(0xFF1E293B),
+    onSurfaceVariant = Color(0xFFCBD5E1),
+    outline = Color(0xFF334155),
     error = ErrorCoral
 )
 

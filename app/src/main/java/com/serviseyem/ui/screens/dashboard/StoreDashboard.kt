@@ -157,7 +157,7 @@ fun StoreDashboard(
                         )
                     }
                     2 -> {
-                        TabOffersCoupons(themeColors = themeColors)
+                        TabOffersCoupons(storeId = account.id, themeColors = themeColors)
                     }
                     3 -> {
                         TabReviewsFeedback(

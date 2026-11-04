@@ -442,21 +442,6 @@ fun RestaurantCard(
                         }
                     }
 
-                    // Button 1: Details
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = themeColors.accent,
-                        shadowElevation = 2.dp,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(29.dp)
-                            .clickable { onClick() }
-                    ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Text("التفاصيل 📋", fontSize = 9.sp, color = Color.Black, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
                     // Button 2: Instant Chat
                     Surface(
                         shape = RoundedCornerShape(8.dp),

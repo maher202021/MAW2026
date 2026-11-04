@@ -39,29 +39,31 @@ fun ProvidersSectionView(
     onChatOpen: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // ضمان عدم ظهور أي سكيلتون أو مربعات فارغة أبداً - استخدام البيانات الافتراضية المباشرة عند الفراغ
-    val effectiveProviders = if (displayProviders.isEmpty()) {
-        DefaultDemoData.getDemoProviders()
-    } else {
-        displayProviders
-    }
+    val effectiveProviders = displayProviders
 
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Categories Horizontal Bar REMOVED for Minimalism
-        // Surface(...) { ... }
-
-        // Providers List Section - Direct rendered cards (No skeleton placeholders)
-        val limitedProviders = effectiveProviders.take(providersLimit)
-        limitedProviders.forEach { provider ->
-            ProviderCard(
-                provider = provider,
-                themeColors = themeColors,
-                viewModel = viewModel,
-                onChatOpen = onChatOpen
+        if (effectiveProviders.isEmpty()) {
+            com.serviseyem.ui.screens.dashboard.components.UnifiedEmptyState(
+                title = "لا يوجد فنيون مسجلون حالياً",
+                description = "كن أول فني ينضم لمنصة serviseyem",
+                iconText = "🛠️",
+                actionLabel = "سجّل كفني",
+                onActionClick = { viewModel.navigateTo(AppScreens.REGISTER_FORM) },
+                themeColors = themeColors
             )
+        } else {
+            val limitedProviders = effectiveProviders.take(providersLimit)
+            limitedProviders.forEach { provider ->
+                ProviderCard(
+                    provider = provider,
+                    themeColors = themeColors,
+                    viewModel = viewModel,
+                    onChatOpen = onChatOpen
+                )
+            }
         }
 
         if (effectiveProviders.size > providersLimit) {

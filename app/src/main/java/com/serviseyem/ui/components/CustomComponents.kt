@@ -105,26 +105,26 @@ fun Luxury3DNavIcon(
 
             Surface(
                 shape = CircleShape,
-                color = if (isSelected) Color(0xFFEFF6FF) else Color(0xFFF1F5F9),
+                color = if (isSelected) Color(0xFF0284C7) else Color(0xFF1E293B),
                 border = BorderStroke(
                     width = if (isSelected) 1.5.dp else 1.dp,
-                    color = if (isSelected) Color(0xFF2563EB) else Color(0xFFE2E8F0)
+                    color = if (isSelected) Color(0xFFFFC93C) else Color(0xFF334155)
                 ),
-                shadowElevation = if (isSelected) 3.dp else 1.dp,
-                modifier = Modifier.size(sizeDp + 6.dp)
+                shadowElevation = if (isSelected) 4.dp else 2.dp,
+                modifier = Modifier.size(sizeDp + 8.dp)
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                     if (vectorIcon != null && (iconStyle == "MINIMAL" || forceWhiteText)) {
                         Icon(
                             imageVector = vectorIcon,
                             contentDescription = label,
-                            tint = if (forceWhiteText) Color.White else if (isSelected) Color(0xFF2563EB) else Color(0xFF1E293B),
+                            tint = if (isSelected) Color(0xFFFFC93C) else Color.White,
                             modifier = Modifier.size(sizeDp)
                         )
                     } else {
                         Text(
                             text = emojiIcon,
-                            fontSize = (sizeDp.value * 0.68f).sp,
+                            fontSize = (sizeDp.value * 0.70f).sp,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -136,7 +136,7 @@ fun Luxury3DNavIcon(
                     shape = CircleShape,
                     color = Color(0xFFEF4444), // Vibrant Red Badge
                     border = BorderStroke(1.dp, Color(0xFFFFFFFF)), // White border
-                    shadowElevation = 2.dp,
+                    shadowElevation = 3.dp,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .offset(x = 4.dp, y = (-2).dp)
@@ -154,15 +154,22 @@ fun Luxury3DNavIcon(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = label,
-            fontSize = 8.5.sp,
-            maxLines = 1,
-            softWrap = false,
-            color = if (forceWhiteText) Color.White else if (isSelected) Color(0xFF2563EB) else Color(0xFF1E293B),
-            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold
-        )
+        Spacer(modifier = Modifier.height(3.dp))
+        Box(
+            modifier = Modifier.height(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                softWrap = false,
+                color = if (isSelected) Color(0xFFFFC93C) else Color(0xFFC9D2E0),
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 

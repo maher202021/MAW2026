@@ -253,13 +253,6 @@ fun ProfileHeader(
                     }
                 }
 
-                Text(
-                    text = entityDescription,
-                    fontSize = 12.5.sp,
-                    color = Color.White.copy(alpha = 0.9f),
-                    lineHeight = 17.sp
-                )
-
                 // Owner Business Statistics Section
                 if (isOwner) {
                     HorizontalDivider(color = themeColors.accent.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 4.dp))

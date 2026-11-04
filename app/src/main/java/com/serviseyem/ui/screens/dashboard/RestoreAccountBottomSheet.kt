@@ -105,23 +105,27 @@ fun RestoreAccountBottomSheet(
                     onClick = {
                         val cleanPhone = restorePhone.trim().replace(" ", "")
                         val cleanPass = restorePass.trim()
-                        if (cleanPhone.length == 9 && cleanPass.isNotEmpty()) {
-                            isRestoring = true
-                            viewModel.restoreGuestUser(
-                                context = context,
-                                phone = cleanPhone,
-                                password = cleanPass,
-                                onResult = { success, msg ->
-                                    isRestoring = false
-                                    if (success) {
-                                        onDismissRequest()
-                                    }
-                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                                }
-                            )
-                        } else {
-                            Toast.makeText(context, "❌ يرجى تعبئة كافة الحقول بشكل صحيح ورقم من 9 أرقام!", Toast.LENGTH_SHORT).show()
+                        if (cleanPhone.length != 9) {
+                            Toast.makeText(context, "❌ يجب أن يتكون رقم الهاتف اليمني من 9 أرقام (مثال: 77xxxxxxx)", Toast.LENGTH_SHORT).show()
+                            return@Button
                         }
+                        if (cleanPass.length < 8) {
+                            Toast.makeText(context, "❌ كلمة المرور يجب ألا تقل عن 8 خانات", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        isRestoring = true
+                        viewModel.restoreGuestUser(
+                            context = context,
+                            phone = cleanPhone,
+                            password = cleanPass,
+                            onResult = { success, msg ->
+                                isRestoring = false
+                                if (success) {
+                                    onDismissRequest()
+                                }
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                            }
+                        )
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
                     shape = RoundedCornerShape(10.dp),

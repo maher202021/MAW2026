@@ -28,10 +28,10 @@ fun StoreEditDetailsCard(
     themeColors: VisualThemePalette
 ) {
     val context = LocalContext.current
-    var editName by remember(store) { mutableStateOf(store.name) }
-    var editDesc by remember(store) { mutableStateOf(store.description) }
-    var editAddress by remember(store) { mutableStateOf(store.localNeighborhood) }
-    var editPhone by remember(store) { mutableStateOf(store.phone) }
+    var editName by remember(store.id) { mutableStateOf(store.name) }
+    var editDesc by remember(store.id) { mutableStateOf(store.description) }
+    var editAddress by remember(store.id) { mutableStateOf(store.localNeighborhood) }
+    var editPhone by remember(store.id) { mutableStateOf(store.phone) }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = themeColors.surface),

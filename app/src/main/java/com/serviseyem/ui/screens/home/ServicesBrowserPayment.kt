@@ -49,27 +49,24 @@ fun ServicesBrowserPaymentDialog(
     var selectedWallet by remember { mutableStateOf(wallets.firstOrNull()) }
     var transferNumber by rememberSaveable { mutableStateOf("") }
     var senderName by rememberSaveable { mutableStateOf("") }
+    var transferPhotoUrl by remember { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
-    var transferPhotoBase64 by remember { mutableStateOf("") }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
             if (uri != null) {
                 scope.launch {
-                    val base64 = withContext(Dispatchers.IO) {
-                        try {
-                            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                            if (bytes != null && bytes.size < 2_000_000) {
-                                Base64.encodeToString(bytes, Base64.NO_WRAP)
-                            } else ""
-                        } catch (_: Exception) { "" }
-                    }
-                    if (base64.isNotBlank()) {
-                        transferPhotoBase64 = base64
+                    val uploadResult = com.serviseyem.utils.FirebaseStorageUploader.uploadImageToStorage(
+                        context = context,
+                        uri = uri,
+                        path = "payments/${booking.id}/${System.currentTimeMillis()}.webp"
+                    )
+                    uploadResult.onSuccess { remoteUrl ->
+                        transferPhotoUrl = remoteUrl
                         Toast.makeText(context, "📸 تم إرفاق صورة الإشعار بنجاح!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, "❌ فشل تحميل الصورة أو حجمها كبير", Toast.LENGTH_LONG).show()
+                    }.onFailure {
+                        Toast.makeText(context, "❌ فشل رفع صورة الإشعار، يرجى المحاولة لاحقاً", Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -248,14 +245,14 @@ fun ServicesBrowserPaymentDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = if (transferPhotoBase64.isBlank()) "📸 إرفاق صورة إشعار التحويل (اختياري)" else "🔄 تغيير صورة إشعار التحويل",
+                        text = if (transferPhotoUrl.isBlank()) "📸 إرفاق صورة إشعار التحويل (اختياري)" else "🔄 تغيير صورة إشعار التحويل",
                         fontSize = 11.sp,
                         color = themeColors.accent,
                         fontWeight = FontWeight.Bold
                     )
                 }
 
-                if (transferPhotoBase64.isNotBlank()) {
+                if (transferPhotoUrl.isNotBlank()) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -265,7 +262,7 @@ fun ServicesBrowserPaymentDialog(
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             SmartAsyncImage(
-                                model = transferPhotoBase64,
+                                model = transferPhotoUrl,
                                 contentDescription = "صورة الإشعار المرفقة",
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -296,7 +293,7 @@ fun ServicesBrowserPaymentDialog(
                                     walletNumber = selectedWallet?.walletNumber ?: "",
                                     walletAccountName = senderName,
                                     transferId = transferNumber,
-                                    transferPhoto = transferPhotoBase64,
+                                    transferPhoto = transferPhotoUrl,
                                     status = "PROCESSING"
                                 )
                                 Toast.makeText(context, "✅ تم إرسال إشعار السداد بنجاح وهو قيد التأكيد!", Toast.LENGTH_LONG).show()

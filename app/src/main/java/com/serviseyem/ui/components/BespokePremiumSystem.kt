@@ -31,9 +31,9 @@ import com.serviseyem.ui.theme.*
  */
 object BespokePremiumSystem {
 
-    val DeepDark = Color(0xFFF8FAFC)
-    val SurfaceDark = Color(0xFFFFFFFF)
-    val GlassBorder = Color(0xFFE2E8F0)
+    val DeepDark = Color(0xFF0F172A)
+    val SurfaceDark = Color(0xFF1E293B)
+    val GlassBorder = Color(0xFF334155)
     val EmeraldAccent = Color(0xFF059669)
     val WarmOrange = Color(0xFFEA580C)
     val CyanMedical = Color(0xFF0D9488)
@@ -49,10 +49,10 @@ object BespokePremiumSystem {
     val ServicesGradient = BrandGradient
     val GoldBannerGradient = Brush.horizontalGradient(listOf(Color(0xFFF59E0B), Color(0xFFD97706)))
 
-    val CardPureWhite = Color(0xFFFFFFFF)
-    val CardDarkTitle = Color(0xFF0F172A)  // Deepest Navy Slate
-    val CardMutedText = Color(0xFF475569)  // Slate-600
-    val CardBorderLight = Color(0xFFE2E8F0) // Subtle clean border
+    val CardPureWhite = Color(0xFF1E293B)
+    val CardDarkTitle = Color(0xFFFFFFFF)  // Pure White Heading
+    val CardMutedText = Color(0xFFCBD5E1)  // Soft Slate Text
+    val CardBorderLight = Color(0xFF334155) // Dark glass border
     val ButtonLightText = Color(0xFFFFFFFF)
 
     @Composable
@@ -61,7 +61,7 @@ object BespokePremiumSystem {
         Surface(
             onClick = onBackClick,
             shape = RoundedCornerShape(14.dp),
-            color = Color.White,
+            color = Color(0xFF1E293B),
             border = BorderStroke(1.dp, CardBorderLight),
             shadowElevation = 2.dp,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)
@@ -77,8 +77,8 @@ object BespokePremiumSystem {
                 }
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFEFF6FF),
-                    border = BorderStroke(0.8.dp, Color(0xFFBFDBFE))
+                    color = Color(0xFF0F172A),
+                    border = BorderStroke(0.8.dp, Color(0xFF334155))
                 ) {
                     Text(text = title, color = ElectricBlue, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
                 }
@@ -90,7 +90,7 @@ object BespokePremiumSystem {
     fun TrustStatisticsBar() {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
+            color = Color(0xFF1E293B),
             border = BorderStroke(1.dp, CardBorderLight),
             shadowElevation = 2.dp,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp)
@@ -104,12 +104,12 @@ object BespokePremiumSystem {
                     Text("1,500+", color = EmeraldAccent, fontSize = 14.sp, fontWeight = FontWeight.Black)
                     Text("مزود خدمة", color = CardMutedText, fontSize = 9.5.sp)
                 }
-                Box(modifier = Modifier.height(24.dp).width(1.dp).background(Color(0xFFE2E8F0)))
+                Box(modifier = Modifier.height(24.dp).width(1.dp).background(Color(0xFF334155)))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("12", color = ElectricBlue, fontSize = 14.sp, fontWeight = FontWeight.Black)
                     Text("مدينة", color = CardMutedText, fontSize = 9.5.sp)
                 }
-                Box(modifier = Modifier.height(24.dp).width(1.dp).background(Color(0xFFE2E8F0)))
+                Box(modifier = Modifier.height(24.dp).width(1.dp).background(Color(0xFF334155)))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("45,000+", color = Color(0xFFF59E0B), fontSize = 14.sp, fontWeight = FontWeight.Black)
                     Text("حجز وطلب", color = CardMutedText, fontSize = 9.5.sp)
@@ -124,18 +124,23 @@ object BespokePremiumSystem {
             onClick = onJoinClick,
             shape = RoundedCornerShape(18.dp),
             color = Color.Transparent,
-            border = BorderStroke(1.dp, Color(0xFFD97706)),
-            shadowElevation = 3.dp,
+            border = BorderStroke(1.dp, Color(0xFFD4A017)),
+            shadowElevation = 4.dp,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)
         ) {
-            Box(modifier = Modifier.fillMaxWidth().background(GoldBannerGradient).padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Brush.horizontalGradient(listOf(Color(0xFF1E293B), Color(0xFF0F172A))))
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("👑 انضم كمزوّد خدمة معتمد", color = Color(0xFF0F172A), fontSize = 14.sp, fontWeight = FontWeight.Black)
-                        Text("سجّل نشاطك التجاري الآن واستقبل الطلبات مباشرة", color = Color(0xFF1E293B), fontSize = 10.5.sp)
+                        Text("👑 انضم كمزوّد خدمة معتمد", color = Color(0xFFFFC93C), fontSize = 14.sp, fontWeight = FontWeight.Black)
+                        Text("سجّل نشاطك التجاري الآن واستقبل الطلبات مباشرة", color = Color(0xFFCBD5E1), fontSize = 10.5.sp)
                     }
-                    Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFF0F172A), modifier = Modifier.padding(start = 8.dp)) {
-                        Text(text = "سجّل الآن ✨", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+                    Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFFD4A017), modifier = Modifier.padding(start = 8.dp)) {
+                        Text(text = "سجّل الآن ✨", color = Color(0xFF0F172A), fontSize = 11.5.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
                     }
                 }
             }
@@ -144,7 +149,7 @@ object BespokePremiumSystem {
 
     @Composable
     fun GlassmorphicSurface(modifier: Modifier = Modifier, shape: RoundedCornerShape = RoundedCornerShape(20.dp), content: @Composable ColumnScope.() -> Unit) {
-        Surface(modifier = modifier, shape = shape, color = Color.White, border = BorderStroke(1.dp, CardBorderLight), shadowElevation = 2.dp) {
+        Surface(modifier = modifier, shape = shape, color = Color(0xFF1E293B), border = BorderStroke(1.dp, CardBorderLight), shadowElevation = 2.dp) {
             Column(modifier = Modifier.padding(12.dp)) { content() }
         }
     }
@@ -178,28 +183,28 @@ object BespokePremiumSystem {
         }
     }
 
-    // 🏪 بطاقة المتجر والمحلات (Pure White #FFFFFF + Emerald Green CTA)
+    // 🏪 بطاقة المتجر والمحلات (#1E293B + Emerald Green CTA)
     @Composable
     fun TechHubStoreCard(title: String, imageUrl: String, rating: Float, priceRange: String, onCartClick: () -> Unit, onClick: () -> Unit) {
         Surface(
             onClick = onClick,
-            shape = RoundedCornerShape(18.dp),
-            color = Color.White,
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFF1E293B),
             border = BorderStroke(1.dp, CardBorderLight),
             shadowElevation = 3.dp,
-            modifier = Modifier.fillMaxWidth().padding(5.dp)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             Column {
-                AsyncImage(
+                SmartAsyncImage(
                     model = imageUrl,
                     contentDescription = title,
-                    modifier = Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)),
+                    modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
                     contentScale = ContentScale.Crop
                 )
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(title, color = CardDarkTitle, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, modifier = Modifier.weight(1f))
-                        Surface(shape = CircleShape, color = Color(0xFFD1FAE5), modifier = Modifier.size(18.dp)) {
+                        Surface(shape = CircleShape, color = Color(0xFF064E3B), modifier = Modifier.size(18.dp)) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(Icons.Filled.Check, contentDescription = "موثق", tint = EmeraldAccent, modifier = Modifier.size(12.dp))
                             }
@@ -211,7 +216,7 @@ object BespokePremiumSystem {
                             Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(13.dp))
                             Text(rating.toString(), color = CardDarkTitle, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                         }
-                        Surface(shape = RoundedCornerShape(6.dp), color = Color(0xFFECFDF5)) {
+                        Surface(shape = RoundedCornerShape(6.dp), color = Color(0xFF064E3B)) {
                             Text(priceRange, color = EmeraldAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                         }
                     }
@@ -219,8 +224,8 @@ object BespokePremiumSystem {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
                             .background(StoresGradient)
                             .clickable { onCartClick() },
                         contentAlignment = Alignment.Center
@@ -232,13 +237,13 @@ object BespokePremiumSystem {
         }
     }
 
-    // 🍔 بطاقة المطعم والكافيهات (Pure White #FFFFFF + Warm Orange CTA)
+    // 🍔 بطاقة المطعم والكافيهات (#1E293B + Warm Orange CTA)
     @Composable
     fun FoodieRestaurantCard(title: String, imageUrl: String, deliveryTime: String, price: String, onClick: () -> Unit, onAddClick: () -> Unit) {
         Surface(
             onClick = onClick,
             shape = RoundedCornerShape(18.dp),
-            color = Color.White,
+            color = Color(0xFF1E293B),
             border = BorderStroke(1.dp, CardBorderLight),
             shadowElevation = 3.dp,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)
@@ -270,20 +275,20 @@ object BespokePremiumSystem {
         }
     }
 
-    // 🏥 بطاقة المركز الطبي والعيادات (Pure White #FFFFFF + Medical Teal CTA)
+    // 🏥 بطاقة المركز الطبي والعيادات (#1E293B + Medical Teal CTA)
     @Composable
     fun MedicalClinicalCard(name: String, specialty: String, isOpen: Boolean, onBook: () -> Unit, onCall: () -> Unit, onNav: () -> Unit) {
         Surface(
             shape = RoundedCornerShape(18.dp),
-            color = Color.White,
+            color = Color(0xFF1E293B),
             border = BorderStroke(1.dp, CardBorderLight),
             shadowElevation = 3.dp,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFFCCFBF1), modifier = Modifier.size(46.dp)) {
-                        Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.LocalHospital, contentDescription = null, tint = CyanMedical) }
+                    Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFF115E59), modifier = Modifier.size(46.dp)) {
+                        Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.LocalHospital, contentDescription = null, tint = Color.White) }
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
@@ -292,12 +297,12 @@ object BespokePremiumSystem {
                     }
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = if (isOpen) Color(0xFFECFDF5) else Color(0xFFFEF2F2),
-                        border = BorderStroke(0.5.dp, if (isOpen) Color(0xFFA7F3D0) else Color(0xFFFECACA))
+                        color = if (isOpen) Color(0xFF064E3B) else Color(0xFF881337),
+                        border = BorderStroke(0.5.dp, if (isOpen) Color(0xFF10B981) else Color(0xFFF43F5E))
                     ) {
                         Text(
                             text = if (isOpen) "متاح الآن 🟢" else "مغلق 🔴",
-                            color = if (isOpen) Color(0xFF059669) else Color(0xFFDC2626),
+                            color = if (isOpen) Color(0xFF34D399) else Color(0xFFFB7185),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -317,10 +322,10 @@ object BespokePremiumSystem {
                     ) {
                         Text("حجز موعد الآن", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                     }
-                    Surface(onClick = onCall, shape = RoundedCornerShape(10.dp), color = Color(0xFFF1F5F9), modifier = Modifier.size(40.dp)) {
+                    Surface(onClick = onCall, shape = RoundedCornerShape(10.dp), color = Color(0xFF0F172A), modifier = Modifier.size(40.dp)) {
                         Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Phone, contentDescription = "اتصال", tint = CyanMedical, modifier = Modifier.size(18.dp)) }
                     }
-                    Surface(onClick = onNav, shape = RoundedCornerShape(10.dp), color = Color(0xFFF1F5F9), modifier = Modifier.size(40.dp)) {
+                    Surface(onClick = onNav, shape = RoundedCornerShape(10.dp), color = Color(0xFF0F172A), modifier = Modifier.size(40.dp)) {
                         Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Directions, contentDescription = "الموقع", tint = ElectricBlue, modifier = Modifier.size(18.dp)) }
                     }
                 }
@@ -328,26 +333,26 @@ object BespokePremiumSystem {
         }
     }
 
-    // 💼 بطاقة الوظائف والفرص (Pure White #FFFFFF + Royal Indigo CTA)
+    // 💼 بطاقة الوظائف والفرص (#1E293B + Royal Indigo CTA)
     @Composable
     fun LinkedInJobCard(title: String, company: String, type: String, salary: String, logoUrl: String, onApply: () -> Unit) {
         Surface(
             shape = RoundedCornerShape(18.dp),
-            color = Color.White,
+            color = Color(0xFF1E293B),
             border = BorderStroke(1.dp, CardBorderLight),
             shadowElevation = 3.dp,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)
         ) {
             Row(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFFEEF2FF), modifier = Modifier.size(46.dp)) {
-                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Work, contentDescription = null, tint = RoyalPurple) }
+                Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFF312E81), modifier = Modifier.size(46.dp)) {
+                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Work, contentDescription = null, tint = Color.White) }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(title, color = CardDarkTitle, fontSize = 14.5.sp, fontWeight = FontWeight.ExtraBold)
                     Text(company, color = CardMutedText, fontSize = 11.5.sp)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(type, color = RoyalPurple, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
+                        Text(type, color = Color(0xFF818CF8), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
                         if (salary.isNotBlank()) {
                             Text("•", color = CardMutedText)
                             Text(salary, color = EmeraldAccent, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
@@ -368,7 +373,7 @@ object BespokePremiumSystem {
         }
     }
 
-    // 🏢 بطاقة العقارات الفخمة (Pure White #FFFFFF + Crisp Typography)
+    // 🏢 بطاقة العقارات الفخمة (#1E293B + Crisp Typography)
     @Composable
     fun EstateLuxuryCard(
         title: String,
@@ -384,7 +389,7 @@ object BespokePremiumSystem {
         Surface(
             onClick = onClick,
             shape = RoundedCornerShape(18.dp),
-            color = Color.White,
+            color = Color(0xFF1E293B),
             border = BorderStroke(1.dp, CardBorderLight),
             shadowElevation = 3.dp,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)
@@ -394,20 +399,20 @@ object BespokePremiumSystem {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(title, color = CardDarkTitle, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
-                        Text(price, color = ElectricBlue, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                        Text(price, color = Color(0xFF38BDF8), fontSize = 14.sp, fontWeight = FontWeight.Black)
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(location, color = CardMutedText, fontSize = 11.5.sp)
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = RoundedCornerShape(6.dp), color = Color(0xFFF1F5F9)) {
+                        Surface(shape = RoundedCornerShape(6.dp), color = Color(0xFF0F172A)) {
                             Text("$rooms غرف • $area م²", color = CardDarkTitle, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Surface(onClick = onBookmark, shape = CircleShape, color = Color(0xFFF1F5F9), modifier = Modifier.size(34.dp)) {
+                            Surface(onClick = onBookmark, shape = CircleShape, color = Color(0xFF0F172A), modifier = Modifier.size(34.dp)) {
                                 Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.BookmarkBorder, contentDescription = null, tint = CardDarkTitle, modifier = Modifier.size(16.dp)) }
                             }
-                            Surface(onClick = onShare, shape = CircleShape, color = Color(0xFFF1F5F9), modifier = Modifier.size(34.dp)) {
+                            Surface(onClick = onShare, shape = CircleShape, color = Color(0xFF0F172A), modifier = Modifier.size(34.dp)) {
                                 Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Share, contentDescription = null, tint = CardDarkTitle, modifier = Modifier.size(16.dp)) }
                             }
                         }

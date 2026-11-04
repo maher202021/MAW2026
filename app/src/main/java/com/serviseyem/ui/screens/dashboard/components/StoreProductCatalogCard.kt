@@ -82,18 +82,10 @@ fun StoreProductCatalogCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            val pBitmap = remember(prod.imageUrl) {
-                                if (prod.imageUrl.isNotEmpty()) {
-                                    try {
-                                        val bytes = android.util.Base64.decode(prod.imageUrl, android.util.Base64.DEFAULT)
-                                        android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
-                                    } catch(e: Exception) { null }
-                                } else null
-                            }
-                            if (pBitmap != null) {
-                                Image(
-                                    bitmap = pBitmap,
-                                    contentDescription = null,
+                            if (prod.imageUrl.isNotEmpty()) {
+                                com.serviseyem.ui.components.SmartAsyncImage(
+                                    model = prod.imageUrl,
+                                    contentDescription = prod.name,
                                     modifier = Modifier.size(36.dp).clip(RoundedCornerShape(4.dp)),
                                     contentScale = ContentScale.Crop
                                 )

@@ -98,7 +98,7 @@ fun ServicesBrowserLayout(
         list.toList()
     }
 
-    val activeTabBg = Color(0xFFF8FAFC)
+    val activeTabBg = AppBackground
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(activeTabBg),
@@ -148,14 +148,14 @@ fun ServicesBrowserLayout(
                 }
             }
             
-            // 3.8 Custom Notification Card (تنبيه العروض الحصرية بلون ذهبي هادئ فوق القسم الرئيسي)
+            // 3.8 Custom Notification Card (تنبيه العروض الحصرية خلفية داكنة فخمة)
             item {
                 val currentCategoryTitle = selectedCategory?.ifBlank { "جميع الأقسام" } ?: "جميع الأقسام"
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = LightCardSurface,
-                    border = BorderStroke(1.dp, SoftGold.copy(alpha = 0.5f)),
-                    shadowElevation = 2.dp,
+                    color = Color(0xFF0F172A),
+                    border = BorderStroke(1.dp, Color(0xFFD4A017).copy(alpha = 0.6f)),
+                    shadowElevation = 4.dp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp, vertical = 2.dp)
@@ -163,7 +163,7 @@ fun ServicesBrowserLayout(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Brush.horizontalGradient(listOf(Color(0xFFFEF3C7), Color(0xFFE6F4EA))))
+                            .background(Brush.horizontalGradient(listOf(Color(0xFF1E293B), Color(0xFF0F172A))))
                             .padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -172,21 +172,21 @@ fun ServicesBrowserLayout(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(SoftGold),
+                                .background(Color(0xFFD4A017)),
                             contentAlignment = Alignment.Center
                         ) {
                             Text("🔔", fontSize = 16.sp)
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text("تنبيه العروض الحصرية", color = Color(0xFFB45309), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("•", color = TextMutedSage)
-                                Text(currentCategoryTitle, color = TextMutedSage, fontSize = 11.sp)
+                                Text("تنبيه العروض الحصرية", color = Color(0xFFFFC93C), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("•", color = Color(0xFF94A3B8))
+                                Text(currentCategoryTitle, color = Color(0xFFCBD5E1), fontSize = 11.sp)
                             }
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "أحدث العروض والخصومات المتاحة الآن في فئة $currentCategoryTitle - استكشفها الآن!",
-                                color = TextDarkGreen,
+                                color = Color.White,
                                 fontSize = 11.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -196,7 +196,7 @@ fun ServicesBrowserLayout(
                 }
             }
 
-            // 4. Quick Category Grid (4x2 Bespoke Categories - HD 3D Style with depth)
+            // 4. Quick Category Grid (4x2 Bespoke Categories - Dark Luxury Glassmorphic Cards #1E293B)
             item {
                 data class CategoryGridItem(
                     val title: String,
@@ -249,10 +249,10 @@ fun ServicesBrowserLayout(
                             Surface(
                                 onClick = item.onClick,
                                 shape = RoundedCornerShape(16.dp),
-                                color = Color.White,
-                                tonalElevation = 2.dp,
-                                shadowElevation = 2.dp,
-                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                color = Color(0xFF1E293B),
+                                tonalElevation = 4.dp,
+                                shadowElevation = 3.dp,
+                                border = BorderStroke(1.dp, Color(0xFF334155)),
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(82.dp)
@@ -267,7 +267,7 @@ fun ServicesBrowserLayout(
                                     Box(
                                         modifier = Modifier
                                             .size(42.dp)
-                                            .shadow(2.dp, CircleShape)
+                                            .shadow(3.dp, CircleShape)
                                             .clip(CircleShape)
                                             .background(item.gradient),
                                         contentAlignment = Alignment.Center
@@ -279,7 +279,7 @@ fun ServicesBrowserLayout(
                                         text = item.title,
                                         fontSize = 11.5.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF1E293B),
+                                        color = Color.White,
                                         maxLines = 1,
                                         softWrap = false
                                     )
@@ -296,10 +296,10 @@ fun ServicesBrowserLayout(
                             Surface(
                                 onClick = item.onClick,
                                 shape = RoundedCornerShape(16.dp),
-                                color = Color.White,
-                                tonalElevation = 2.dp,
-                                shadowElevation = 2.dp,
-                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                color = Color(0xFF1E293B),
+                                tonalElevation = 4.dp,
+                                shadowElevation = 3.dp,
+                                border = BorderStroke(1.dp, Color(0xFF334155)),
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(82.dp)
@@ -314,7 +314,7 @@ fun ServicesBrowserLayout(
                                     Box(
                                         modifier = Modifier
                                             .size(42.dp)
-                                            .shadow(2.dp, CircleShape)
+                                            .shadow(3.dp, CircleShape)
                                             .clip(CircleShape)
                                             .background(item.gradient),
                                         contentAlignment = Alignment.Center
@@ -326,7 +326,7 @@ fun ServicesBrowserLayout(
                                         text = item.title,
                                         fontSize = 11.5.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF1E293B),
+                                        color = Color.White,
                                         maxLines = 1,
                                         softWrap = false
                                     )

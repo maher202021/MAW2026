@@ -45,9 +45,7 @@ fun TechniciansSectionView(
     onChatOpen: (String) -> Unit
 ) {
     val rawProviders by viewModel.providers.collectAsState()
-    val allProviders = remember(rawProviders) {
-        if (rawProviders.isEmpty()) DefaultDemoData.getDemoProviders() else rawProviders
-    }
+    val allProviders = rawProviders
 
     var selectedSubCat by remember { mutableStateOf("الكل") }
 

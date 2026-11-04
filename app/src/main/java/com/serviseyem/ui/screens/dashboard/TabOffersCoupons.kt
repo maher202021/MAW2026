@@ -26,25 +26,25 @@ import android.widget.Toast
 
 @Composable
 fun TabOffersCoupons(
-    storeId: String = "",
+    storeId: String,
     themeColors: VisualThemePalette,
     viewModel: OffersViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val offersList by viewModel.offers.collectAsState()
-    var showAddDialog by remember { mutableStateOf(false) }
+    var showAddDialog by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<SpecialOfferEntity?>(null) }
 
-    var titleInput by remember { mutableStateOf("") }
-    var descInput by remember { mutableStateOf("") }
-    var discountInput by remember { mutableStateOf("") }
-    var codeInput by remember { mutableStateOf("") }
+    var titleInput by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var descInput by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var discountInput by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var codeInput by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
 
     val displayedOffers = remember(offersList, storeId) {
         if (storeId.isNotBlank()) {
-            offersList.filter { it.providerId == storeId || it.providerId.isBlank() }
+            offersList.filter { it.providerId == storeId }
         } else {
-            offersList
+            emptyList()
         }
     }
 
@@ -81,7 +81,7 @@ fun TabOffersCoupons(
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
             ) {
                 items(displayedOffers, key = { it.id }) { offer ->
                     Card(

@@ -27,11 +27,16 @@ import java.util.UUID
  */
 @Composable
 fun LoyaltyManager(
-    ownerId: String = "",
-    viewModel: com.serviseyem.ui.screens.dashboard.viewmodels.DashboardExtensionsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory { override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T { return com.serviseyem.ui.screens.dashboard.viewmodels.DashboardExtensionsViewModel(ownerId) as T } }),
+    ownerId: String,
+    viewModel: com.serviseyem.ui.screens.dashboard.viewmodels.DashboardExtensionsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
 ) {
+    LaunchedEffect(ownerId) {
+        if (ownerId.isNotBlank()) {
+            viewModel.setOwnerId(ownerId)
+        }
+    }
     val programs by viewModel.loyaltyPrograms.collectAsState()
 
     var showAddDialog by remember { mutableStateOf(false) }

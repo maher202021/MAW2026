@@ -68,7 +68,7 @@ fun BoxScope.FloatingIconsOverlay(
             Box(
                 modifier = Modifier
                     .scale(pulseScale)
-                    .size(50.dp)
+                    .size(48.dp)
                     .shadow(10.dp, CircleShape, ambientColor = Color(0xFF0284C7), spotColor = Color(0xFF0E7490))
                     .clip(CircleShape)
                     .background(
@@ -83,7 +83,7 @@ fun BoxScope.FloatingIconsOverlay(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Text("🤖", fontSize = 22.sp)
+                Text("🤖", fontSize = 20.sp)
             }
             Surface(
                 shape = RoundedCornerShape(8.dp),
@@ -114,7 +114,7 @@ fun BoxScope.FloatingIconsOverlay(
             Box(
                 modifier = Modifier
                     .scale(pulseScale)
-                    .size(50.dp)
+                    .size(48.dp)
                     .shadow(10.dp, CircleShape, ambientColor = Color(0xFFE11D48), spotColor = Color(0xFF0D5C3A))
                     .clip(CircleShape)
                     .background(
@@ -129,7 +129,7 @@ fun BoxScope.FloatingIconsOverlay(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Text("⚡", fontSize = 22.sp)
+                Text("⚡", fontSize = 20.sp)
             }
             Surface(
                 shape = RoundedCornerShape(8.dp),

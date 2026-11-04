@@ -20,6 +20,8 @@ import androidx.annotation.Keep
 @Keep
 data class BookingEntity(
     val id: String = "",
+    val clientUserId: String = "",     // Stable UUID
+    val providerUserId: String = "",   // Stable UUID
     val customerName: String = "",
     val customerPhone: String = "",
     val customerArea: String = "",

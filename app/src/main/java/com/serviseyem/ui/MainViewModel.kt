@@ -641,4 +641,33 @@ class MainViewModel @Inject constructor(
         )
     }
 
+    /**
+     * 🗑️ حذف ناعم للكيان عبر طبقة الـ ViewModel بدلاً من الوصول المباشر لـ Firestore من الـ UI
+     */
+    fun softDeleteEntity(
+        collection: String,
+        entityId: String,
+        onSuccess: () -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        db.collection(collection).document(entityId)
+            .update("isDeleted", true)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { onError(it) }
+    }
+
+    /**
+     * 📦 إضافة منتج جديد مباشرة عبر طبقة الـ ViewModel
+     */
+    fun addProductDirect(
+        product: com.serviseyem.data.ProductEntity,
+        onSuccess: () -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        db.collection("products").document(product.id)
+            .set(product)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { onError(it) }
+    }
+
 }

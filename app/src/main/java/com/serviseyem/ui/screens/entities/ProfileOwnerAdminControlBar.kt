@@ -689,18 +689,16 @@ fun ProfileOwnerAdminControlBar(
                                         description = prodDesc,
                                         imageUrl = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400"
                                     )
-                                    try {
-                                        viewModel.db.collection("products").document(newProduct.id).set(newProduct)
-                                            .addOnSuccessListener {
-                                                Toast.makeText(context, "📦 تم إضافة الصنف بنجاح!", Toast.LENGTH_SHORT).show()
-                                            }
-                                            .addOnFailureListener { e ->
-                                                Toast.makeText(context, "فشل حفظ الصنف: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-                                            }
-                                        showAddProductDialog = false
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "حدث خطأ: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-                                    }
+                                     viewModel.addProductDirect(
+                                         product = newProduct,
+                                         onSuccess = {
+                                             Toast.makeText(context, "📦 تم إضافة الصنف بنجاح!", Toast.LENGTH_SHORT).show()
+                                         },
+                                         onError = { e ->
+                                             Toast.makeText(context, "فشل حفظ الصنف: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                                         }
+                                     )
+                                     showAddProductDialog = false
                                 } else {
                                     Toast.makeText(context, "يرجى كتابة اسم الصنف", Toast.LENGTH_SHORT).show()
                                 }
@@ -728,19 +726,18 @@ fun ProfileOwnerAdminControlBar(
             confirmButton = {
                 Button(
                     onClick = {
-                        try {
-                            viewModel.db.collection(collectionName).document(entityId).update("isDeleted", true)
-                                .addOnSuccessListener {
-                                    Toast.makeText(context, "🗑️ تم حذف النشاط وإخفاؤه بنجاح", Toast.LENGTH_LONG).show()
-                                    viewModel.navigateToScreen(AppScreens.USER_BROWSE)
-                                }
-                                .addOnFailureListener { e ->
-                                    Toast.makeText(context, "فشل حذف النشاط: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                                }
-                            showDeleteConfirmDialog = false
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "حدث خطأ: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-                        }
+                        viewModel.softDeleteEntity(
+                            collection = collectionName,
+                            entityId = entityId,
+                            onSuccess = {
+                                Toast.makeText(context, "🗑️ تم حذف النشاط وإخفاؤه بنجاح", Toast.LENGTH_LONG).show()
+                                viewModel.navigateToScreen(AppScreens.USER_BROWSE)
+                            },
+                            onError = { e ->
+                                Toast.makeText(context, "فشل حذف النشاط: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                            }
+                        )
+                        showDeleteConfirmDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
                 ) {

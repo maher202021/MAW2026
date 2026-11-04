@@ -74,7 +74,7 @@ fun RestaurantsSectionView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFF8FAFC))
+            .background(com.serviseyem.ui.theme.AppBackground)
             .padding(bottom = 20.dp)
     ) {
         // 0. Top Back Header
@@ -108,9 +108,9 @@ fun RestaurantsSectionView(
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = if (isSelected) glowColor.copy(alpha = 0.18f) else Color.White,
-                        border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) glowColor else Color(0xFFE2E8F0)),
-                        shadowElevation = if (isSelected) 3.dp else 1.dp,
+                        color = if (isSelected) glowColor.copy(alpha = 0.25f) else Color(0xFF1E293B),
+                        border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) glowColor else Color(0xFF334155)),
+                        shadowElevation = if (isSelected) 4.dp else 2.dp,
                         modifier = Modifier.size(58.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -120,7 +120,7 @@ fun RestaurantsSectionView(
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         label,
-                        color = if (isSelected) glowColor else Color(0xFF1E293B),
+                        color = if (isSelected) glowColor else Color.White,
                         fontSize = 11.5.sp,
                         fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold
                     )

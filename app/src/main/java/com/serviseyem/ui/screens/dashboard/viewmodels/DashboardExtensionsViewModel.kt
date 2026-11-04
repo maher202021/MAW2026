@@ -1,22 +1,36 @@
 package com.serviseyem.ui.screens.dashboard.viewmodels
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.serviseyem.data.repositories.IDashboardExtensionsRepository
-import com.serviseyem.data.repositories.DashboardExtensionsRepositoryImpl
+import com.serviseyem.data.SpecialOfferEntity
+import com.serviseyem.data.repositories.*
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import com.serviseyem.data.SpecialOfferEntity
-import com.serviseyem.data.repositories.InventoryItem
-import com.serviseyem.data.repositories.LoyaltyProgram
-import com.serviseyem.data.repositories.StaffMember
+import javax.inject.Inject
 
-class DashboardExtensionsViewModel(
-    private val ownerId: String,
-    private val repository: IDashboardExtensionsRepository = DashboardExtensionsRepositoryImpl()
+@HiltViewModel
+class DashboardExtensionsViewModel @Inject constructor(
+    private val repository: IDashboardExtensionsRepository,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private var activeOwnerId: String = savedStateHandle["ownerId"] ?: ""
+    private var offersJob: Job? = null
+    private var couponsJob: Job? = null
+    private var inventoryJob: Job? = null
+    private var loyaltyJob: Job? = null
+    private var staffJob: Job? = null
+
+    // Secondary constructor for backward compatibility
+    constructor(ownerId: String) : this(
+        DashboardExtensionsRepositoryImpl(),
+        SavedStateHandle(mapOf("ownerId" to ownerId))
+    )
 
     private val _specialOffers = MutableStateFlow<List<SpecialOfferEntity>>(emptyList())
     val specialOffers: StateFlow<List<SpecialOfferEntity>> = _specialOffers.asStateFlow()
@@ -34,20 +48,39 @@ class DashboardExtensionsViewModel(
     val staff: StateFlow<List<StaffMember>> = _staff.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            repository.getSpecialOffers(ownerId).collect { _specialOffers.value = it }
+        if (activeOwnerId.isNotBlank()) {
+            loadForOwner(activeOwnerId)
         }
-        viewModelScope.launch {
-            repository.getCoupons(ownerId).collect { _coupons.value = it }
+    }
+
+    fun setOwnerId(ownerId: String) {
+        if (ownerId.isNotBlank() && ownerId != activeOwnerId) {
+            activeOwnerId = ownerId
+            loadForOwner(ownerId)
         }
-        viewModelScope.launch {
-            repository.getInventory(ownerId).collect { _inventory.value = it }
+    }
+
+    private fun loadForOwner(id: String) {
+        offersJob?.cancel()
+        couponsJob?.cancel()
+        inventoryJob?.cancel()
+        loyaltyJob?.cancel()
+        staffJob?.cancel()
+
+        offersJob = viewModelScope.launch {
+            repository.getSpecialOffers(id).collect { _specialOffers.value = it }
         }
-        viewModelScope.launch {
-            repository.getLoyaltyPrograms(ownerId).collect { _loyaltyPrograms.value = it }
+        couponsJob = viewModelScope.launch {
+            repository.getCoupons(id).collect { _coupons.value = it }
         }
-        viewModelScope.launch {
-            repository.getStaff(ownerId).collect { _staff.value = it }
+        inventoryJob = viewModelScope.launch {
+            repository.getInventory(id).collect { _inventory.value = it }
+        }
+        loyaltyJob = viewModelScope.launch {
+            repository.getLoyaltyPrograms(id).collect { _loyaltyPrograms.value = it }
+        }
+        staffJob = viewModelScope.launch {
+            repository.getStaff(id).collect { _staff.value = it }
         }
     }
 

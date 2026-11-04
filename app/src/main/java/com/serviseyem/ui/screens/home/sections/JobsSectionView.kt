@@ -68,7 +68,7 @@ fun JobsSectionView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFF8FAFC))
+            .background(com.serviseyem.ui.theme.AppBackground)
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -106,8 +106,8 @@ fun JobsSectionView(
                         selectedSubCat = subCat 
                     },
                     shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) Color(0xFF4F46E5) else Color.White,
-                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else Color(0xFFE2E8F0)),
+                    color = if (isSelected) Color(0xFF4F46E5) else Color(0xFF1E293B),
+                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else Color(0xFF334155)),
                     shadowElevation = if (isSelected) 3.dp else 1.dp
                 ) {
                     Row(
@@ -120,7 +120,7 @@ fun JobsSectionView(
                             subCat.label,
                             fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
-                            color = if (isSelected) Color.White else Color(0xFF1E293B)
+                            color = if (isSelected) Color.White else Color(0xFFCBD5E1)
                         )
                     }
                 }
