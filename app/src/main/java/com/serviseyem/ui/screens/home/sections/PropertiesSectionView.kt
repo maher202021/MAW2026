@@ -65,10 +65,55 @@ fun PropertiesSectionView(
             title = "العقارات والاستثمارات",
             subtitle = "اكتشف أفخم العقارات والأراضي في اليمن",
             icon = Icons.Default.Apartment,
-            accentColor = Color(0xFF4F46E5),
+            accentColor = Color(0xFF2563EB),
             actionLabel = "أضف عقارك",
             onActionClick = onCreatePropertyClick
         )
+
+        // 2. Top Hero Promo Banner (Discover Egypt Navy Style - Screenshot 3)
+        Surface(
+            modifier = Modifier.fillMaxWidth().height(160.dp).padding(horizontal = 8.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFF121A2C),
+            border = BorderStroke(1.5.dp, Color(0xFF2563EB)),
+            shadowElevation = 4.dp
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                com.serviseyem.ui.components.SmartAsyncImage(
+                    model = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+                    contentDescription = "عروض العقارات",
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                listOf(Color(0xFA070A13), Color(0xE61E3A8A), Color(0x66070A13))
+                            )
+                        )
+                )
+                Column(modifier = Modifier.align(Alignment.CenterStart).padding(16.dp)) {
+                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE8B23A)) {
+                        Text("العقارات الموثقة VIP ⭐", color = Color(0xFF070A13), fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text("عقارات وأراضي مستقبلك 🏡", color = Color.White, fontSize = 16.5.sp, fontWeight = FontWeight.Black)
+                    Text("استكشف أفخم الفلل والشقق المتاحة للبيع والإيجار بأسعار ممتازة", color = Color(0xFFCBD5E1), fontSize = 11.sp)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF2563EB),
+                        shadowElevation = 2.dp
+                    ) {
+                        Text("استكشف العروض ➔", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp))
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
 
         // 2. Elegant Smart Filters (Horizontal Pills)
         Row(
@@ -80,8 +125,8 @@ fun PropertiesSectionView(
                 Surface(
                     onClick = { selectedSubCategory = cat },
                     shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) Color(0xFF4F46E5) else Color(0xFF1E293B),
-                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else Color(0xFF334155)),
+                    color = if (isSelected) Color(0xFF2563EB) else Color(0xFF121A2C),
+                    border = BorderStroke(1.dp, if (isSelected) Color.Transparent else Color(0xFF1E293B)),
                     shadowElevation = if (isSelected) 3.dp else 1.dp
                 ) {
                     Text(

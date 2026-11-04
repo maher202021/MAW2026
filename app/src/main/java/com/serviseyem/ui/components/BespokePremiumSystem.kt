@@ -237,57 +237,58 @@ object BespokePremiumSystem {
         }
     }
 
-    // 🍔 بطاقة المطعم والكافيهات (#1E293B + Warm Orange CTA)
+    // 🍔 بطاقة المطعم والكافيهات (#121A2C + Mature Red #E11D48 CTA)
     @Composable
     fun FoodieRestaurantCard(title: String, imageUrl: String, deliveryTime: String, price: String, onClick: () -> Unit, onAddClick: () -> Unit) {
         Surface(
             onClick = onClick,
-            shape = RoundedCornerShape(18.dp),
-            color = Color(0xFF1E293B),
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFF121A2C),
             border = BorderStroke(1.dp, CardBorderLight),
             shadowElevation = 3.dp,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
-            Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(model = imageUrl, contentDescription = title, modifier = Modifier.size(86.dp).clip(RoundedCornerShape(14.dp)), contentScale = ContentScale.Crop)
-                Spacer(modifier = Modifier.width(12.dp))
+            Row(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                SmartAsyncImage(model = imageUrl, contentDescription = title, modifier = Modifier.size(86.dp).clip(RoundedCornerShape(16.dp)), contentScale = ContentScale.Crop)
+                Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(title, color = CardDarkTitle, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Icon(Icons.Filled.Timer, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(13.dp))
+                        Icon(Icons.Filled.Timer, contentDescription = null, tint = Color(0xFFE8B23A), modifier = Modifier.size(13.dp))
                         Text(deliveryTime, color = CardMutedText, fontSize = 11.5.sp, fontWeight = FontWeight.Medium)
                     }
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(price, color = WarmOrange, fontSize = 13.5.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(price, color = Color(0xFFE11D48), fontSize = 13.5.sp, fontWeight = FontWeight.ExtraBold)
                 }
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(FoodGradient)
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Brush.horizontalGradient(listOf(Color(0xFFE11D48), Color(0xFFBE123C))))
                         .clickable { onAddClick() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "إضافة", tint = Color.White, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Filled.Add, contentDescription = "إضافة", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
             }
         }
     }
 
-    // 🏥 بطاقة المركز الطبي والعيادات (#1E293B + Medical Teal CTA)
+    // 🏥 بطاقة المركز الطبي والعيادات (#121A2C + Medical Teal CTA)
     @Composable
-    fun MedicalClinicalCard(name: String, specialty: String, isOpen: Boolean, onBook: () -> Unit, onCall: () -> Unit, onNav: () -> Unit) {
+    fun MedicalClinicalCard(name: String, specialty: String, isOpen: Boolean, onBook: () -> Unit, onCall: () -> Unit, onNav: () -> Unit, onClick: () -> Unit = onBook) {
         Surface(
-            shape = RoundedCornerShape(18.dp),
-            color = Color(0xFF1E293B),
+            onClick = onClick,
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFF121A2C),
             border = BorderStroke(1.dp, CardBorderLight),
             shadowElevation = 3.dp,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFF115E59), modifier = Modifier.size(46.dp)) {
+                    Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFF0D9488), modifier = Modifier.size(46.dp)) {
                         Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.LocalHospital, contentDescription = null, tint = Color.White) }
                     }
                     Spacer(modifier = Modifier.width(12.dp))
@@ -314,18 +315,18 @@ object BespokePremiumSystem {
                     Box(
                         modifier = Modifier
                             .weight(1.5f)
-                            .height(40.dp)
-                            .clip(RoundedCornerShape(10.dp))
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
                             .background(MedicalGradient)
                             .clickable { onBook() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("حجز موعد الآن", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                        Text("عرض الملف والتفاصيل 🏥", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                     }
-                    Surface(onClick = onCall, shape = RoundedCornerShape(10.dp), color = Color(0xFF0F172A), modifier = Modifier.size(40.dp)) {
+                    Surface(onClick = onCall, shape = RoundedCornerShape(12.dp), color = Color(0xFF070A13), modifier = Modifier.size(44.dp)) {
                         Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Phone, contentDescription = "اتصال", tint = CyanMedical, modifier = Modifier.size(18.dp)) }
                     }
-                    Surface(onClick = onNav, shape = RoundedCornerShape(10.dp), color = Color(0xFF0F172A), modifier = Modifier.size(40.dp)) {
+                    Surface(onClick = onNav, shape = RoundedCornerShape(12.dp), color = Color(0xFF070A13), modifier = Modifier.size(44.dp)) {
                         Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Directions, contentDescription = "الموقع", tint = ElectricBlue, modifier = Modifier.size(18.dp)) }
                     }
                 }
@@ -333,15 +334,16 @@ object BespokePremiumSystem {
         }
     }
 
-    // 💼 بطاقة الوظائف والفرص (#1E293B + Royal Indigo CTA)
+    // 💼 بطاقة الوظائف والفرص (#121A2C + Royal Indigo CTA)
     @Composable
-    fun LinkedInJobCard(title: String, company: String, type: String, salary: String, logoUrl: String, onApply: () -> Unit) {
+    fun LinkedInJobCard(title: String, company: String, type: String, salary: String, logoUrl: String, onApply: () -> Unit, onClick: () -> Unit = onApply) {
         Surface(
-            shape = RoundedCornerShape(18.dp),
-            color = Color(0xFF1E293B),
+            onClick = onClick,
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFF121A2C),
             border = BorderStroke(1.dp, CardBorderLight),
             shadowElevation = 3.dp,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             Row(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFF312E81), modifier = Modifier.size(46.dp)) {
@@ -361,19 +363,20 @@ object BespokePremiumSystem {
                 }
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(JobsGradient)
                         .clickable { onApply() }
-                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                        .padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("تقديم", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                    Text("عرض التفاصيل", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
     }
 
-    // 🏢 بطاقة العقارات الفخمة (#1E293B + Crisp Typography)
+    // 🏢 بطاقة العقارات الفخمة (#121A2C + Crisp Typography)
     @Composable
     fun EstateLuxuryCard(
         title: String,
@@ -388,14 +391,14 @@ object BespokePremiumSystem {
     ) {
         Surface(
             onClick = onClick,
-            shape = RoundedCornerShape(18.dp),
-            color = Color(0xFF1E293B),
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFF121A2C),
             border = BorderStroke(1.dp, CardBorderLight),
             shadowElevation = 3.dp,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             Column {
-                AsyncImage(model = imageUrl, contentDescription = title, modifier = Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)), contentScale = ContentScale.Crop)
+                SmartAsyncImage(model = imageUrl, contentDescription = title, modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)), contentScale = ContentScale.Crop)
                 Column(modifier = Modifier.padding(14.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(title, color = CardDarkTitle, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))

@@ -10,21 +10,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-// 💎 World-Class Dark Luxury Color Scheme (#0F172A background, #1E293B surface)
+// 💎 World-Class Dark Luxury Color Scheme (#070A13 background, #121A2C surface)
 private val LightLuxuryColorScheme = androidx.compose.material3.darkColorScheme(
     primary = PrimaryBlue,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFF1E293B),
+    primaryContainer = Color(0xFF121A2C),
     onPrimaryContainer = Color.White,
     secondary = GoldShine,
     onSecondary = Color.White,
-    background = Color(0xFF0F172A),
+    background = Color(0xFF070A13),
     onBackground = Color.White,
-    surface = Color(0xFF1E293B),
+    surface = Color(0xFF121A2C),
     onSurface = Color.White,
-    surfaceVariant = Color(0xFF1E293B),
+    surfaceVariant = Color(0xFF121A2C),
     onSurfaceVariant = Color(0xFFCBD5E1),
-    outline = Color(0xFF334155),
+    outline = Color(0xFF1E293B),
     error = ErrorCoral
 )
 

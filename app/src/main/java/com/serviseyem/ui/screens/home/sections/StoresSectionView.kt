@@ -90,42 +90,50 @@ fun StoresSectionView(
             title = "المتاجر والمعارض",
             subtitle = "تسوق من أفضل العلامات التجارية في اليمن",
             icon = Icons.Default.Storefront,
-            accentColor = Color(0xFF059669),
+            accentColor = Color(0xFFE8B23A),
             actionLabel = "إضافة متجر +",
             onActionClick = onCreateStoreClick
         )
 
-        // 2. Promotional Carousel (Simulated with a prominent Box)
+        // 2. Top Hero Promo Banner (Store Gold Style)
         Surface(
             modifier = Modifier.fillMaxWidth().height(160.dp).padding(horizontal = 8.dp),
             shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF1E293B),
-            border = BorderStroke(1.dp, Color(0xFF334155)),
-            shadowElevation = 3.dp
+            color = Color(0xFF121A2C),
+            border = BorderStroke(1.5.dp, Color(0xFFE8B23A)),
+            shadowElevation = 4.dp
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 AsyncImage(
                     model = "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=800&q=80",
-                    contentDescription = null,
+                    contentDescription = "عروض المتاجر",
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().alpha(0.85f)
+                    modifier = Modifier.fillMaxSize()
                 )
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Transparent, Color(0xCC0F172A))
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFA070A13), Color(0xE6121A2C), Color(0x66070A13))
                             )
                         )
                 )
-                Column(modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)) {
-                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF059669)) {
-                        Text("خصم 30%", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                Column(modifier = Modifier.align(Alignment.CenterStart).padding(16.dp)) {
+                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE8B23A)) {
+                        Text("عروض المتاجر الأسبوعية 🛍️", color = Color(0xFF070A13), fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("عروض المتاجر الأسبوعية 🔥", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("على كافة الأجهزة والمنتجات المحلية", color = Color(0xFFCBD5E1), fontSize = 11.5.sp)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text("أجود المنتجات بأسعار منافسة 🔥", color = Color.White, fontSize = 16.5.sp, fontWeight = FontWeight.Black)
+                    Text("خصومات تصل حتى 30% على المنتجات والإلكترونيات", color = Color(0xFFCBD5E1), fontSize = 11.sp)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFE8B23A),
+                        shadowElevation = 2.dp
+                    ) {
+                        Text("تسوق الآن ➔", color = Color(0xFF070A13), fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp))
+                    }
                 }
             }
         }

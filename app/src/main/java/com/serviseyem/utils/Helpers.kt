@@ -123,14 +123,14 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
             )
         }
         "EMERALD_YEMEN", "YEMEN_EMERALD" -> {
-            val primary = Color(0xFF10B981) // Requested Emerald Green
-            val secondary = Color(0xFF047857)
-            val background = Color(0xFF0B0F19) // Requested Dark Modern background
-            val surface = Color(0xFF161C2C) // Sleek dark card surface
+            val primary = Color(0xFF16A34A) // Emerald Green
+            val secondary = Color(0xFF0D9488)
+            val background = Color(0xFF070A13) // Matured #070A13 background
+            val surface = Color(0xFF121A2C) // Sleek dark card surface
             val textPrimary = Color(0xFFFFFFFF) // Crisp high-contrast pure white
-            val textSecondary = Color(0xFF94A3B8) // Slate-400
-            val accent = Color(0xFF00F2FE) // Requested Neon Cyan
-            val border = Color(0xFF1E2E4A)
+            val textSecondary = Color(0xFFCBD5E1) // Slate-300
+            val accent = Color(0xFFE8B23A) // Soft Luxury Gold
+            val border = Color(0xFF1E293B)
             VisualThemePalette(
                 activeId = "EMERALD_YEMEN",
                 primary = primary,
@@ -141,13 +141,13 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
                 textSecondary = textSecondary,
                 accent = accent,
                 border = border,
-                gradientBrush = Brush.verticalGradient(listOf(Color(0xFF161C2C), Color(0xFF0B0F19))),
+                gradientBrush = Brush.verticalGradient(listOf(Color(0xFF121A2C), Color(0xFF070A13))),
                 scheme = darkColorScheme(
                     primary = primary,
                     secondary = secondary,
                     background = background,
                     surface = surface,
-                    onPrimary = Color.Black,
+                    onPrimary = Color.White,
                     onSecondary = Color.White,
                     onBackground = Color.White,
                     onSurface = Color.White
@@ -155,13 +155,13 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
             )
         }
         "CUSTOM" -> {
-            val primary = parseColorSafely(settings.customPrimaryHex, Color(0xFF0C1628))
-            val secondary = parseColorSafely(settings.customSecondaryHex, Color(0xFF1E2D4A))
-            val background = parseColorSafely(settings.customBackgroundHex, Color(0xFF090E17))
-            val surface = parseColorSafely(settings.customSurfaceHex, Color(0xFF111C30))
+            val primary = parseColorSafely(settings.customPrimaryHex, Color(0xFFE8B23A))
+            val secondary = parseColorSafely(settings.customSecondaryHex, Color(0xFF1E293B))
+            val background = parseColorSafely(settings.customBackgroundHex, Color(0xFF070A13))
+            val surface = parseColorSafely(settings.customSurfaceHex, Color(0xFF121A2C))
             val textPrimary = Color(0xFFFFFFFF)
-            val textSecondary = Color(0xFF94A3B8)
-            val accent = Color(0xFFD4AF37)
+            val textSecondary = Color(0xFFCBD5E1)
+            val accent = Color(0xFFE8B23A)
             VisualThemePalette(
                 activeId = "CUSTOM",
                 primary = primary,
@@ -171,13 +171,13 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
                 textPrimary = textPrimary,
                 textSecondary = textSecondary,
                 accent = accent,
-                border = Color(0xFF1E2E4A),
+                border = Color(0xFF1E293B),
                 gradientBrush = Brush.verticalGradient(listOf(surface, background)),
                 scheme = darkColorScheme(primary = primary, secondary = secondary, background = background, surface = surface)
             )
         }
         else -> {
-            // Default: Dark Luxury High-Contrast Theme (#0F172A background, #1E293B card surface, crisp white text)
+            // Default: Dark Luxury High-Contrast Theme (#070A13 background, #121A2C card surface, crisp white text)
             val primary = com.serviseyem.ui.theme.PrimaryBlue
             val secondary = com.serviseyem.ui.theme.GoldShine
             val background = com.serviseyem.ui.theme.AppBackground
@@ -195,7 +195,7 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
                 textSecondary = textSecondary,
                 accent = accent,
                 border = com.serviseyem.ui.theme.CardBorder,
-                gradientBrush = Brush.verticalGradient(listOf(Color(0xFF1E293B), Color(0xFF0F172A))),
+                gradientBrush = Brush.verticalGradient(listOf(Color(0xFF121A2C), Color(0xFF070A13))),
                 scheme = androidx.compose.material3.darkColorScheme(
                     primary = primary,
                     secondary = secondary,
