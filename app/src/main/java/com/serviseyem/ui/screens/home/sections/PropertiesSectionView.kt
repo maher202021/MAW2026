@@ -70,7 +70,18 @@ fun PropertiesSectionView(
             onActionClick = onCreatePropertyClick
         )
 
-        // 2. Top Hero Promo Banner (Discover Egypt Navy Style - Screenshot 3)
+        // 2. Top Hero Promo Banner (Discover Egypt Navy Style with Admin Dynamic Sync)
+        val allBanners by viewModel.banners.collectAsState()
+        val customPropBanner = remember(allBanners) {
+            allBanners.firstOrNull { 
+                it.targetSection.contains("propert", ignoreCase = true) || 
+                it.redirectCategory.contains("propert", ignoreCase = true)
+            }
+        }
+        val displayBannerTitle = customPropBanner?.title?.ifBlank { "عقارات وأراضي مستقبلك 🏡" } ?: "عقارات وأراضي مستقبلك 🏡"
+        val displayBannerImage = customPropBanner?.url?.ifBlank { "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80" } ?: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80"
+        val displayBannerBadge = customPropBanner?.displayTime?.ifBlank { "العقارات الموثقة VIP ⭐" } ?: "العقارات الموثقة VIP ⭐"
+
         Surface(
             modifier = Modifier.fillMaxWidth().height(160.dp).padding(horizontal = 8.dp),
             shape = RoundedCornerShape(20.dp),
@@ -80,7 +91,7 @@ fun PropertiesSectionView(
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 com.serviseyem.ui.components.SmartAsyncImage(
-                    model = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+                    model = displayBannerImage,
                     contentDescription = "عروض العقارات",
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -96,10 +107,10 @@ fun PropertiesSectionView(
                 )
                 Column(modifier = Modifier.align(Alignment.CenterStart).padding(16.dp)) {
                     Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE8B23A)) {
-                        Text("العقارات الموثقة VIP ⭐", color = Color(0xFF070A13), fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                        Text(displayBannerBadge, color = Color(0xFF070A13), fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                     }
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("عقارات وأراضي مستقبلك 🏡", color = Color.White, fontSize = 16.5.sp, fontWeight = FontWeight.Black)
+                    Text(displayBannerTitle, color = Color.White, fontSize = 16.5.sp, fontWeight = FontWeight.Black)
                     Text("استكشف أفخم الفلل والشقق المتاحة للبيع والإيجار بأسعار ممتازة", color = Color(0xFFCBD5E1), fontSize = 11.sp)
                     Spacer(modifier = Modifier.height(10.dp))
                     Surface(

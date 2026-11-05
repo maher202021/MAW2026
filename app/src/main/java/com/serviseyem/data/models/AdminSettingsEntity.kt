@@ -29,6 +29,10 @@ data class AdminSettingsEntity(
     val assistantHidden: Boolean = false,
     val showLoyaltyBanner: Boolean = false,
     val assistantSize: Int = 56,
+    val floatingIconsIntervalMinutes: Int = 5,
+    val floatingIconsVisibleDurationSeconds: Int = 30,
+    val floatingIconsMode: String = "TIMED_SUBPAGES", // TIMED_SUBPAGES, ALWAYS_VISIBLE, HOME_ONLY, ALWAYS_HIDDEN
+    val floatingIconsHiddenScreens: String = "STORES,RESTAURANTS,MEDICAL,PROPERTIES,JOBS,REGISTER,SUBPAGES",
     val chatHidden: Boolean = false,
     val chatSize: Int = 56,
     val maxSearchRadiusKm: Int = 20,

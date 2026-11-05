@@ -357,8 +357,8 @@ class InstantRequestViewModel @Inject constructor(
                 }
             },
             onError = { err ->
-                _uiState.value = InstantUiState.Success("تم تقديم عرض السعر محلياً")
-                triggerNotification?.invoke("⚠️ تم حفظ عرض السعر محلياً، سيتم المزامنة تلقائياً عند توفر الاتصال")
+                _uiState.value = InstantUiState.Error("فشل حفظ العرض: $err")
+                triggerNotification?.invoke("❌ فشل إرسال عرض السعر: $err")
             }
         )
     }

@@ -93,7 +93,18 @@ fun RestaurantsSectionView(
             onActionClick = onCreateRestaurantClick
         )
 
-        // 2. Top Hero Promo Banner (Arby's Style - Screenshot 1)
+        // 2. Top Hero Promo Banner (Arby's Style with Admin Dynamic Sync)
+        val allBanners by viewModel.banners.collectAsState()
+        val customRestBanner = remember(allBanners) {
+            allBanners.firstOrNull { 
+                it.targetSection.contains("restaurant", ignoreCase = true) || 
+                it.redirectCategory.contains("restaurant", ignoreCase = true)
+            }
+        }
+        val displayBannerTitle = customRestBanner?.title?.ifBlank { "أشهى المأكولات والوجبات السريعة 🍔" } ?: "أشهى المأكولات والوجبات السريعة 🍔"
+        val displayBannerImage = customRestBanner?.url?.ifBlank { "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80" } ?: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80"
+        val displayBannerBadge = customRestBanner?.displayTime?.ifBlank { "عروض المطاعم 🔥" } ?: "عروض المطاعم 🔥"
+
         Surface(
             modifier = Modifier.fillMaxWidth().height(160.dp).padding(horizontal = 8.dp),
             shape = RoundedCornerShape(20.dp),
@@ -103,7 +114,7 @@ fun RestaurantsSectionView(
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 com.serviseyem.ui.components.SmartAsyncImage(
-                    model = "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80",
+                    model = displayBannerImage,
                     contentDescription = "عرض المطاعم",
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -113,16 +124,16 @@ fun RestaurantsSectionView(
                         .fillMaxSize()
                         .background(
                             androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                listOf(Color(0xE6E11D48), Color(0xCC881337), Color(0x66070A13))
+                                listOf(Color(0xFA070A13), Color(0xE6881337), Color(0x66070A13))
                             )
                         )
                 )
                 Column(modifier = Modifier.align(Alignment.CenterStart).padding(16.dp)) {
                     Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE8B23A)) {
-                        Text("عروض خاصة 🔥", color = Color(0xFF070A13), fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                        Text(displayBannerBadge, color = Color(0xFF070A13), fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                     }
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("أشهى المأكولات والوجبات السريعة", color = Color.White, fontSize = 16.5.sp, fontWeight = FontWeight.Black)
+                    Text(displayBannerTitle, color = Color.White, fontSize = 16.5.sp, fontWeight = FontWeight.Black)
                     Text("خصومات حصرية تصل حتى 25% مع توصيل سريع", color = Color(0xFFCBD5E1), fontSize = 11.sp)
                     Spacer(modifier = Modifier.height(10.dp))
                     Surface(

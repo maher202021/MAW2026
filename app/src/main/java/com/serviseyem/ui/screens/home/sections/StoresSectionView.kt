@@ -95,7 +95,18 @@ fun StoresSectionView(
             onActionClick = onCreateStoreClick
         )
 
-        // 2. Top Hero Promo Banner (Store Gold Style)
+        // 2. Top Hero Promo Banner (Store Gold Style with Admin Dynamic Sync)
+        val allBanners by viewModel.banners.collectAsState()
+        val customStoreBanner = remember(allBanners) {
+            allBanners.firstOrNull { 
+                it.targetSection.contains("store", ignoreCase = true) || 
+                it.redirectCategory.contains("store", ignoreCase = true)
+            }
+        }
+        val displayBannerTitle = customStoreBanner?.title?.ifBlank { "أجود المنتجات بأسعار منافسة 🔥" } ?: "أجود المنتجات بأسعار منافسة 🔥"
+        val displayBannerImage = customStoreBanner?.url?.ifBlank { "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=800&q=80" } ?: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=800&q=80"
+        val displayBannerBadge = customStoreBanner?.displayTime?.ifBlank { "عروض المتاجر 🛍️" } ?: "عروض المتاجر 🛍️"
+
         Surface(
             modifier = Modifier.fillMaxWidth().height(160.dp).padding(horizontal = 8.dp),
             shape = RoundedCornerShape(20.dp),
@@ -105,7 +116,7 @@ fun StoresSectionView(
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 AsyncImage(
-                    model = "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=800&q=80",
+                    model = displayBannerImage,
                     contentDescription = "عروض المتاجر",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -121,11 +132,11 @@ fun StoresSectionView(
                 )
                 Column(modifier = Modifier.align(Alignment.CenterStart).padding(16.dp)) {
                     Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE8B23A)) {
-                        Text("عروض المتاجر الأسبوعية 🛍️", color = Color(0xFF070A13), fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                        Text(displayBannerBadge, color = Color(0xFF070A13), fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                     }
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("أجود المنتجات بأسعار منافسة 🔥", color = Color.White, fontSize = 16.5.sp, fontWeight = FontWeight.Black)
-                    Text("خصومات تصل حتى 30% على المنتجات والإلكترونيات", color = Color(0xFFCBD5E1), fontSize = 11.sp)
+                    Text(displayBannerTitle, color = Color.White, fontSize = 16.5.sp, fontWeight = FontWeight.Black)
+                    Text("خصومات حصرية على كبرى العلامات التجارية في اليمن", color = Color(0xFFCBD5E1), fontSize = 11.sp)
                     Spacer(modifier = Modifier.height(10.dp))
                     Surface(
                         shape = RoundedCornerShape(10.dp),

@@ -323,38 +323,11 @@ fun ForgotPasswordRecoveryDialog(
                                     color = Color(0xFF10B981)
                                 )
                                 Text(
-                                    text = "كلمة المرور المؤقتة الخاصة بك هي:",
+                                    text = "🔒 تم تحديث وتعيين كلمة المرور الجديدة لحسابك بنجاح. يمكنك تسجيل الدخول الآن بأمان.",
                                     fontSize = 11.sp,
-                                    color = Color.LightGray
+                                    color = Color.LightGray,
+                                    textAlign = TextAlign.Center
                                 )
-                                Card(
-                                    colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.4f)),
-                                    border = BorderStroke(1.dp, Color(0xFF10B981)),
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = tempPassword,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 16.sp,
-                                            color = Color.White
-                                        )
-                                        IconButton(
-                                            onClick = {
-                                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                                val clip = android.content.ClipData.newPlainText("password", tempPassword)
-                                                clipboard.setPrimaryClip(clip)
-                                                Toast.makeText(context, "📋 تم نسخ كلمة المرور الجديدة", Toast.LENGTH_SHORT).show()
-                                            }
-                                        ) {
-                                            Icon(Icons.Default.Share, contentDescription = "نسخ", tint = Color.LightGray)
-                                        }
-                                    }
-                                }
                             }
                             "REJECTED" -> {
                                 Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(48.dp))

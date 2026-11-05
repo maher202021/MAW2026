@@ -246,7 +246,7 @@ class SecurityManager(context: Context) {
             return try {
                 val expectedHash = com.serviseyem.BuildConfig.SIGNATURE_HASH.trim()
                 if (expectedHash.isEmpty()) {
-                    return true
+                    return !com.serviseyem.BuildConfig.DEBUG
                 }
 
                 val pm = context.packageManager
@@ -279,7 +279,7 @@ class SecurityManager(context: Context) {
                 }
 
                 if (signatures.isNullOrEmpty()) {
-                    return true
+                    return !com.serviseyem.BuildConfig.DEBUG
                 }
 
                 val md = MessageDigest.getInstance("SHA-256")
@@ -294,7 +294,7 @@ class SecurityManager(context: Context) {
                 false
             } catch (e: Throwable) {
                 Log.e(TAG, "Exception during signature verification: ${e.message}")
-                true
+                !com.serviseyem.BuildConfig.DEBUG
             }
         }
     }

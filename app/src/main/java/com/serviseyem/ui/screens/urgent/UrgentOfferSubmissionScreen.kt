@@ -69,6 +69,19 @@ fun UrgentOfferSubmissionScreen(
         }
     }
 
+    LaunchedEffect(uiState) {
+        when (val s = uiState) {
+            is InstantUiState.Success -> {
+                snackbarHostState.showSnackbar(s.message ?: "تم إرسال عرضك الفوري بنجاح!")
+                onOfferSubmitted()
+            }
+            is InstantUiState.Error -> {
+                snackbarHostState.showSnackbar(s.message)
+            }
+            else -> {}
+        }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
@@ -228,8 +241,6 @@ fun UrgentOfferSubmissionScreen(
                         estimatedDuration = estimatedDuration,
                         notes = notesText
                     )
-                    scope.launch { snackbarHostState.showSnackbar("تم إرسال عرضك الفوري بنجاح!") }
-                    onOfferSubmitted()
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp).testTag("submit_urgent_offer_btn"),
                 shape = RoundedCornerShape(12.dp),

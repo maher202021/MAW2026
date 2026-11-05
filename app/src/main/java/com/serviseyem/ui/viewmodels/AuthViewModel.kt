@@ -7,6 +7,7 @@ import com.serviseyem.ui.*
 import androidx.lifecycle.viewModelScope
 import com.serviseyem.data.*
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -587,6 +588,26 @@ open class AuthViewModel @Inject constructor() : BaseViewModel() {
         try {
             com.serviseyem.utils.SecureStorage(context).clearAdminSession()
         } catch (_: Exception) {}
+
+        _currentUserId.value = "guest"
+        _currentUserName.value = ""
+        _currentUserPhone.value = ""
+        _currentUserResidence.value = ""
+        _joinRequestPhone.value = ""
+        _passwordRecoveryWaitingPhone.value = ""
+
+        try {
+            context.getSharedPreferences("yemen_service_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+        } catch (_: Exception) {}
+
+        try {
+            context.deleteSharedPreferences("yemen_service_secure_prefs")
+        } catch (_: Exception) {}
+
+        try {
+            FirebaseFirestore.getInstance().clearPersistence()
+        } catch (_: Exception) {}
+
         triggerToast("🔒 تم تسجيل الخروج بنجاح")
     }
 

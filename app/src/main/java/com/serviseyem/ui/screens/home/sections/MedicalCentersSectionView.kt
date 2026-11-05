@@ -78,7 +78,18 @@ fun MedicalCentersSectionView(
             onActionClick = onCreateMedicalClick
         )
 
-        // 2. Top Hero Promo Banner (Taco Bell / Medical Style - Screenshot 2)
+        // 2. Top Hero Promo Banner (Medical Style with Admin Dynamic Sync)
+        val allBanners by viewModel.banners.collectAsState()
+        val customMedicalBanner = remember(allBanners) {
+            allBanners.firstOrNull { 
+                it.targetSection.contains("medical", ignoreCase = true) || 
+                it.redirectCategory.contains("medical", ignoreCase = true)
+            }
+        }
+        val displayBannerTitle = customMedicalBanner?.title?.ifBlank { "أجود المستشفيات والعيادات التخصصية 🩺" } ?: "أجود المستشفيات والعيادات التخصصية 🩺"
+        val displayBannerImage = customMedicalBanner?.url?.ifBlank { "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80" } ?: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80"
+        val displayBannerBadge = customMedicalBanner?.displayTime?.ifBlank { "رعاية صحية 24/7 🩺" } ?: "رعاية صحية 24/7 🩺"
+
         Surface(
             modifier = Modifier.fillMaxWidth().height(160.dp).padding(horizontal = 8.dp),
             shape = RoundedCornerShape(20.dp),
@@ -88,7 +99,7 @@ fun MedicalCentersSectionView(
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 com.serviseyem.ui.components.SmartAsyncImage(
-                    model = "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80",
+                    model = displayBannerImage,
                     contentDescription = "عرض المراكز الطبية",
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -104,10 +115,10 @@ fun MedicalCentersSectionView(
                 )
                 Column(modifier = Modifier.align(Alignment.CenterStart).padding(16.dp)) {
                     Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF0D9488)) {
-                        Text("رعاية صحية 24/7 🩺", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                        Text(displayBannerBadge, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                     }
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("أجود المستشفيات والعيادات التخصصية", color = Color.White, fontSize = 16.5.sp, fontWeight = FontWeight.Black)
+                    Text(displayBannerTitle, color = Color.White, fontSize = 16.5.sp, fontWeight = FontWeight.Black)
                     Text("فحوصات شاملة واستشارات مع كبار الاستشاريين", color = Color(0xFFCBD5E1), fontSize = 11.sp)
                     Spacer(modifier = Modifier.height(10.dp))
                     Surface(

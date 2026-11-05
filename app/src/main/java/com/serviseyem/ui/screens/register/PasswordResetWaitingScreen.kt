@@ -231,49 +231,32 @@ fun PasswordResetWaitingScreen(
                         )
 
                         if (newPassword.isNotBlank()) {
-                            // New Password Display Box
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.4f)),
                                 border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.5f))
                             ) {
-                                Row(
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(14.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Column {
-                                        Text("كلمة المرور الجديدة:", fontSize = 10.sp, color = Color.Gray)
-                                        Text(
-                                            text = if (isPasswordVisible) newPassword else "••••••••",
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White,
-                                            letterSpacing = if (isPasswordVisible) 1.sp else 4.sp
-                                        )
-                                    }
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                                            Icon(
-                                                imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                                contentDescription = "إظهار",
-                                                tint = themeColors.accent
-                                            )
-                                        }
-                                        IconButton(
-                                            onClick = {
-                                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                val clip = ClipData.newPlainText("New Password", newPassword)
-                                                clipboard.setPrimaryClip(clip)
-                                                Toast.makeText(context, "📋 تم نسخ كلمة المرور!", Toast.LENGTH_SHORT).show()
-                                            }
-                                        ) {
-                                            Icon(Icons.Default.ContentCopy, contentDescription = "نسخ", tint = themeColors.accent)
-                                        }
-                                    }
+                                    Text(
+                                        text = "🔒 تم تعيين كلمة المرور بأمان.",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF34D399),
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Text(
+                                        text = "تم تحديث كلمة المرور الخاصة بحسابك بنجاح. أدخل كلمة المرور الجديدة في الأسفل لتسجيل الدخول الفوري.",
+                                        fontSize = 11.sp,
+                                        color = Color.LightGray,
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
                             }
                         }

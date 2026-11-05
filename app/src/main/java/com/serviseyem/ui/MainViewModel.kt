@@ -57,6 +57,11 @@ class MainViewModel @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
         }
+        try {
+            accountRecoveryHelper?.clear()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
     val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
     internal val _currentLanguage = MutableStateFlow("ar")
