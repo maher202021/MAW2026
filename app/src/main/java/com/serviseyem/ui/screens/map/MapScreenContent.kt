@@ -425,6 +425,38 @@ fun MapScreenContent(
                         snackbarHostState.showSnackbar(if (active) "تم عرض مناطق التغطية الضعيفة 🔴" else "تم إخفاء التغطية الضعيفة")
                     }
                 },
+                isReliabilityActive = state.isReliabilityLayerActive,
+                onToggleReliability = {
+                    state.isReliabilityLayerActive = !state.isReliabilityLayerActive
+                    val active = state.isReliabilityLayerActive
+                    if (active) {
+                        // بناء طبقة الموثوقية: أخضر (فنيون متاحون)، أصفر (منشغلون)، أحمر (غير مغطى)
+                        val zones = providers.groupBy { it.area.ifBlank { it.cityId } }.map { (area, areaProviders) ->
+                            val hasAvailable = areaProviders.any { it.isAvailable }
+                            val isBusy = areaProviders.isNotEmpty() && !hasAvailable
+                            val status = if (hasAvailable) "AVAILABLE" else (if (isBusy) "BUSY" else "UNCOVERED")
+                            val firstProv = areaProviders.firstOrNull()
+                            mapOf(
+                                "lat" to (firstProv?.latitude ?: safeUserLat),
+                                "lng" to (firstProv?.longitude ?: safeUserLng),
+                                "areaName" to (if (area.isNotBlank()) area else "المنطقة الحالية"),
+                                "status" to status,
+                                "details" to "عدد الفنيين: ${areaProviders.size} • المتاحين: ${areaProviders.count { it.isAvailable }}",
+                                "radius" to 1100
+                            )
+                        }
+                        val jsonStr = org.json.JSONArray(zones).toString()
+                        webViewRef?.post { webViewRef?.evaluateJavascript("if (window.setReliabilityZones) { window.setReliabilityZones($jsonStr); }", null) }
+                    } else {
+                        webViewRef?.post { webViewRef?.evaluateJavascript("if (window.setReliabilityZones) { window.setReliabilityZones([]); }", null) }
+                    }
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(if (active) "تم تفعيل خريطة الموثوقية وتوافر الفنيين (أخضر/أصفر/أحمر) 🛡️" else "تم إيقاف خريطة الموثوقية")
+                    }
+                },
+                onOpenRoutePlanner = {
+                    state.isRoutePlannerOpen = true
+                },
                 isRoadSafetyActive = state.isRoadSafetyActive,
                 onToggleRoadSafety = {
                     state.isRoadSafetyActive = !state.isRoadSafetyActive
@@ -836,6 +868,28 @@ fun MapScreenContent(
                 }
             },
             onDismiss = { state.isAddOsmDialogOpen = false }
+        )
+    }
+
+    // 🎖️ الفكرة الخامسة: نافذة تخطيط المسارات متعددة المحطات (Route Planner)
+    if (state.isRoutePlannerOpen) {
+        RoutePlannerDialog(
+            userLat = safeUserLat,
+            userLng = safeUserLng,
+            currentCity = state.selectedCity,
+            themeColors = themeColors,
+            onCalculatePlannedRoute = { start, stops, dest ->
+                state.currentMapMode = MapMode.NAVIGATION
+                state.currentMapLayer = "navigation"
+                val startCoords = OfflineMapManager.getCityCoordinates(start)
+                val destCoords = OfflineMapManager.getCityCoordinates(dest)
+                val script = "if (window.drawRoute) { window.drawRoute(${startCoords.latitude}, ${startCoords.longitude}, ${destCoords.latitude}, ${destCoords.longitude}, '#00E5FF', 'مسار $start إلى $dest'); }"
+                webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("تم تخطيط ورسم المسار من $start عبر ${stops.joinToString()} إلى $dest 🛣️")
+                }
+            },
+            onDismiss = { state.isRoutePlannerOpen = false }
         )
     }
 }

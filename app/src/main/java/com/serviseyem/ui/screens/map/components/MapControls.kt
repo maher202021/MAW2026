@@ -48,6 +48,9 @@ fun MapControls(
     // New Advanced Map Enhancements
     isDeadZoneActive: Boolean = false,
     onToggleDeadZoneOverlay: () -> Unit = {},
+    isReliabilityActive: Boolean = false,
+    onToggleReliability: () -> Unit = {},
+    onOpenRoutePlanner: () -> Unit = {},
     isRoadSafetyActive: Boolean = false,
     onToggleRoadSafety: () -> Unit = {},
     onOpenAddOsmLandmark: () -> Unit = {},
@@ -219,7 +222,27 @@ fun MapControls(
                 )
             }
 
-            // 🥇 الفكرة الأولى: طبقة سلامة الطريق وصعوبات الطرق اليمنية (Road Safety Layer)
+            // 🥇 الفكرة الأولى: "خريطة الموثوقية" (Reliability Layer) - أخضر (متاح)، أصفر (مشغول)، أحمر (غير مغطى)
+            IconButton(onClick = onToggleReliability, modifier = Modifier.size(38.dp)) {
+                Icon(
+                    imageVector = Icons.Default.VerifiedUser,
+                    tint = if (isReliabilityActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.6f),
+                    contentDescription = "خريطة الموثوقية وتوافر الفنيين",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // 🎖️ الفكرة الخامسة: "الخريطة كأداة تخطيط للمسارات والمحطات" (Multi-Stop Route Planner)
+            IconButton(onClick = onOpenRoutePlanner, modifier = Modifier.size(38.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Polyline,
+                    tint = Color(0xFF00E5FF),
+                    contentDescription = "تخطيط مسار مخصص",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // طبقة سلامة الطريق وصعوبات الطرق اليمنية (Road Safety Layer)
             IconButton(onClick = onToggleRoadSafety, modifier = Modifier.size(38.dp)) {
                 Icon(
                     imageVector = Icons.Default.Warning,

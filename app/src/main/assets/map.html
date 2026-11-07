@@ -150,6 +150,33 @@
             });
         }
 
+        var reliabilityLayerGroup = null;
+
+        function setReliabilityZones(zonesJson) {
+            if (!reliabilityLayerGroup) {
+                reliabilityLayerGroup = L.layerGroup().addTo(map);
+            }
+            reliabilityLayerGroup.clearLayers();
+            var zones = (typeof zonesJson === 'string') ? JSON.parse(zonesJson) : zonesJson;
+            if (!zones || !Array.isArray(zones)) return;
+
+            zones.forEach(function(z) {
+                // z.status: 'AVAILABLE' (أخضر)، 'BUSY' (أصفر)، 'UNCOVERED' (أحمر)
+                var color = z.status === 'AVAILABLE' ? '#10B981' : (z.status === 'BUSY' ? '#F59E0B' : '#EF4444');
+                var circle = L.circle([z.lat, z.lng], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.22,
+                    radius: z.radius || 900,
+                    weight: 2
+                });
+                var badgeIcon = z.status === 'AVAILABLE' ? '🟢 متاح الآن' : (z.status === 'BUSY' ? '🟡 منشغل حالياً' : '🔴 غير مغطى');
+                var tooltipText = '<b>' + (z.areaName || 'منطقة') + '</b><br>' + badgeIcon + '<br><small>' + (z.details || '') + '</small>';
+                circle.bindTooltip(tooltipText, { permanent: false, direction: 'top' });
+                reliabilityLayerGroup.addLayer(circle);
+            });
+        }
+
         function setGroupMembers(membersJson) {
             if (!groupMembersLayerGroup) return;
             groupMembersLayerGroup.clearLayers();

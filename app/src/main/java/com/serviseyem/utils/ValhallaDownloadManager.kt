@@ -27,6 +27,23 @@ object ValhallaDownloadManager {
     }
 
     /**
+     * التحقق من تنزيل حزمة مدينة محددة
+     */
+    fun isCityDownloaded(context: Context, cityName: String): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean("city_offline_$cityName", false) || isDownloaded(context)
+    }
+
+    /**
+     * حفظ تنزيل حزمة مدينة محددة
+     */
+    fun markCityAsDownloaded(context: Context, cityName: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("city_offline_$cityName", true).apply()
+        markAsDownloaded(context)
+    }
+
+    /**
      * حفظ حالة التحميل في الذاكرة الدائمة
      */
     fun markAsDownloaded(context: Context) {
@@ -47,7 +64,7 @@ object ValhallaDownloadManager {
      */
     fun clearOfflineData(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().remove(KEY_IS_DOWNLOADED).remove(KEY_DOWNLOAD_TIME).apply()
+        prefs.edit().clear().apply()
         try {
             val marker = File(context.filesDir, MARKER_FILE_NAME)
             if (marker.exists()) marker.delete()
