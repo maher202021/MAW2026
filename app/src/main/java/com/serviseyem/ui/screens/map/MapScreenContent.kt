@@ -469,10 +469,10 @@ fun MapScreenContent(
                 onToggleNightMode = {
                     state.isNightModeActive = !state.isNightModeActive
                     val active = state.isNightModeActive
-                    val script = "if (window.toggleHudMirror) { window.toggleHudMirror($active); }"
+                    val script = "if (window.toggleNightMode) { window.toggleNightMode($active); }"
                     webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar(if (active) "تم تفعيل وضع HUD المائي الليلي 🌙" else "تم إلغاء وضع HUD")
+                        snackbarHostState.showSnackbar(if (active) "تم تفعيل الوضع الليلي للخريطة 🌙" else "تم إيقاف الوضع الليلي والعودة للوضع النهاري ☀️")
                     }
                 },
                 isGroupActive = state.isGroupTrackingActive,

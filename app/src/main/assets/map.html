@@ -23,7 +23,10 @@
         .user-pulse { width: 48px; height: 48px; background: rgba(0, 229, 255, 0.5); border-radius: 50%; position: absolute; top: -10px; left: -10px; animation: userPulsing 2s infinite ease-out; z-index: 1; }
         @keyframes userPulsing { 0% { transform: scale(0.4); opacity: 0.95; } 100% { transform: scale(1.9); opacity: 0; } }
         
-        .hud-mirrored { transform: scaleX(-1) scaleY(-1) !important; filter: contrast(150%) brightness(120%); }
+        .hud-mirrored { transform: scaleX(-1) scaleY(-1) !important; }
+        .night-mode-active .leaflet-tile-pane {
+            filter: brightness(60%) invert(100%) contrast(300%) hue-rotate(200deg) saturate(30%) !important;
+        }
         .dead-zone-circle { fill-color: #EF4444; fill-opacity: 0.18; stroke: #F59E0B; stroke-width: 1.5; stroke-dasharray: 6,4; }
         
         .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
@@ -80,6 +83,15 @@
                 if (window.AndroidBridge) window.AndroidBridge.onMapReady();
             } catch(e) {
                 document.body.innerHTML = '<div style="color:white; padding:20px; text-align:center;">خطأ في تحميل الخريطة</div>';
+            }
+        }
+
+        function toggleNightMode(enable) {
+            var el = document.getElementById('map');
+            if (enable) {
+                el.classList.add('night-mode-active');
+            } else {
+                el.classList.remove('night-mode-active');
             }
         }
 
