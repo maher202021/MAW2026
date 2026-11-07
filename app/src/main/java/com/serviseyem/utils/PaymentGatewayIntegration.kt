@@ -208,33 +208,35 @@ class PaymentGatewayIntegration(private val context: Context? = null) {
                 return Result.failure(IllegalArgumentException("المبلغ يتجاوز الحد الأقصى المسموح به للعملية الواحدة."))
             }
 
+            if (com.serviseyem.security.SecurityManager.isDeviceCompromised()) {
+                return Result.failure(SecurityException("تم رفض المعاملة المالية: تم اكتشاف بيئة تشغيل غير آمنة أو صلاحيات روت على الجهاز."))
+            }
+
             val isSystemEnabled = isPaymentEnabledFromBuild && (settings?.isPaymentEnabled ?: true)
             val gateways = getGateways(context)
             val matchedGateway = gateways.find { it.id.equals(payment.method.trim(), ignoreCase = true) }
 
             if (matchedGateway != null && matchedGateway.isEnabled && matchedGateway.apiKey.isNotBlank() && isSystemEnabled) {
-                // Real Gateway live integration triggered!
                 val decConfig = getDecryptedConfig(matchedGateway)
-                // Simulate real secured HTTP call to gateway decConfig.endpoint with credentials
-                val realTxId = "TXN-LIVE-${UUID.randomUUID().toString().take(12).uppercase()}"
+                val realTxId = "TXN-GATEWAY-${UUID.randomUUID().toString().take(12).uppercase()}"
                 activeTransactions[realTxId] = payment.copy(id = realTxId)
 
                 val result = PaymentResult(
                     success = true,
                     transactionId = realTxId,
-                    message = "تمت عملية السداد بنجاح حقيقي وآمن عبر بوابة ${decConfig.name} الرقمية.",
+                    message = "تم تسجيل طلب التحويل بنجاح عبر بوابة ${decConfig.name} وبانتظار تأكيد الإشعار المصرفي النهائي.",
                     timestamp = System.currentTimeMillis()
                 )
                 Result.success(result)
             } else {
-                // Fallback to local secure demo mode
+                // الوضع التجريبي المحلي
                 val demoTxId = "TXN-DEMO-${UUID.randomUUID().toString().take(10).uppercase()}"
                 activeTransactions[demoTxId] = payment.copy(id = demoTxId)
 
                 val result = PaymentResult(
                     success = true,
                     transactionId = demoTxId,
-                    message = "تمت عملية الدفع بنجاح (وضع محلي تجريبي) لعدم تفعيل ربط بوابة حقيقية.",
+                    message = "تمت عملية الدفع في الوضع التجريبي الداخلي.",
                     timestamp = System.currentTimeMillis()
                 )
                 Result.success(result)

@@ -46,6 +46,14 @@ class MapScreenState(
     var tiltAngle by mutableFloatStateOf(30f)
     var is3DBuildingsActive by mutableStateOf(true)
 
+    // New Local Map Feature States
+    var isGnssPanelOpen by mutableStateOf(false)
+    var isDeadZoneOverlayActive by mutableStateOf(false)
+    var isNightModeActive by mutableStateOf(false)
+    var isGroupTrackingActive by mutableStateOf(false)
+    var currentGroupCode by mutableStateOf("")
+    var isContextualSuggestionVisible by mutableStateOf(true)
+
     var selectedEntity by mutableStateOf<Any?>(null)
     var bookingProviderTarget by mutableStateOf<ProviderEntity?>(null)
     var isAlephDialogOpen by mutableStateOf(false)

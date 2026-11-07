@@ -51,7 +51,7 @@ object UrgentConstants {
         }
     }
 
-    val cities = listOf("صنعاء", "عدن", "تعز", "الحديدة", "إب", "حضرموت", "مأرب", "ذمار")
+    val cities = com.serviseyem.domain.YemenCities.list
 
     val urgencyTimeOptions = listOf("الوصول خلال 15 دقيقة", "الوصول خلال 20 دقيقة", "الوصول خلال 30 دقيقة")
     val durationOptions = listOf("نصف ساعة", "ساعة واحدة", "ساعتان")

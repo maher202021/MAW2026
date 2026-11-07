@@ -36,6 +36,10 @@ class BookingTestRunner(private val context: Context) {
         onProgress: (String) -> Unit,
         onComplete: (BookingFullReport) -> Unit
     ) {
+        if (!com.serviseyem.BuildConfig.DEBUG) {
+            onComplete(BookingFullReport(timestamp = DateFormatter.formatCustom(System.currentTimeMillis(), "yyyy-MM-dd HH:mm"), totalSteps = 0, passed = 0, failed = 0, steps = emptyList()))
+            return
+        }
         val stepsList = mutableListOf<BookingStepReport>()
         val timestamp = DateFormatter.formatCustom(System.currentTimeMillis(), "yyyy-MM-dd HH:mm")
 
@@ -273,6 +277,7 @@ class BookingTestRunner(private val context: Context) {
     }
 
     suspend fun cleanAllTestData() {
+        if (!com.serviseyem.BuildConfig.DEBUG) return
         try {
             val batch = db.batch()
 

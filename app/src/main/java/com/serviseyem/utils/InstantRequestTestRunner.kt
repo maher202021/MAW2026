@@ -36,6 +36,11 @@ class InstantRequestTestRunner(private val context: Context) {
         onProgress: (String) -> Unit,
         onComplete: (InstantRequestFullReport) -> Unit
     ) {
+        if (!com.serviseyem.BuildConfig.DEBUG) {
+            val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+            onComplete(InstantRequestFullReport(timestamp = timestamp, totalSteps = 0, passed = 0, failed = 0, steps = emptyList()))
+            return
+        }
         val stepsList = mutableListOf<InstantRequestStepReport>()
         val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
 
@@ -265,6 +270,7 @@ class InstantRequestTestRunner(private val context: Context) {
     }
 
     suspend fun cleanAllTestData() {
+        if (!com.serviseyem.BuildConfig.DEBUG) return
         try {
             val batch = db.batch()
 

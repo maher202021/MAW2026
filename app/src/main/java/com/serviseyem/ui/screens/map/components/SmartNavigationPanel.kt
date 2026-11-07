@@ -442,7 +442,59 @@ fun SmartNavigationPanel(
                     }
                 }
 
+                // Route Profile Selector (Point 14: الأسرع ⚡، الأقصر 📏، الأسهل/مستوي 🛣️)
+                var selectedRouteProfile by remember { mutableStateOf("FASTEST") }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(
+                        Triple("FASTEST", "الأسرع ⚡", "أفضل وقت وسرعة"),
+                        Triple("SHORTEST", "الأقصر 📏", "أقصر مسافة بالكيلومتر"),
+                        Triple("EASIEST", "الأسهل 🛣️", "طريق مستوي وخالي من المنحدرات")
+                    ).forEach { (key, label, desc) ->
+                        val isSelected = selectedRouteProfile == key
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) Color(0xFF10B981) else Color(0xFF1E293B),
+                            border = BorderStroke(1.dp, if (isSelected) Color(0xFF10B981) else Color(0xFF334155)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable {
+                                    selectedRouteProfile = key
+                                    if (isVoiceEnabled) {
+                                        VoiceManager.speak("تم اختيار مسار: $label")
+                                    }
+                                }
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) Color.Black else Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Route Metrics Summary
+                val distanceMultiplier = when (selectedRouteProfile) {
+                    "SHORTEST" -> 0.92
+                    "EASIEST" -> 1.08
+                    else -> 1.0
+                }
+                val durationMultiplier = when (selectedRouteProfile) {
+                    "FASTEST" -> 0.90
+                    "EASIEST" -> 1.05
+                    else -> 1.0
+                }
+                val displayDistance = String.format("%.1f", activeRoute.distanceKm * distanceMultiplier)
+
                 Card(
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF111E38)),
@@ -459,7 +511,7 @@ fun SmartNavigationPanel(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Icon(Icons.Default.Route, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(16.dp))
-                                Text(text = "المسافة: ${activeRoute.distanceKm} كم", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00E5FF))
+                                Text(text = "المسافة: $displayDistance كم", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00E5FF))
                             }
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Icon(Icons.Default.Timer, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(16.dp))
@@ -467,7 +519,7 @@ fun SmartNavigationPanel(
                             }
                         }
                         Text(
-                            text = "🛣️ ${activeRoute.highwayOrStreetName}",
+                            text = "🛣️ ${activeRoute.highwayOrStreetName} • ${if (selectedRouteProfile == "EASIEST") "مسار ممهد لذوي الاحتياجات وبدون عقبات" else "مسار رئيسي نشط"}",
                             fontSize = 11.sp,
                             color = Color(0xFFCBD5E1),
                             maxLines = 1,

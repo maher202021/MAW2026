@@ -3408,27 +3408,29 @@ fun exportJobApplicantsCsv(context: android.content.Context) {
     private var passwordRecoveryListenerRegistration: ListenerRegistration? = null
 
     init {
-        listenToPasswordRecoveryRequests()
-        try {
-            val session = secureStorage.getAdminSession()
-            if (session != null) {
-                val isExpired = System.currentTimeMillis() - session.loginTime > 30L * 24 * 60 * 60 * 1000
-                if (!isExpired && session.role in listOf("OWNER", "ADMIN", "SUPERVISOR")) {
-                    _adminRole.value = session.role
-                    _supervisorPermissions.value = session.permissions
-                }
-            } else {
-                val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-                if (user != null) {
-                    user.getIdToken(false).addOnSuccessListener { token ->
-                        val role = token?.claims?.get("role") as? String
-                        if (role != null && role.uppercase() in listOf("OWNER", "ADMIN", "SUPERVISOR")) {
-                            _adminRole.value = role.uppercase()
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            listenToPasswordRecoveryRequests()
+            try {
+                val session = secureStorage.getAdminSession()
+                if (session != null) {
+                    val isExpired = System.currentTimeMillis() - session.loginTime > 30L * 24 * 60 * 60 * 1000
+                    if (!isExpired && session.role in listOf("OWNER", "ADMIN", "SUPERVISOR")) {
+                        _adminRole.value = session.role
+                        _supervisorPermissions.value = session.permissions
+                    }
+                } else {
+                    val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                    if (user != null) {
+                        user.getIdToken(false).addOnSuccessListener { token ->
+                            val role = token?.claims?.get("role") as? String
+                            if (role != null && role.uppercase() in listOf("OWNER", "ADMIN", "SUPERVISOR")) {
+                                _adminRole.value = role.uppercase()
+                            }
                         }
                     }
                 }
-            }
-        } catch (_: Exception) {}
+            } catch (_: Exception) {}
+        }
     }
 
     private fun listenToPasswordRecoveryRequests() {

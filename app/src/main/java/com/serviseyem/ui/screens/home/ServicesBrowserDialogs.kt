@@ -312,289 +312,59 @@ fun PropertyQuickDetailsDialog(
     themeColors: VisualThemePalette,
     onDismiss: () -> Unit
 ) {
-    val propertyTypeArabic = remember(property.propertyType) {
-        when (property.propertyType.lowercase()) {
-            "apartment", "شقة" -> "شقة فاخرة"
-            "house", "villa", "فلة", "منزل" -> "فلة مستقلة"
-            "land", "أرض" -> "أرض سكنية / تجارية"
-            "shop", "محل" -> "محل تجاري"
-            else -> property.propertyType.ifBlank { "عقار سكني" }
-        }
-    }
-    val contractTypeArabic = if (property.type.lowercase() == "sale" || property.type == "بيع") "للبيع" else "للإيجار"
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
-    ) {
+    Dialog(onDismissRequest = onDismiss) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF070A13)),
-            shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(1.5.dp, Color(0xFFE8B23A)),
-            modifier = Modifier
-                .fillMaxWidth(0.93f)
-                .padding(vertical = 16.dp)
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.5.dp, themeColors.accent),
+            modifier = Modifier.fillMaxWidth().padding(8.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(14.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // 1. Header Bar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("🏡", fontSize = 20.sp)
-                        Text(
-                            "تفاصيل العقار الشاملة",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
-                        )
-                    }
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .background(Color(0xFF1E293B), CircleShape)
-                    ) {
-                        Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color.White, modifier = Modifier.size(18.dp))
+                    Text("🏡 ${property.title}", fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color.Red)
                     }
                 }
 
-                // 2. Cover Photo with Badges
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                ) {
-                    val imageUrl = property.images.firstOrNull() ?: "https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&w=800&q=80"
+                if (property.images.isNotEmpty()) {
                     AsyncImage(
-                        model = imageUrl,
+                        model = property.images.first(),
                         contentDescription = property.title,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(130.dp)
+                            .clip(RoundedCornerShape(10.dp)),
                         contentScale = ContentScale.Crop
                     )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                androidx.compose.ui.graphics.Brush.verticalGradient(
-                                    listOf(Color.Transparent, Color(0xDD070A13))
-                                )
-                            )
-                    )
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE8B23A)) {
-                            Text(
-                                "VIP موثق ⭐",
-                                color = Color(0xFF070A13),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Black,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                        Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF2563EB)) {
-                            Text(
-                                contractTypeArabic,
-                                color = Color.White,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
                 }
 
-                // 3. Title & Price Tag
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        property.title.ifBlank { "عقار فاخر في موقع ممتاز" },
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = com.serviseyem.utils.formatPriceWithCurrency(property.price, property.currency),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color(0xFFE8B23A)
-                        )
-                        Text(
-                            text = "📍 ${property.cityId} - ${property.localNeighborhood}",
-                            fontSize = 12.sp,
-                            color = Color(0xFF94A3B8)
-                        )
-                    }
-                }
+                Text("السعر: ${property.price.toInt()} ${property.currency}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
+                Text("النوع: ${property.propertyType} (${property.type})", fontSize = 11.sp, color = Color.White)
+                Text("الموقع: ${property.cityId} - ${property.localNeighborhood}", fontSize = 11.sp, color = Color.LightGray)
 
-                Divider(color = Color(0xFF1E293B))
-
-                // 4. Specification Grid (4 Boxes)
-                Text("المواصفات الرئيسية للعقار", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF121A2C)),
-                        border = BorderStroke(1.dp, Color(0xFF1E293B)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("🛏️", fontSize = 18.sp)
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text("عدد الغرف", fontSize = 10.sp, color = Color(0xFF94A3B8))
-                            Text("${property.rooms} غرفة", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-                    }
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF121A2C)),
-                        border = BorderStroke(1.dp, Color(0xFF1E293B)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("📐", fontSize = 18.sp)
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text("المساحة الإجمالية", fontSize = 10.sp, color = Color(0xFF94A3B8))
-                            Text("${property.areaSqm.toInt()} م²", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-                    }
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF121A2C)),
-                        border = BorderStroke(1.dp, Color(0xFF1E293B)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("🏠", fontSize = 18.sp)
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text("نوع العقار", fontSize = 10.sp, color = Color(0xFF94A3B8))
-                            Text(propertyTypeArabic, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
-                        }
-                    }
-                }
-
-                // 5. Full Description
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF121A2C)),
-                    border = BorderStroke(1.dp, Color(0xFF1E293B)),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("📋 وصف العقار والتفاصيل الكاملة:", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE8B23A))
-                        Text(
-                            text = property.description.ifBlank {
-                                "عقار فاخر ومميز بتشطيب ديلوكس في موقع استراتيجي هادئ وقريب من الخط العام، يتوفر فيه كافة الخدمات والكهرباء والماء والمدارس."
-                            },
-                            fontSize = 11.5.sp,
-                            color = Color(0xFFCBD5E1),
-                            lineHeight = 18.sp
-                        )
-                    }
-                }
-
-                // 6. Key Amenities Checklist
-                Text("✨ المميزات والخدمات المتاحة", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                androidx.compose.foundation.layout.FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    val amenities = listOf("⚡ كهرباء مستقلة", "💧 خزان مياه خاص", "🚗 موقف سيارات", "🛗 مصعد كهربائي", "🛡️ حراسة 24/7", "🛋️ تشطيب سوبر ديلوكس")
-                    amenities.forEach { item ->
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = Color(0xFF1E293B),
-                            border = BorderStroke(1.dp, Color(0xFF334155))
-                        ) {
-                            Text(item, color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
-                        }
-                    }
-                }
-
-                Divider(color = Color(0xFF1E293B))
-
-                // 7. Owner Info
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF121A2C), RoundedCornerShape(12.dp))
-                        .padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text("صاحب العقار / المعلن:", fontSize = 10.5.sp, color = Color(0xFF94A3B8))
-                        Text(property.ownerName.ifBlank { "مالك العقار المعتمد" }, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    }
-                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF10B981).copy(alpha = 0.2f)) {
-                        Text("📱 ${property.phone}", color = Color(0xFF10B981), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(8.dp))
-                    }
-                }
-
-                // 8. Action Buttons
                 Button(
                     onClick = {
                         val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${property.phone}"))
                         context.startActivity(intent)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().height(46.dp)
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth().height(44.dp)
                 ) {
                     Icon(Icons.Default.Phone, contentDescription = null, tint = Color.White)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("اتصال مباشر بمالك العقار (${property.phone})", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            val cleanPhone = property.phone.replace("+", "").replace(" ", "").trim()
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=$cleanPhone"))
-                            try { context.startActivity(intent) } catch (e: Exception) {}
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D9488)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f).height(44.dp)
-                    ) {
-                        Text("💬 مراسلة واتساب", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
-                    }
-
-                    Button(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${property.phone}"))
-                            context.startActivity(intent)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE8B23A)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f).height(44.dp)
-                    ) {
-                        Text("📅 طلب معاينة", color = Color(0xFF070A13), fontWeight = FontWeight.Black, fontSize = 11.5.sp)
-                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("اتصال بصاحب العقار (${property.phone})", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
                 }
             }
         }

@@ -76,12 +76,12 @@ fun UrgentActionButtons(
                     IconButton(
                         onClick = {
                             if (!phoneToCall.isNullOrBlank()) {
-                                val cleanPhone = phoneToCall.trim().replace(" ", "").replace("-", "")
-                                val isValidPhone = android.util.Patterns.PHONE.matcher(cleanPhone).matches() && cleanPhone.length >= 7
-                                if (isValidPhone) {
+                                val validation = com.serviseyem.domain.usecases.ValidatePhoneUseCase()(phoneToCall)
+                                if (validation.isValid) {
                                     onCallPhone()
                                 } else {
-                                    android.widget.Toast.makeText(context, "❌ رقم الهاتف غير صالح للاتصال!", android.widget.Toast.LENGTH_SHORT).show()
+                                    val err = validation.errorMessage ?: "رقم الهاتف غير صالح للاتصال!"
+                                    android.widget.Toast.makeText(context, "❌ $err", android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             } else {
                                 onCallPhone()

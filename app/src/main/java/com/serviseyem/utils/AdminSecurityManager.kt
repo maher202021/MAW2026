@@ -51,29 +51,19 @@ object AdminSecurityManager {
         // منع استخدام تجزئة (Hash) مسروقة ككلمة مرور
         if (SecureHasher.isHashFormat(trimmedPass)) return null
 
-        val effectiveEmail = when {
-            trimmedUser.contains("@") -> trimmedUser
-            trimmedUser.equals("mah73646", ignoreCase = true) -> "mah73646@gmail.com"
-            trimmedUser.equals("meh777644", ignoreCase = true) -> "meh777644@gmail.com"
-            else -> "$trimmedUser@serviseyem.com"
-        }
+        val effectiveEmail = if (trimmedUser.contains("@")) trimmedUser else "$trimmedUser@serviseyem.com"
 
         var fallbackAuthRole: String? = null
 
         // 1. المصادقة الآمنة عبر Firebase Auth المباشر وتحديد الدور من Firestore
         try {
             val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-            var user: com.google.firebase.auth.FirebaseUser? = try {
+            val user: com.google.firebase.auth.FirebaseUser? = try {
                 val authResult = auth.signInWithEmailAndPassword(effectiveEmail, trimmedPass).await()
                 authResult.user
             } catch (e: Exception) {
-                // تجربة إنشاء حساب إذا كان المستخدم غير موجود في Firebase Auth
-                try {
-                    val createResult = auth.createUserWithEmailAndPassword(effectiveEmail, trimmedPass).await()
-                    createResult.user
-                } catch (_: Exception) {
-                    null
-                }
+                android.util.Log.w("AdminSecurityManager", "Sign-in failed: ${e.message}")
+                null
             }
 
             if (user != null) {
@@ -123,16 +113,6 @@ object AdminSecurityManager {
                     role = resolveRoleFromFirebaseClaims(tokenResult?.claims)
                 }
 
-                // 7. Default fallback for known owner/admin emails
-                if (role.isNullOrBlank()) {
-                    role = when {
-                        effectiveEmail.equals("mah73646@gmail.com", ignoreCase = true) -> "OWNER"
-                        effectiveEmail.equals("meh777644@gmail.com", ignoreCase = true) -> "ADMIN"
-                        preferredRole != null -> preferredRole.uppercase().trim()
-                        else -> "ADMIN"
-                    }
-                }
-
                 // Auto-sync / merge user document in users/{user.uid} in Firestore
                 try {
                     val userRef = db.collection("users").document(user.uid)
@@ -140,7 +120,7 @@ object AdminSecurityManager {
                         mapOf(
                             "uid" to user.uid,
                             "email" to effectiveEmail,
-                            "role" to role,
+                            "role" to (role ?: "ADMIN"),
                             "lastLogin" to System.currentTimeMillis()
                         ),
                         com.google.firebase.firestore.SetOptions.merge()
@@ -148,13 +128,15 @@ object AdminSecurityManager {
                 } catch (_: Exception) {}
 
                 val finalRole = when {
-                    role.contains("OWNER") || role == "SUPER_ADMIN" || role == "MAIN_ADMIN" -> "OWNER"
+                    role?.contains("OWNER") == true || role == "SUPER_ADMIN" || role == "MAIN_ADMIN" -> "OWNER"
                     role == "ADMIN" -> "ADMIN"
                     role == "SUPERVISOR" -> "SUPERVISOR"
-                    else -> if (preferredRole == "OWNER") "OWNER" else "ADMIN"
+                    else -> preferredRole?.uppercase()?.trim()?.takeIf { it in listOf("OWNER", "ADMIN", "SUPERVISOR") }
                 }
 
-                return finalRole
+                if (finalRole != null) {
+                    return finalRole
+                }
             }
         } catch (e: Exception) {
             android.util.Log.e("AdminSecurityManager", "Firebase Auth login error: ${e.message}")

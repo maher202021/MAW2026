@@ -78,67 +78,11 @@ fun MedicalCentersSectionView(
             onActionClick = onCreateMedicalClick
         )
 
-        // 2. Top Hero Promo Banner (Medical Style with Admin Dynamic Sync)
-        val allBanners by viewModel.banners.collectAsState()
-        val customMedicalBanner = remember(allBanners) {
-            allBanners.firstOrNull { 
-                it.targetSection.contains("medical", ignoreCase = true) || 
-                it.redirectCategory.contains("medical", ignoreCase = true)
-            }
-        }
-        val displayBannerTitle = customMedicalBanner?.title?.ifBlank { "أجود المستشفيات والعيادات التخصصية 🩺" } ?: "أجود المستشفيات والعيادات التخصصية 🩺"
-        val displayBannerImage = customMedicalBanner?.url?.ifBlank { "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80" } ?: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80"
-        val displayBannerBadge = customMedicalBanner?.displayTime?.ifBlank { "رعاية صحية 24/7 🩺" } ?: "رعاية صحية 24/7 🩺"
-
+        // 2. Emergency 24/7 Pill
         Surface(
-            modifier = Modifier.fillMaxWidth().height(160.dp).padding(horizontal = 8.dp),
-            shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF121A2C),
-            border = BorderStroke(1.dp, Color(0xFF0D9488).copy(alpha = 0.5f)),
-            shadowElevation = 4.dp
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                com.serviseyem.ui.components.SmartAsyncImage(
-                    model = displayBannerImage,
-                    contentDescription = "عرض المراكز الطبية",
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                listOf(Color(0xFA070A13), Color(0xE60D9488), Color(0x66070A13))
-                            )
-                        )
-                )
-                Column(modifier = Modifier.align(Alignment.CenterStart).padding(16.dp)) {
-                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF0D9488)) {
-                        Text(displayBannerBadge, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(displayBannerTitle, color = Color.White, fontSize = 16.5.sp, fontWeight = FontWeight.Black)
-                    Text("فحوصات شاملة واستشارات مع كبار الاستشاريين", color = Color(0xFFCBD5E1), fontSize = 11.sp)
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.White,
-                        shadowElevation = 2.dp
-                    ) {
-                        Text("احجز موعدك الآن ➔", color = Color(0xFF0D9488), fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp))
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // 3. Emergency 24/7 Pill
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF121A2C),
+            color = Color(0xFF1E293B),
             border = BorderStroke(1.dp, Color(0xFF7F1D1D)),
             shadowElevation = 2.dp
         ) {

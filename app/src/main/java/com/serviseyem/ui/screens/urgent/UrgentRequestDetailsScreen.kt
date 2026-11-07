@@ -3,6 +3,7 @@ package com.serviseyem.ui.screens.urgent
 import android.content.Intent
 import com.serviseyem.ui.*
 import android.net.Uri
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -46,6 +47,7 @@ fun UrgentRequestDetailsScreen(
     onNavigateToChat: (phone: String, name: String) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val settingsState by viewModel.settings.collectAsState()
     val activeTheme = themeColors ?: resolveThemePalette(settingsState)
@@ -120,7 +122,10 @@ fun UrgentRequestDetailsScreen(
                     onAcceptOffer = { offer ->
                         instantViewModel.acceptOffer(req.id, offer.id, offer.technicianPhone) { success, msg ->
                             if (success) {
+                                scope.launch { snackbarHostState.showSnackbar("✅ تم قبول العرض بنجاح!") }
                                 onNavigateToOfferSelection(offer.id)
+                            } else {
+                                scope.launch { snackbarHostState.showSnackbar("❌ ${msg ?: "فشل قبول العرض"}") }
                             }
                         }
                     },
@@ -192,10 +197,13 @@ fun UrgentRequestDetailsScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        instantViewModel.cancelInstantRequest(safeReq.id, enteredPin, context) { success, _ ->
-                            showCancelDialog = false
+                        instantViewModel.cancelInstantRequest(safeReq.id, enteredPin, context) { success, msg ->
                             if (success) {
+                                showCancelDialog = false
+                                scope.launch { snackbarHostState.showSnackbar("✅ تم إلغاء الطلب بنجاح") }
                                 onNavigateBack()
+                            } else {
+                                scope.launch { snackbarHostState.showSnackbar("❌ ${msg ?: "فشل إلغاء الطلب"}") }
                             }
                         }
                     },

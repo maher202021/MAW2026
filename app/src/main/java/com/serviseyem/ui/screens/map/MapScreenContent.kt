@@ -33,6 +33,8 @@ import com.serviseyem.ui.MainViewModel
 import com.serviseyem.ui.dialogs.BookingDialog
 import com.serviseyem.ui.screens.map.components.*
 import com.serviseyem.ui.screens.map.utils.OfflineMapManager
+import com.serviseyem.utils.GnssDiagnosticsManager
+import com.serviseyem.utils.GpxManager
 import com.serviseyem.utils.VisualThemePalette
 import com.serviseyem.utils.resolveThemePalette
 import kotlinx.coroutines.launch
@@ -167,6 +169,17 @@ fun MapScreenContent(
     val sensorManager = remember { context.getSystemService(android.content.Context.SENSOR_SERVICE) as android.hardware.SensorManager }
     val gpsFusionFilter = remember { com.serviseyem.utils.GpsSensorFusionFilter(sensorManager) }
 
+    val gnssDiagnosticsManager = remember { GnssDiagnosticsManager(context) }
+    val satelliteStatus by gnssDiagnosticsManager.gnssStatusFlow.collectAsState()
+
+    LaunchedEffect(state.isGnssPanelOpen) {
+        if (state.isGnssPanelOpen) {
+            gnssDiagnosticsManager.startMonitoring()
+        } else {
+            gnssDiagnosticsManager.stopMonitoring()
+        }
+    }
+
     LaunchedEffect(Unit) {
         gpsFusionFilter.start()
     }
@@ -174,6 +187,7 @@ fun MapScreenContent(
     DisposableEffect(Unit) {
         onDispose {
             gpsFusionFilter.stop()
+            gnssDiagnosticsManager.stopMonitoring()
         }
     }
 
@@ -329,6 +343,26 @@ fun MapScreenContent(
                     .padding(top = 8.dp)
             )
 
+            // --- 1.1 Contextual Smart Suggestion Card ---
+            if (state.isContextualSuggestionVisible) {
+                ContextualSmartSuggestionsCard(
+                    isVisible = state.isContextualSuggestionVisible,
+                    currentCity = state.selectedCity,
+                    onApplySuggestion = { cat ->
+                        state.selectedCategory = cat
+                        state.isContextualSuggestionVisible = false
+                    },
+                    onDismiss = {
+                        state.isContextualSuggestionVisible = false
+                    },
+                    themeColors = themeColors,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .padding(top = 70.dp, start = 16.dp, end = 16.dp)
+                )
+            }
+
             // --- 2. Unified Floating Control Dock (Right Side) ---
             MapControls(
                 isRadarMode = state.isRadarMode,
@@ -379,6 +413,55 @@ fun MapScreenContent(
                 onOpenAleph = {
                     state.alephSelectedEntity = state.selectedEntity
                     state.isAlephDialogOpen = true
+                },
+                // Advanced Local Map Tools
+                isDeadZoneActive = state.isDeadZoneOverlayActive,
+                onToggleDeadZoneOverlay = {
+                    state.isDeadZoneOverlayActive = !state.isDeadZoneOverlayActive
+                    val active = state.isDeadZoneOverlayActive
+                    val script = "if (window.setDeadZones) { window.setDeadZones($active); }"
+                    webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(if (active) "تم عرض مناطق التغطية الضعيفة 🔴" else "تم إخفاء التغطية الضعيفة")
+                    }
+                },
+                isNightMode = state.isNightModeActive,
+                onToggleNightMode = {
+                    state.isNightModeActive = !state.isNightModeActive
+                    val active = state.isNightModeActive
+                    val script = "if (window.toggleHudMirror) { window.toggleHudMirror($active); }"
+                    webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(if (active) "تم تفعيل وضع HUD المائي الليلي 🌙" else "تم إلغاء وضع HUD")
+                    }
+                },
+                isGroupActive = state.isGroupTrackingActive,
+                onToggleGroupTracking = {
+                    state.isGroupTrackingActive = true
+                },
+                onOpenGnssDiagnostics = {
+                    state.isGnssPanelOpen = true
+                },
+                onExportGpx = {
+                    val defaultRoute = listOf(
+                        Pair(safeUserLat, safeUserLng),
+                        Pair(safeUserLat + 0.01, safeUserLng + 0.01)
+                    )
+                    val result = GpxManager.exportRouteToGpx(context, "مسار_الخدمات_${state.selectedCity}", defaultRoute)
+                    result.onSuccess { gpxFile ->
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("تم تصدير مسار GPX بنجاح: ${gpxFile.name} 🛰️")
+                        }
+                    }.onFailure {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("فشل تصدير مسار GPX")
+                        }
+                    }
+                },
+                onPrintMapPdf = {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("جاري تحضير ملخص الخريطة المطبوع 📄")
+                    }
                 },
                 themeColors = themeColors,
                 modifier = Modifier
@@ -664,6 +747,38 @@ fun MapScreenContent(
             },
             containerColor = Color(0xFF0F172A),
             shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    // 🛰️ GNSS Live Satellite Diagnostics Overlay Modal
+    if (state.isGnssPanelOpen) {
+        GnssSignalPanel(
+            statusSummary = satelliteStatus,
+            themeColors = themeColors,
+            onDismiss = { state.isGnssPanelOpen = false }
+        )
+    }
+
+    // 👥 Group Tracking Modal
+    if (state.isGroupTrackingActive) {
+        GroupTrackingDialog(
+            isGroupActive = state.currentGroupCode.isNotBlank(),
+            currentGroupCode = state.currentGroupCode,
+            onStartGroupSession = { code ->
+                state.currentGroupCode = code
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("تم تفعيل تتبع المجموعة: $code 👥")
+                }
+            },
+            onStopGroupSession = {
+                state.currentGroupCode = ""
+                state.isGroupTrackingActive = false
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("تم إيقاف تتبع المجموعة 🔴")
+                }
+            },
+            themeColors = themeColors,
+            onDismiss = { state.isGroupTrackingActive = false }
         )
     }
 }

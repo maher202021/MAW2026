@@ -158,7 +158,7 @@ fun YemenSplashScreen(
 
             // 👑 App Title & Subtitle in Material 3 Style
             Text(
-                text = "دليل خدمات اليمن الذكي",
+                text = "دليل خدمات اليمن",
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 24.sp,
                 color = Color.White,

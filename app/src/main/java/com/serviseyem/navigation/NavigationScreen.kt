@@ -186,8 +186,15 @@ fun NavigationScreen(
                     }
                 }.toString()
 
-                val escapedTarget = targetName.replace("'", "\\'")
-                val script = "if (window.renderNavigationRoute) { window.renderNavigationRoute(${locationFix.latitude}, ${locationFix.longitude}, $targetLat, $targetLng, $coordsJson, '$escapedTarget'); }"
+                val argsObj = org.json.JSONObject().apply {
+                    put("sLat", locationFix.latitude)
+                    put("sLng", locationFix.longitude)
+                    put("eLat", targetLat)
+                    put("eLng", targetLng)
+                    put("coords", JSONArray(coordsJson))
+                    put("title", targetName)
+                }.toString()
+                val script = "if (window.renderNavigationRouteSafe) { window.renderNavigationRouteSafe($argsObj); } else if (window.renderNavigationRoute) { window.renderNavigationRoute(${locationFix.latitude}, ${locationFix.longitude}, $targetLat, $targetLng, $coordsJson, ''); }"
                 webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
             }
             isRerouting = false
@@ -309,7 +316,8 @@ fun NavigationScreen(
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.cacheMode = WebSettings.LOAD_DEFAULT
-                    settings.allowFileAccess = true
+                    settings.allowFileAccess = false
+                    settings.allowContentAccess = false
                     webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
@@ -715,6 +723,16 @@ private fun buildNavigationLeafletHtml(
             var destMarker = L.marker([$endLat, $endLon], { icon: destIcon }).addTo(map).bindPopup('$destName');
 
             var routePolyline = null;
+
+            window.renderNavigationRouteSafe = function(args) {
+                var sLat = args.sLat;
+                var sLng = args.sLng;
+                var eLat = args.eLat;
+                var eLng = args.eLng;
+                var coords = args.coords || [];
+                var title = args.title || '';
+                window.renderNavigationRoute(sLat, sLng, eLat, eLng, coords, title);
+            };
 
             window.renderNavigationRoute = function(sLat, sLng, eLat, eLng, coords, title) {
                 userMarker.setLatLng([sLat, sLng]);

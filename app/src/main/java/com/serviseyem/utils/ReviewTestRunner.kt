@@ -237,6 +237,7 @@ class ReviewTestRunner(private val context: Context) {
     }
 
     suspend fun cleanAllTestData() {
+        if (!com.serviseyem.BuildConfig.DEBUG) return
         try {
             val batch = db.batch()
 

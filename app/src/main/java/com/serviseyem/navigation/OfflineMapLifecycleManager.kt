@@ -60,7 +60,7 @@ class OfflineMapLifecycleManager private constructor(private val context: Contex
         val dir = File(context.filesDir, VALHALLA_DIR)
         val marker = File(dir, MARKER_FILE)
         val archive = File(dir, TILES_ARCHIVE)
-        return marker.exists() && (archive.exists() || dir.listFiles()?.isNotEmpty() == true)
+        return marker.exists() && archive.exists() && archive.length() > 1_000_000L
     }
 
     /**
@@ -105,10 +105,7 @@ class OfflineMapLifecycleManager private constructor(private val context: Contex
 
                 val responseCode = connection.responseCode
                 if (responseCode !in 200..299) {
-                    // في حال تعذر الاتصال بالخادم، ننشئ حزمة محلية احتياطية ونضع العلامة حتى لا يتعطل التطبيق
-                    targetArchive.createNewFile()
-                    marker.writeText("FALLBACK_LOCAL_STORED_${System.currentTimeMillis()}")
-                    _downloadState.value = DownloadState.Completed(targetArchive.absolutePath, targetArchive.length())
+                    _downloadState.value = DownloadState.Error("تعذر الاتصال بالخادم لتحميل الخرائط (رمز الاستجابة $responseCode).")
                     return@launch
                 }
 

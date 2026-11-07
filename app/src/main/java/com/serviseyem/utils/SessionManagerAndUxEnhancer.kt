@@ -212,6 +212,14 @@ object CleanLogoutManager {
 
     fun executeCleanLogout(context: Context, onComplete: () -> Unit) {
         try {
+            // 0. Sign out from Firebase Auth and clear messaging token
+            try {
+                com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+            } catch (_: Exception) {}
+            try {
+                com.google.firebase.messaging.FirebaseMessaging.getInstance().deleteToken()
+            } catch (_: Exception) {}
+
             // 1. Clear encrypted admin session in SecureStorage
             SecureStorage(context).clearAdminSession()
 

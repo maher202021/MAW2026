@@ -79,6 +79,7 @@ class RegistrationTestRunner(private val context: Context) {
      * Cleans up all test data from Firestore to ensure a pristine test state.
      */
     suspend fun cleanAllTestData(onProgress: (String) -> Unit = {}) {
+        if (!com.serviseyem.BuildConfig.DEBUG) return
         onProgress("🧹 جاري تصفية وتطهير بيانات الاختبار القديمة من قاعدة البيانات...")
         try {
             val batch = db.batch()

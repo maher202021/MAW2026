@@ -42,6 +42,16 @@ fun MapControls(
     tiltAngle: Float,
     onToggleTilt: () -> Unit,
     onOpenAleph: () -> Unit,
+    // New Advanced Map Enhancements
+    isDeadZoneActive: Boolean = false,
+    onToggleDeadZoneOverlay: () -> Unit = {},
+    isNightMode: Boolean = false,
+    onToggleNightMode: () -> Unit = {},
+    isGroupActive: Boolean = false,
+    onToggleGroupTracking: () -> Unit = {},
+    onOpenGnssDiagnostics: () -> Unit = {},
+    onExportGpx: () -> Unit = {},
+    onPrintMapPdf: () -> Unit = {},
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
 ) {
@@ -176,21 +186,65 @@ fun MapControls(
 
             Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.width(30.dp))
 
-            // --- Section 4: Tools (Heatmap & Download) ---
-            IconButton(onClick = onToggleHeatmap, modifier = Modifier.size(38.dp)) {
+            Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.width(30.dp))
+
+            // --- Section 4: Advanced Local Map Tools (GNSS, DeadZone, Night HUD, GPX) ---
+            // 1. GNSS Live Satellites Signal Panel
+            IconButton(onClick = onOpenGnssDiagnostics, modifier = Modifier.size(38.dp)) {
                 Icon(
-                    imageVector = if (isHeatmapActive) Icons.Default.CloudDone else Icons.Default.CloudDownload,
-                    tint = if (isHeatmapActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.5f),
-                    contentDescription = "أوفلاين",
+                    imageVector = Icons.Default.SatelliteAlt,
+                    tint = themeColors.accent,
+                    contentDescription = "تشخيص الأقمار",
                     modifier = Modifier.size(20.dp)
                 )
             }
 
-            IconButton(onClick = onDownloadValhallaClick, modifier = Modifier.size(38.dp)) {
+            // 2. Dead Zone Service Heatmap Overlay
+            IconButton(onClick = onToggleDeadZoneOverlay, modifier = Modifier.size(38.dp)) {
                 Icon(
-                    imageVector = Icons.Default.Download,
-                    tint = Color(0xFF10B981),
-                    contentDescription = "تحميل",
+                    imageVector = if (isDeadZoneActive) Icons.Default.GridOff else Icons.Default.GridOn,
+                    tint = if (isDeadZoneActive) Color(0xFFEF4444) else Color.White.copy(alpha = 0.6f),
+                    contentDescription = "مناطق التغطية",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // 3. Night Mode / HUD
+            IconButton(onClick = onToggleNightMode, modifier = Modifier.size(38.dp)) {
+                Icon(
+                    imageVector = if (isNightMode) Icons.Default.Bedtime else Icons.Default.WbSunny,
+                    tint = if (isNightMode) Color(0xFF818CF8) else Color.White.copy(alpha = 0.6f),
+                    contentDescription = "الوضع الليلي / HUD",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // 4. Group Members Tracking
+            IconButton(onClick = onToggleGroupTracking, modifier = Modifier.size(38.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Group,
+                    tint = if (isGroupActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.6f),
+                    contentDescription = "تتبع المجموعة",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // 5. GPX Track Export / Import
+            IconButton(onClick = onExportGpx, modifier = Modifier.size(38.dp)) {
+                Icon(
+                    imageVector = Icons.Default.AltRoute,
+                    tint = Color(0xFF38BDF8),
+                    contentDescription = "تصدير GPX",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // 6. Printable Map PDF Summary
+            IconButton(onClick = onPrintMapPdf, modifier = Modifier.size(38.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Print,
+                    tint = Color.White.copy(alpha = 0.8f),
+                    contentDescription = "طباعة الخريطة",
                     modifier = Modifier.size(20.dp)
                 )
             }

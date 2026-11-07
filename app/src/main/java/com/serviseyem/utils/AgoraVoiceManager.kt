@@ -210,19 +210,6 @@ class AgoraVoiceManager(private val context: Context) {
             audioManager.mode = AudioManager.MODE_NORMAL
             audioManager.isSpeakerphoneOn = false
             audioManager.isMicrophoneMute = false
-            audioManager.setMicrophoneMute(false)
-
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                try {
-                    audioManager.adjustStreamVolume(
-                        AudioManager.STREAM_VOICE_CALL,
-                        AudioManager.ADJUST_MUTE,
-                        0
-                    )
-                } catch (e: Exception) {
-                    // ignore
-                }
-            }
         } catch (e: Exception) {
             e.printStackTrace()
         }

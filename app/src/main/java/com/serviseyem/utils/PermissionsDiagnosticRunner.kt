@@ -26,6 +26,7 @@ class PermissionsDiagnosticRunner(context: Context) {
     private val testSupervisorDocId = "test_diag_supervisor_777"
 
     suspend fun cleanAllTestData(onProgress: (String) -> Unit = {}) {
+        if (!com.serviseyem.BuildConfig.DEBUG) return
         try {
             db.collection("supervisors").document(testSupervisorDocId).delete().await()
         } catch (_: Exception) {

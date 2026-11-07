@@ -54,21 +54,27 @@ fun UrgentRequestsListScreen(
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
-            kotlinx.coroutines.delay(15_000L)
+            kotlinx.coroutines.delay(20_000L)
             now = System.currentTimeMillis()
         }
     }
 
+    val mySubmittedOffers by instantViewModel.requestOffers.collectAsState()
+
     val filteredList = requestsList.filter { req ->
-        val isExpired = req.expiresAt > 0 && req.expiresAt < now && (req.status == "WAITING_FOR_OFFERS" || req.status == "OPEN")
-        val remainingMinutes = ((req.expiresAt - now) / 1000) / 60
-        val matchesTimeFilter = if (onlyUnder10MinFilter) remainingMinutes in 0..10 else true
+        val isExpired = req.expiresAt in 1..now && (req.status == "WAITING_FOR_OFFERS" || req.status == "OPEN")
+        if (isExpired) return@filter false
+
+        val remainingMinutes = if (req.expiresAt > now) ((req.expiresAt - now) / 1000L / 60L).toInt() else 30
+        val matchesTimeFilter = if (onlyUnder10MinFilter) remainingMinutes in 1..10 else true
         val matchesSearch = searchQuery.isBlank() ||
                 req.requestCode.contains(searchQuery, ignoreCase = true) ||
                 req.serviceTitle.contains(searchQuery, ignoreCase = true) ||
                 req.userNeighborhood.contains(searchQuery, ignoreCase = true)
 
-        !isExpired && matchesTimeFilter && matchesSearch
+        val alreadyOffered = isProvider && mySubmittedOffers.any { it.requestId == req.id && it.technicianId == currentUserId }
+
+        matchesTimeFilter && matchesSearch && !alreadyOffered
     }
 
     Scaffold(
@@ -88,9 +94,19 @@ fun UrgentRequestsListScreen(
                 },
                 actions = {
                     IconButton(onClick = {
+                        if (filteredList.isEmpty()) {
+                            android.widget.Toast.makeText(context, "لا توجد طلبات لتصديرها", android.widget.Toast.LENGTH_SHORT).show()
+                            return@IconButton
+                        }
                         val res = com.serviseyem.utils.ReportExporter.exportUrgentRequestsToCsv(context, filteredList)
                         res.onSuccess { file ->
-                            com.serviseyem.utils.ReportExporter.shareExportedFile(context, file, "مشاركة تقرير الطلبات العاجلة")
+                            try {
+                                com.serviseyem.utils.ReportExporter.shareExportedFile(context, file, "مشاركة تقرير الطلبات العاجلة")
+                            } catch (e: Exception) {
+                                android.widget.Toast.makeText(context, "فشل المشاركة: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }.onFailure { e ->
+                            android.widget.Toast.makeText(context, "فشل التصدير: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     }) {
                         Icon(Icons.Default.Share, contentDescription = "تصدير التقرير", tint = Color(0xFFD32F2F))

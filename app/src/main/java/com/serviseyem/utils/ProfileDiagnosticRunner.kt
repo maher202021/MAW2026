@@ -54,6 +54,7 @@ class ProfileDiagnosticRunner(context: Context) {
     )
 
     suspend fun cleanAllTestData(onProgress: (String) -> Unit = {}) {
+        if (!com.serviseyem.BuildConfig.DEBUG) return
         onProgress("🧹 جاري تنظيف بيانات اختبار الملفات الشخصية الثمانية...")
         try {
             val batch = db.batch()

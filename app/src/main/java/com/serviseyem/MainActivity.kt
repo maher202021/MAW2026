@@ -278,6 +278,11 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 try {
+                    viewModel.initializeUserIdentity(context)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                try {
                     val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
                     if (cm != null) {
                         networkCallback?.let { oldCb ->

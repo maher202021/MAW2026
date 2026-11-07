@@ -23,6 +23,9 @@
         .user-pulse { width: 48px; height: 48px; background: rgba(0, 229, 255, 0.5); border-radius: 50%; position: absolute; top: -10px; left: -10px; animation: userPulsing 2s infinite ease-out; z-index: 1; }
         @keyframes userPulsing { 0% { transform: scale(0.4); opacity: 0.95; } 100% { transform: scale(1.9); opacity: 0; } }
         
+        .hud-mirrored { transform: scaleX(-1) scaleY(-1) !important; filter: contrast(150%) brightness(120%); }
+        .dead-zone-circle { fill-color: #EF4444; fill-opacity: 0.18; stroke: #F59E0B; stroke-width: 1.5; stroke-dasharray: 6,4; }
+        
         .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
     </style>
 </head>
@@ -34,6 +37,9 @@
         var map;
         var currentTileLayer = null;
         var markerClusterGroup;
+        var deadZoneLayerGroup = null;
+        var gpxTrackLayer = null;
+        var groupMembersLayerGroup = null;
         var userMarker = null;
         var userLat = 15.3694;
         var userLng = 44.1910;
@@ -64,6 +70,9 @@
                 markerClusterGroup = L.markerClusterGroup({ maxClusterRadius: 35, spiderfyOnMaxZoom: true });
                 map.addLayer(markerClusterGroup);
 
+                deadZoneLayerGroup = L.layerGroup().addTo(map);
+                groupMembersLayerGroup = L.layerGroup().addTo(map);
+
                 map.on('click', function() {
                     if (window.AndroidBridge) window.AndroidBridge.onMapClicked();
                 });
@@ -72,6 +81,70 @@
             } catch(e) {
                 document.body.innerHTML = '<div style="color:white; padding:20px; text-align:center;">خطأ في تحميل الخريطة</div>';
             }
+        }
+
+        function toggleHudMirror(enable) {
+            var el = document.getElementById('map');
+            if (enable) {
+                el.classList.add('hud-mirrored');
+            } else {
+                el.classList.remove('hud-mirrored');
+            }
+        }
+
+        function setDeadZones(deadZonesJson) {
+            if (!deadZoneLayerGroup) return;
+            deadZoneLayerGroup.clearLayers();
+            var zones = (typeof deadZonesJson === 'string') ? JSON.parse(deadZonesJson) : deadZonesJson;
+            if (!zones || !Array.isArray(zones)) return;
+
+            zones.forEach(function(z) {
+                var circle = L.circle([z.lat, z.lng], {
+                    color: '#EF4444',
+                    fillColor: '#EF4444',
+                    fillOpacity: 0.18,
+                    radius: z.radiusMeters || 1200,
+                    weight: 1.5,
+                    dashArray: '6, 4'
+                });
+                circle.bindTooltip(z.label || "منطقة غير مغطاة بخدمات ⚠️", { permanent: false, direction: 'top' });
+                deadZoneLayerGroup.addLayer(circle);
+            });
+        }
+
+        function setGroupMembers(membersJson) {
+            if (!groupMembersLayerGroup) return;
+            groupMembersLayerGroup.clearLayers();
+            var members = (typeof membersJson === 'string') ? JSON.parse(membersJson) : membersJson;
+            if (!members || !Array.isArray(members)) return;
+
+            members.forEach(function(m) {
+                var html = '<div class="custom-pin-container">' +
+                    '<div class="custom-pin-head" style="background-color:#10B981;">👤</div>' +
+                    '<div class="custom-pin-arrow" style="border-top-color:#10B981;"></div>' +
+                    '<div class="custom-pin-label">'+m.name+'</div></div>';
+                var marker = L.marker([m.lat, m.lng], {
+                    icon: L.divIcon({ className:'', html: html, iconSize:[32,46], iconAnchor:[16,44] })
+                });
+                groupMembersLayerGroup.addLayer(marker);
+            });
+        }
+
+        function drawGpxTrack(coordsJson) {
+            if (gpxTrackLayer) {
+                map.removeLayer(gpxTrackLayer);
+                gpxTrackLayer = null;
+            }
+            var coords = (typeof coordsJson === 'string') ? JSON.parse(coordsJson) : coordsJson;
+            if (!coords || !Array.isArray(coords) || coords.length === 0) return;
+
+            var latLngs = coords.map(function(pt) { return [pt[0], pt[1]]; });
+            gpxTrackLayer = L.polyline(latLngs, {
+                color: '#00E5FF',
+                weight: 5,
+                opacity: 0.9
+            }).addTo(map);
+            map.fitBounds(gpxTrackLayer.getBounds(), { padding: [40, 40] });
         }
 
         function switchLayer(key) {

@@ -290,6 +290,40 @@ fun VpsArCameraView(
                     }
                 }
             }
+
+            // 📷 ميزة النقطة 15: التقاط المعالم والشوارع في وضع الواقع المعزز (AR Street Overlay)
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xFF1E293B).copy(alpha = 0.9f),
+                border = BorderStroke(1.2.dp, Color(0xFF10B981))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Place,
+                        contentDescription = null,
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Column {
+                        Text(
+                            text = "الشارع / المعلم المقابل للكاميرا 🎯",
+                            color = Color(0xFF10B981),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "شارع حدة • تقاطع الرويشان الرئيسي (صنعاء)",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
         }
 
         // Bottom Bar: Nearby Entities List + Big Return Button

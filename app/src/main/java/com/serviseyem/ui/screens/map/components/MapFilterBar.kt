@@ -78,12 +78,12 @@ fun MapFilterBar(
 
     val categories = remember {
         listOf(
-            Triple("ALL", "كل الفئات 🌐", "🌐"),
-            Triple("PROVIDERS", "فنيين 👷", "👷"),
-            Triple("STORES", "متاجر ومحلات 🏪", "🏪"),
-            Triple("RESTAURANTS", "مطاعم وكافيهات 🍔", "🍔"),
-            Triple("MEDICAL", "مراكز طبية 🏥", "🏥"),
-            Triple("PROPERTIES", "عقارات 🏠", "🏠")
+            Triple("ALL", "كل الخدمات 🌐", "🌐"),
+            Triple("STORES", "بقالة ودكاكين 🛒", "🛒"),
+            Triple("RESTAURANTS", "بوفيه ومأكولات 🍳", "🍳"),
+            Triple("PROVIDERS", "ميكانيكي وبنشر 🔧", "🔧"),
+            Triple("MEDICAL", "صيدلية ومستوصف 💊", "💊"),
+            Triple("PROPERTIES", "عقارات وبيوت 🏠", "🏠")
         )
     }
 

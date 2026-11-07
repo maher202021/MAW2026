@@ -88,68 +88,12 @@ fun RestaurantsSectionView(
             title = "المطاعم والكافيهات",
             subtitle = "اكتشف أشهى المأكولات والوجبات في مدينتك",
             icon = Icons.Default.Restaurant,
-            accentColor = Color(0xFFE11D48),
+            accentColor = Color(0xFFEA580C),
             actionLabel = "تسجيل مطعمك",
             onActionClick = onCreateRestaurantClick
         )
 
-        // 2. Top Hero Promo Banner (Arby's Style with Admin Dynamic Sync)
-        val allBanners by viewModel.banners.collectAsState()
-        val customRestBanner = remember(allBanners) {
-            allBanners.firstOrNull { 
-                it.targetSection.contains("restaurant", ignoreCase = true) || 
-                it.redirectCategory.contains("restaurant", ignoreCase = true)
-            }
-        }
-        val displayBannerTitle = customRestBanner?.title?.ifBlank { "أشهى المأكولات والوجبات السريعة 🍔" } ?: "أشهى المأكولات والوجبات السريعة 🍔"
-        val displayBannerImage = customRestBanner?.url?.ifBlank { "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80" } ?: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80"
-        val displayBannerBadge = customRestBanner?.displayTime?.ifBlank { "عروض المطاعم 🔥" } ?: "عروض المطاعم 🔥"
-
-        Surface(
-            modifier = Modifier.fillMaxWidth().height(160.dp).padding(horizontal = 8.dp),
-            shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF121A2C),
-            border = BorderStroke(1.dp, Color(0xFFE11D48).copy(alpha = 0.5f)),
-            shadowElevation = 4.dp
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                com.serviseyem.ui.components.SmartAsyncImage(
-                    model = displayBannerImage,
-                    contentDescription = "عرض المطاعم",
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                listOf(Color(0xFA070A13), Color(0xE6881337), Color(0x66070A13))
-                            )
-                        )
-                )
-                Column(modifier = Modifier.align(Alignment.CenterStart).padding(16.dp)) {
-                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE8B23A)) {
-                        Text(displayBannerBadge, color = Color(0xFF070A13), fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(displayBannerTitle, color = Color.White, fontSize = 16.5.sp, fontWeight = FontWeight.Black)
-                    Text("خصومات حصرية تصل حتى 25% مع توصيل سريع", color = Color(0xFFCBD5E1), fontSize = 11.sp)
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.White,
-                        shadowElevation = 2.dp
-                    ) {
-                        Text("اطلب الآن ➔", color = Color(0xFFE11D48), fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp))
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // 3. Illustrated Category Selector (Working Filter)
+        // 2. Illustrated Category Selector (Working Filter)
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -164,8 +108,8 @@ fun RestaurantsSectionView(
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = if (isSelected) Color(0xFFE11D48).copy(alpha = 0.25f) else Color(0xFF121A2C),
-                        border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) Color(0xFFE11D48) else Color(0xFF1E293B)),
+                        color = if (isSelected) glowColor.copy(alpha = 0.25f) else Color(0xFF1E293B),
+                        border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) glowColor else Color(0xFF334155)),
                         shadowElevation = if (isSelected) 4.dp else 2.dp,
                         modifier = Modifier.size(58.dp)
                     ) {

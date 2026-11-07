@@ -171,19 +171,24 @@ class FirestoreSeedHelper(private val db: FirebaseFirestore) {
         // No fake default banners written automatically
     }
 
+
+
     fun writeDefaultProviders() {
+        if (!com.serviseyem.BuildConfig.DEBUG) return
         com.serviseyem.data.helpers.DefaultDemoData.getDemoProviders().forEach { provider ->
             db.collection("providers").document(provider.id).set(provider, com.google.firebase.firestore.SetOptions.merge())
         }
     }
 
     fun writeDefaultStores() {
+        if (!com.serviseyem.BuildConfig.DEBUG) return
         com.serviseyem.data.helpers.DefaultDemoData.getDemoStores().forEach { store ->
             db.collection("stores").document(store.id).set(store, com.google.firebase.firestore.SetOptions.merge())
         }
     }
 
     fun writeDefaultProperties() {
+        if (!com.serviseyem.BuildConfig.DEBUG) return
         com.serviseyem.data.helpers.DefaultDemoData.getDemoProperties().forEach { prop ->
             db.collection("properties").document(prop.id).set(prop, com.google.firebase.firestore.SetOptions.merge())
         }

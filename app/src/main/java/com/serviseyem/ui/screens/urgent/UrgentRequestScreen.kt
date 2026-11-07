@@ -401,8 +401,12 @@ fun UrgentRequestScreen(
                                     maxSizeBytes = 300 * 1024L
                                 )
                                 uploadedUrl = result.getOrDefault("")
-                            } catch (_: Exception) {
+                                if (uploadedUrl.isBlank()) {
+                                    snackbarHostState.showSnackbar("⚠️ تعذر رفع الصورة، سيتم إرسال الطلب بدونها")
+                                }
+                            } catch (e: Exception) {
                                 uploadedUrl = ""
+                                snackbarHostState.showSnackbar("⚠️ تعذر رفع الصورة، سيتم إرسال الطلب بدونها")
                             } finally {
                                 isUploadingImage = false
                             }

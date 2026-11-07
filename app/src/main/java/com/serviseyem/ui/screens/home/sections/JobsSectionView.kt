@@ -83,67 +83,13 @@ fun JobsSectionView(
             title = "فرص العمل المتاحة",
             subtitle = "اكتشف مسارك المهني القادم في أفضل الشركات اليمنية",
             icon = Icons.Default.BusinessCenter,
-            accentColor = Color(0xFF6C5CE7),
+            accentColor = Color(0xFF4F46E5),
             onActionClick = {
                 haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                 onCreateJobClick()
             },
             actionLabel = "نشر وظيفة +"
         )
-
-        // Top Hero Promo Banner (Career Style with Admin Dynamic Sync)
-        val allBanners by viewModel.banners.collectAsState()
-        val customJobBanner = remember(allBanners) {
-            allBanners.firstOrNull { 
-                it.targetSection.contains("job", ignoreCase = true) || 
-                it.redirectCategory.contains("job", ignoreCase = true)
-            }
-        }
-        val displayBannerTitle = customJobBanner?.title?.ifBlank { "فرص العمل والتطوير المهني 💼" } ?: "فرص العمل والتطوير المهني 💼"
-        val displayBannerImage = customJobBanner?.url?.ifBlank { "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80" } ?: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80"
-        val displayBannerBadge = customJobBanner?.displayTime?.ifBlank { "سوق العمل اليمني VIP 💼" } ?: "سوق العمل اليمني VIP 💼"
-
-        Surface(
-            modifier = Modifier.fillMaxWidth().height(160.dp),
-            shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF121A2C),
-            border = BorderStroke(1.dp, Color(0xFF6C5CE7).copy(alpha = 0.5f)),
-            shadowElevation = 4.dp
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                com.serviseyem.ui.components.SmartAsyncImage(
-                    model = displayBannerImage,
-                    contentDescription = "فرص العمل",
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                listOf(Color(0xFA070A13), Color(0xE6312E81), Color(0x66070A13))
-                            )
-                        )
-                )
-                Column(modifier = Modifier.align(Alignment.CenterStart).padding(16.dp)) {
-                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE8B23A)) {
-                        Text(displayBannerBadge, color = Color(0xFF070A13), fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(displayBannerTitle, color = Color.White, fontSize = 16.5.sp, fontWeight = FontWeight.Black)
-                    Text("استكشف أحدث الوظائف المتاحة لدى أفضل الشركات والمؤسسات اليمنية", color = Color(0xFFCBD5E1), fontSize = 11.sp)
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.White,
-                        shadowElevation = 2.dp
-                    ) {
-                        Text("قدم سيرتك الذاتية ➔", color = Color(0xFF6C5CE7), fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp))
-                    }
-                }
-            }
-        }
 
         // Subcategory Micro-Pills
         Row(

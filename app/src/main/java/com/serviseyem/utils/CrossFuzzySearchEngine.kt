@@ -67,14 +67,47 @@ object CrossFuzzySearchEngine {
             }
         }
 
-        // ... (rest of the code) ...
+        // 2. البحث في المديريات والمناطق والأحياء
+        CityAliases.ALIASES.forEach { (cityName, aliases) ->
+            aliases.forEach { alias ->
+                val score = calculateMatchScore(cleanQuery, normalizeText(alias))
+                if (score > 35) {
+                    val matchingCity = OfflineMapManager.MAJOR_YEMENI_CITIES.find { it.nameAr == cityName }
+                    results.add(SearchResult(
+                        id = "area_$alias",
+                        title = alias,
+                        subtitle = "منطقة / حي في $cityName 📍",
+                        type = SearchType.AREA,
+                        latitude = matchingCity?.latitude ?: 15.3694,
+                        longitude = matchingCity?.longitude ?: 44.1910,
+                        originalItem = alias,
+                        score = score + 25
+                    ))
+                }
+            }
+        }
 
-        // 3. البحث عن الأشخاص والفنيين (الاسم + المهنة)
+        // 3. البحث في المعالم اليمنية الشهيرة (باب اليمن، جولة الرويشان، خور المكلا، الخ)
+        com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.searchYemeniLandmarks(rawQuery).forEach { landmark ->
+            results.add(SearchResult(
+                id = "landmark_${landmark.name}",
+                title = landmark.name,
+                subtitle = "📍 ${landmark.type} - ${landmark.area} (${landmark.city})",
+                type = SearchType.STREET,
+                latitude = landmark.lat,
+                longitude = landmark.lng,
+                originalItem = landmark,
+                score = 85
+            ))
+        }
+
+        // 4. البحث عن الأشخاص والفنيين (الاسم + المهنة + اللهجة المحلية)
         providers.forEach { p ->
+            val isDialectMatch = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(rawQuery, "${p.name} ${p.profession} ${p.specialization}")
             val scoreName = calculateMatchScore(cleanQuery, normalizeText(p.name))
             val scoreProf = calculateMatchScore(cleanQuery, normalizeText(p.profession))
             val scoreSpec = calculateMatchScore(cleanQuery, normalizeText(p.specialization))
-            val maxScore = maxOf(scoreName, scoreProf, scoreSpec)
+            val maxScore = maxOf(scoreName, scoreProf, scoreSpec, if (isDialectMatch) 70 else 0)
 
             if (maxScore > 30) {
                 results.add(SearchResult(
@@ -90,16 +123,17 @@ object CrossFuzzySearchEngine {
             }
         }
 
-        // 4. البحث في المتاجر والمطاعم
+        // 5. البحث في المتاجر والمطاعم
         stores.forEach { s ->
+            val isDialectMatch = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(rawQuery, "${s.name} ${s.categoryId} ${s.description}")
             val scoreName = calculateMatchScore(cleanQuery, normalizeText(s.name))
             val scoreCat = calculateMatchScore(cleanQuery, normalizeText(s.categoryId))
-            val maxScore = maxOf(scoreName, scoreCat)
+            val maxScore = maxOf(scoreName, scoreCat, if (isDialectMatch) 70 else 0)
 
             if (maxScore > 30) {
                 val category = when {
                     s.sectionId.contains("medical") -> "🏥 مركز طبي"
-                    s.sectionId.contains("restaurant") -> "🍔 مطعم/كافيه"
+                    s.sectionId.contains("restaurant") -> "🍔 مطعم/بوفيه"
                     else -> "🏪 متجر"
                 }
                 results.add(SearchResult(
@@ -115,11 +149,12 @@ object CrossFuzzySearchEngine {
             }
         }
 
-        // 5. البحث في العقارات والشوارع
+        // 6. البحث في العقارات والشوارع
         properties.forEach { pr ->
+            val isDialectMatch = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(rawQuery, "${pr.title} ${pr.localNeighborhood} ${pr.propertyType}")
             val scoreTitle = calculateMatchScore(cleanQuery, normalizeText(pr.title))
             val scoreLoc = calculateMatchScore(cleanQuery, normalizeText(pr.localNeighborhood))
-            val maxScore = maxOf(scoreTitle, scoreLoc)
+            val maxScore = maxOf(scoreTitle, scoreLoc, if (isDialectMatch) 70 else 0)
 
             if (maxScore > 30) {
                 results.add(SearchResult(

@@ -48,15 +48,28 @@ class MyApplication : Application() {
         super.onCreate()
         instance = this
 
-        // ===================== الخطوة 1: تهيئة Firebase بأمان =====================
+        // ===================== الخطوة 1: تهيئة Firebase وحساب Google بأمان =====================
         try {
             if (FirebaseApp.getApps(this).isEmpty()) {
-                FirebaseApp.initializeApp(this)
+                try {
+                    val options = com.google.firebase.FirebaseOptions.Builder()
+                        .setApplicationId("1:954106721012:android:5fa5e385532b08d5c0e4a1")
+                        .setApiKey("AIzaSyBq2SEhBADFGVF4sDyV3sC_t2HqQ1m8lC0")
+                        .setProjectId("serviseyem")
+                        .setGcmSenderId("954106721012")
+                        .setStorageBucket("serviseyem.firebasestorage.app")
+                        .build()
+                    FirebaseApp.initializeApp(this, options)
+                } catch (eOptions: Throwable) {
+                    FirebaseApp.initializeApp(this)
+                }
             }
             Log.d("MyApplication", "✅ Firebase initialized successfully")
         } catch (e: Throwable) {
             Log.e("MyApplication", "❌ Firebase initialization failed: ${e.message}")
-            e.printStackTrace()
+            try {
+                FirebaseApp.initializeApp(this)
+            } catch (_: Throwable) {}
         }
 
         // ===================== تهيئة Firestore الموحدة =====================
@@ -74,21 +87,12 @@ class MyApplication : Application() {
             } catch (_: Throwable) {}
         }
 
-        // ===================== الخطوة 2: تهيئة Analytics بأمان (تم التعطيل للاختبار) =====================
-        /*
+        // ===================== الخطوة 2: تهيئة Analytics بأمان =====================
         try {
             firebaseAnalytics = FirebaseAnalytics.getInstance(this)
-            Log.d("MyApplication", "✅ FirebaseAnalytics initialized successfully")
-        } catch (e: Throwable) {
-            Log.e("MyApplication", "❌ FirebaseAnalytics initialization failed: ${e.message}")
-            e.printStackTrace()
-        }
-        */
+        } catch (_: Throwable) {}
 
-        // ===================== الخطوة 3: تهيئة Crashlytics بأمان (تم التعطيل للاختبار) =====================
-        // initializeCrashlyticsSafely()
-
-        // ===================== الخطوة 4: تهيئة قنوات الإشعارات الموحدة =====================
+        // ===================== الخطوة 3: تهيئة قنوات الإشعارات الموحدة =====================
         try {
             com.serviseyem.utils.NotificationChannels.createAll(this)
             Log.d("MyApplication", "✅ Unified notification channels created successfully")
@@ -110,15 +114,13 @@ class MyApplication : Application() {
             Log.e("MyApplication", "❌ Failed to create chat notification channels: ${e.message}")
         }
 
-        // ===================== الخطوة 5: جدولة المزامنة الدورية في الخلفية (تم التعطيل بناءً على طلب المستخدم) =====================
-        /*
+        // ===================== الخطوة 4: جدولة المزامنة الدورية وحساب المزامنة بأمان =====================
         try {
             com.serviseyem.sync.PeriodicSyncScheduler(this).schedulePeriodicSync()
             Log.d("MyApplication", "✅ Background periodic sync scheduled successfully")
         } catch (e: Throwable) {
-            Log.e("MyApplication", "❌ Failed to schedule periodic sync: ${e.message}")
+            Log.w("MyApplication", "⚠️ Notice on periodic sync: ${e.message}")
         }
-        */
 
         // ===================== الخطوة 6: إدراج البيانات التجريبية الأولية في Room =====================
         // تم تعطيل الاستدعاء التلقائي في الخلفية منعاً لأي استثناء محتمل عند بدء التشغيل

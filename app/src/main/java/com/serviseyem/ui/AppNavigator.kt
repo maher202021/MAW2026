@@ -540,15 +540,14 @@ fun AppNavigator(
                 )
             }
 
-            val activeTabName by viewModel.activeBrowserTab.collectAsState()
-            val isMainHomeScreen = (currentScreen == AppScreens.USER_BROWSE || currentScreen == AppScreens.HOME) && activeTabName == "الرئيسية"
-
-            FloatingIconsOverlay(
-                settings = settingsState,
-                themeColors = themeColors,
-                onAssistantClick = { viewModel.navigateToScreen(AppScreens.SMART_ASSISTANT) },
-                onRequestServiceClick = { viewModel.navigateToScreen(AppScreens.QUICK_SERVICE_REQUEST) }
-            )
+            if (currentScreen == AppScreens.USER_BROWSE || currentScreen == AppScreens.HOME || currentScreen == AppScreens.FAVORITES_VIEW) {
+                FloatingIconsOverlay(
+                    settings = settingsState,
+                    themeColors = themeColors,
+                    onAssistantClick = { viewModel.navigateToScreen(AppScreens.SMART_ASSISTANT) },
+                    onRequestServiceClick = { viewModel.navigateToScreen(AppScreens.QUICK_SERVICE_REQUEST) }
+                )
+            }
 
             if (showRestoreAccountDialog) {
                 RestoreAccountDialog(viewModel = viewModel, themeColors = themeColors, onDismiss = { viewModel.toggleRestoreAccountDialog(false) })

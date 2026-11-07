@@ -29,6 +29,7 @@ class SettingsSyncDiagnosticRunner(context: Context) {
     private val sandboxDocId = "diagnostic_sandbox_settings"
 
     suspend fun cleanAllTestData(onProgress: (String) -> Unit = {}) {
+        if (!com.serviseyem.BuildConfig.DEBUG) return
         try {
             db.collection("settings").document(sandboxDocId).delete().await()
         } catch (_: Exception) {
