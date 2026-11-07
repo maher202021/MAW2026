@@ -49,6 +49,8 @@ class MapScreenState(
     // New Local Map Feature States
     var isGnssPanelOpen by mutableStateOf(false)
     var isDeadZoneOverlayActive by mutableStateOf(false)
+    var isRoadSafetyActive by mutableStateOf(false)
+    var isAddOsmDialogOpen by mutableStateOf(false)
     var isNightModeActive by mutableStateOf(false)
     var isGroupTrackingActive by mutableStateOf(false)
     var currentGroupCode by mutableStateOf("")

@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.sp
 import com.serviseyem.ui.screens.map.MapMode
 import com.serviseyem.utils.VisualThemePalette
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
 /**
  * 🎮 MapControls (مطابقة للشاشة والضوابط العائمة للخريطة)
  */
@@ -45,6 +48,10 @@ fun MapControls(
     // New Advanced Map Enhancements
     isDeadZoneActive: Boolean = false,
     onToggleDeadZoneOverlay: () -> Unit = {},
+    isRoadSafetyActive: Boolean = false,
+    onToggleRoadSafety: () -> Unit = {},
+    onOpenAddOsmLandmark: () -> Unit = {},
+    onTriggerRuralSos: () -> Unit = {},
     isNightMode: Boolean = false,
     onToggleNightMode: () -> Unit = {},
     isGroupActive: Boolean = false,
@@ -56,6 +63,7 @@ fun MapControls(
     modifier: Modifier = Modifier
 ) {
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val scrollState = rememberScrollState()
 
     Surface(
         shape = RoundedCornerShape(24.dp),
@@ -64,12 +72,14 @@ fun MapControls(
         shadowElevation = 12.dp,
         modifier = modifier
             .width(54.dp)
-            .padding(vertical = 16.dp)
+            .heightIn(max = 580.dp)
+            .padding(vertical = 4.dp)
     ) {
         Column(
             modifier = Modifier
-                .padding(vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .verticalScroll(scrollState)
+                .padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // --- Section 1: Navigation & GPS ---
@@ -205,6 +215,36 @@ fun MapControls(
                     imageVector = if (isDeadZoneActive) Icons.Default.GridOff else Icons.Default.GridOn,
                     tint = if (isDeadZoneActive) Color(0xFFEF4444) else Color.White.copy(alpha = 0.6f),
                     contentDescription = "مناطق التغطية",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // 🥇 الفكرة الأولى: طبقة سلامة الطريق وصعوبات الطرق اليمنية (Road Safety Layer)
+            IconButton(onClick = onToggleRoadSafety, modifier = Modifier.size(38.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    tint = if (isRoadSafetyActive) Color(0xFFF59E0B) else Color.White.copy(alpha = 0.6f),
+                    contentDescription = "سلامة وصعوبة الطريق",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // 🏅 الفكرة الرابعة: إضافة معلم لتوأمة OpenStreetMap (OSM Node)
+            IconButton(onClick = onOpenAddOsmLandmark, modifier = Modifier.size(38.dp)) {
+                Icon(
+                    imageVector = Icons.Default.AddLocationAlt,
+                    tint = Color(0xFF10B981),
+                    contentDescription = "إضافة معلم OSM",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // 🥉 الفكرة الثالثة: زر نجدة طوارئ ريفية بدون إنترنت (Rural Emergency SMS)
+            IconButton(onClick = onTriggerRuralSos, modifier = Modifier.size(38.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Sos,
+                    tint = Color(0xFFEF4444),
+                    contentDescription = "نجدة ريفية SMS",
                     modifier = Modifier.size(20.dp)
                 )
             }

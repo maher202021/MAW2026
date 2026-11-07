@@ -425,6 +425,46 @@ fun MapScreenContent(
                         snackbarHostState.showSnackbar(if (active) "تم عرض مناطق التغطية الضعيفة 🔴" else "تم إخفاء التغطية الضعيفة")
                     }
                 },
+                isRoadSafetyActive = state.isRoadSafetyActive,
+                onToggleRoadSafety = {
+                    state.isRoadSafetyActive = !state.isRoadSafetyActive
+                    val active = state.isRoadSafetyActive
+                    if (active) {
+                        // جمع المخاطر والصعوبات من مزودي الخدمات
+                        val hazardsJson = filteredProviders.filter { it.roadDifficulty >= 2 }.map {
+                            mapOf(
+                                "lat" to it.latitude,
+                                "lng" to it.longitude,
+                                "difficulty" to it.roadDifficulty,
+                                "title" to (if (it.roadHazardDescription.isNotBlank()) it.roadHazardDescription else "طريق جبلي / وعر"),
+                                "desc" to "فني المنطقة: ${it.name} • صعوبة: ${it.roadDifficulty}/5",
+                                "radius" to 600
+                            )
+                        }
+                        val jsonStr = org.json.JSONArray(hazardsJson).toString()
+                        webViewRef?.post { webViewRef?.evaluateJavascript("if (window.setRoadSafetyHazards) { window.setRoadSafetyHazards($jsonStr); }", null) }
+                    } else {
+                        webViewRef?.post { webViewRef?.evaluateJavascript("if (window.setRoadSafetyHazards) { window.setRoadSafetyHazards([]); }", null) }
+                    }
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(if (active) "تم تفعيل طبقة سلامة الطريق وصعوبات الطرق اليمنية ⚠️" else "تم إخفاء طبقة سلامة الطرق")
+                    }
+                },
+                onOpenAddOsmLandmark = {
+                    state.isAddOsmDialogOpen = true
+                },
+                onTriggerRuralSos = {
+                    val packet = com.serviseyem.utils.RuralEmergencySosManager.EmergencyPacket(
+                        latitude = safeUserLat,
+                        longitude = safeUserLng,
+                        nearestTown = state.selectedCity
+                    )
+                    com.serviseyem.utils.RuralEmergencySosManager.sendEmergencySms(context, "199", packet) {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("تم تجهيز رسالة النجدة الريفية عبر SMS 🚨")
+                        }
+                    }
+                },
                 isNightMode = state.isNightModeActive,
                 onToggleNightMode = {
                     state.isNightModeActive = !state.isNightModeActive
@@ -779,6 +819,23 @@ fun MapScreenContent(
             },
             themeColors = themeColors,
             onDismiss = { state.isGroupTrackingActive = false }
+        )
+    }
+
+    // 🏅 الفكرة الرابعة: نافذة إضافة معلم يمني لتوأمة OpenStreetMap
+    if (state.isAddOsmDialogOpen) {
+        AddOsmLandmarkDialog(
+            userLat = safeUserLat,
+            userLng = safeUserLng,
+            currentCity = state.selectedCity,
+            themeColors = themeColors,
+            onSaveLandmark = { node ->
+                com.serviseyem.utils.OsmContributionManager.savePendingLandmark(context, node)
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("تم حفظ المعلم [${node.name}] بنجاح ومشاركته في خريطة اليمن 🌟")
+                }
+            },
+            onDismiss = { state.isAddOsmDialogOpen = false }
         )
     }
 }

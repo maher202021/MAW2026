@@ -42,6 +42,8 @@ data class ProviderEntity(
     val isDeleted: Boolean = false,
     val deletedAt: Long? = null,
     val providerType: String = "",
+    val roadDifficulty: Int = 1, // 1: سهل/ممهد، 3: متعرج/وعر، 5: شديد الوعورة/منحدرات
+    val roadHazardDescription: String = "", // e.g. "طريق جبلي متعرج", "انقطاع شبكة الهاتف"
     val createdAt: Long = System.currentTimeMillis()
 ) : com.serviseyem.data.models.SupervisedEntity {
     @get:com.google.firebase.firestore.Exclude

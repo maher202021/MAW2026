@@ -298,10 +298,69 @@ fun SmartNavigationPanel(
                             }
                         }
                     )
+                    Tab(
+                        selected = selectedNavTab == 2,
+                        onClick = {
+                            selectedNavTab = 2
+                            if (isVoiceEnabled) {
+                                VoiceManager.speak("تم تفعيل وضع المشي، يعرض المساجد ونقاط المياه ودرجة الانحدار")
+                            }
+                        },
+                        text = {
+                            Text(
+                                text = "🚶 وضع المشي اليمني",
+                                fontSize = 11.sp,
+                                fontWeight = if (selectedNavTab == 2) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selectedNavTab == 2) Color(0xFFF59E0B) else Color(0xFF94A3B8)
+                            )
+                        }
+                    )
                 }
 
                 // Main Tab Body
-                if (selectedNavTab == 0) {
+                if (selectedNavTab == 2) {
+                    // 🥈 الفكرة الثانية: "المشي كمواطن من الدرجة الأولى" (مساجد، مياه شرب سبيل، بقالات، انحدار جبلي)
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF162032)),
+                        border = BorderStroke(1.dp, Color(0xFFF59E0B))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "🚶 مميزات مسار المشي في اليمن:",
+                                color = Color(0xFFF59E0B),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF1E293B), modifier = Modifier.weight(1f).padding(2.dp)) {
+                                    Column(modifier = Modifier.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text("🕌 أقرب مسجد", fontSize = 10.sp, color = Color.LightGray)
+                                        Text("جامع الصالح (180م)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
+                                }
+                                Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF1E293B), modifier = Modifier.weight(1f).padding(2.dp)) {
+                                    Column(modifier = Modifier.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text("💧 ماء سبيل / بقالة", fontSize = 10.sp, color = Color.LightGray)
+                                        Text("سبيل مياه (95م)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00E5FF))
+                                    }
+                                }
+                                Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF1E293B), modifier = Modifier.weight(1f).padding(2.dp)) {
+                                    Column(modifier = Modifier.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text("⛰️ انحدار الطريق", fontSize = 10.sp, color = Color.LightGray)
+                                        Text("مستوي (3°)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (selectedNavTab == 0) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),

@@ -112,6 +112,32 @@
             });
         }
 
+        var roadSafetyLayerGroup = null;
+
+        function setRoadSafetyHazards(hazardsJson) {
+            if (!roadSafetyLayerGroup) {
+                roadSafetyLayerGroup = L.layerGroup().addTo(map);
+            }
+            roadSafetyLayerGroup.clearLayers();
+            var hazards = (typeof hazardsJson === 'string') ? JSON.parse(hazardsJson) : hazardsJson;
+            if (!hazards || !Array.isArray(hazards)) return;
+
+            hazards.forEach(function(h) {
+                var color = h.difficulty >= 4 ? '#DC2626' : (h.difficulty >= 3 ? '#F59E0B' : '#3B82F6');
+                var circle = L.circle([h.lat, h.lng], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.25,
+                    radius: h.radius || 800,
+                    weight: 2,
+                    dashArray: '4, 4'
+                });
+                var tooltipText = '⚠️ ' + (h.title || 'طريق وعر') + '<br><small>' + (h.desc || 'صعوبة الطريق: ' + h.difficulty + '/5') + '</small>';
+                circle.bindTooltip(tooltipText, { permanent: false, direction: 'top' });
+                roadSafetyLayerGroup.addLayer(circle);
+            });
+        }
+
         function setGroupMembers(membersJson) {
             if (!groupMembersLayerGroup) return;
             groupMembersLayerGroup.clearLayers();

@@ -118,21 +118,22 @@ object VoiceManager : TextToSpeech.OnInitListener {
 
     fun speak(text: String, utteranceId: String = "ai_speech") {
         if (text.isBlank()) return
+        val yemeniText = com.serviseyem.utils.YemeniDialectVoiceEngine.toYemeniDialect(text)
         activeUtteranceId = utteranceId
         if (isInitialized && tts != null) {
             try {
                 val params = Bundle()
-                tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+                tts?.speak(yemeniText, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
             } catch (e: Exception) {
                 Log.e("VoiceManager", "Error speaking text", e)
             }
         } else {
-            pendingSpeechText = text
+            pendingSpeechText = yemeniText
             pendingUtteranceId = utteranceId
             if (!isDispatchingOnSpeak && tts == null && !isInitializing) {
                 try {
                     isDispatchingOnSpeak = true
-                    onSpeak?.invoke(text)
+                    onSpeak?.invoke(yemeniText)
                 } finally {
                     isDispatchingOnSpeak = false
                 }
