@@ -118,6 +118,11 @@
                 maxNativeZoom: 9,
                 opacity: 0.85,
                 attribution: 'NASA GIBS'
+            }),
+            'eox_cloudless': L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2016_3857/default/g/{z}/{y}/{x}.jpg', {
+                maxZoom: 18,
+                maxNativeZoom: 14,
+                attribution: 'Sentinel-2 cloudless by EOX IT Services GmbH'
             })
         };
 
@@ -173,6 +178,25 @@
             } else {
                 if (nasaGibsLayer && map.hasLayer(nasaGibsLayer)) {
                     map.removeLayer(nasaGibsLayer);
+                }
+            }
+        }
+
+        var eoxCloudlessLayer = null;
+
+        // 🛰️ طبقة الأقمار الصناعية عالية الدقة (10 أمتار) EOX Cloudless 2016 (اختيارية)
+        function toggleEoxCloudlessLayer(enable) {
+            if (!map) return;
+            if (enable) {
+                if (!eoxCloudlessLayer) {
+                    eoxCloudlessLayer = tileProviders['eox_cloudless'];
+                }
+                if (!map.hasLayer(eoxCloudlessLayer)) {
+                    eoxCloudlessLayer.addTo(map);
+                }
+            } else {
+                if (eoxCloudlessLayer && map.hasLayer(eoxCloudlessLayer)) {
+                    map.removeLayer(eoxCloudlessLayer);
                 }
             }
         }

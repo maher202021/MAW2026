@@ -60,6 +60,8 @@ fun MapControls(
     onToggleNightMode: () -> Unit = {},
     isNasaGibsActive: Boolean = false,
     onToggleNasaGibs: () -> Unit = {},
+    isEoxCloudlessActive: Boolean = false,
+    onToggleEoxCloudless: () -> Unit = {},
     isGroupActive: Boolean = false,
     onToggleGroupTracking: () -> Unit = {},
     onOpenGnssDiagnostics: () -> Unit = {},
@@ -294,6 +296,16 @@ fun MapControls(
                 activeColor = Color(0xFF38BDF8),
                 inactiveColor = Color(0xFF38BDF8).copy(alpha = 0.8f),
                 onClick = onToggleNasaGibs
+            )
+
+            // 🛰️ EOX Cloudless 2016 (Sentinel-2 10m عالية الدقة)
+            MapControlItem(
+                icon = Icons.Default.FilterHdr,
+                label = "EOX دقيقة",
+                isActive = isEoxCloudlessActive,
+                activeColor = Color(0xFF10B981),
+                inactiveColor = Color(0xFF10B981).copy(alpha = 0.8f),
+                onClick = onToggleEoxCloudless
             )
 
             // 4. Group Members Tracking

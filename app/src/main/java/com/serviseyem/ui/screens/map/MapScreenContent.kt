@@ -546,12 +546,27 @@ fun MapScreenContent(
                 onToggleNasaGibs = {
                     state.isNasaGibsActive = !state.isNasaGibsActive
                     val active = state.isNasaGibsActive
-                    val script = "if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer($active); }"
+                    if (active) state.isEoxCloudlessActive = false // تبديل اختياري ذكي بين الطبقتين
+                    val script = "if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer($active); } if (window.toggleEoxCloudlessLayer) { window.toggleEoxCloudlessLayer(false); }"
                     webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar(
                             if (active) "تم تفعيل طبقة أقمار NASA GIBS الحية (شبه فورية) 🛰️"
                             else "تم إيقاف طبقة NASA GIBS والعودة للطبقة الافتراضية"
+                        )
+                    }
+                },
+                isEoxCloudlessActive = state.isEoxCloudlessActive,
+                onToggleEoxCloudless = {
+                    state.isEoxCloudlessActive = !state.isEoxCloudlessActive
+                    val active = state.isEoxCloudlessActive
+                    if (active) state.isNasaGibsActive = false
+                    val script = "if (window.toggleEoxCloudlessLayer) { window.toggleEoxCloudlessLayer($active); } if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer(false); }"
+                    webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(
+                            if (active) "تم تفعيل طبقة EOX Cloudless عالية الدقة (10 أمتار) 🛰️"
+                            else "تم إيقاف طبقة EOX Cloudless والعودة للطبقة الافتراضية"
                         )
                     }
                 },
