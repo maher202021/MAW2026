@@ -507,6 +507,19 @@ fun MapScreenContent(
                         snackbarHostState.showSnackbar(if (active) "تم تفعيل الوضع الليلي للخريطة 🌙" else "تم إيقاف الوضع الليلي والعودة للوضع النهاري ☀️")
                     }
                 },
+                isNasaGibsActive = state.isNasaGibsActive,
+                onToggleNasaGibs = {
+                    state.isNasaGibsActive = !state.isNasaGibsActive
+                    val active = state.isNasaGibsActive
+                    val script = "if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer($active); }"
+                    webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(
+                            if (active) "تم تفعيل طبقة أقمار NASA GIBS الحية (شبه فورية) 🛰️"
+                            else "تم إيقاف طبقة NASA GIBS والعودة للطبقة الافتراضية"
+                        )
+                    }
+                },
                 isGroupActive = state.isGroupTrackingActive,
                 onToggleGroupTracking = {
                     state.isGroupTrackingActive = !state.isGroupTrackingActive

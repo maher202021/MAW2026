@@ -63,13 +63,25 @@
         var userLat = 15.3694;
         var userLng = 44.1910;
 
+        var nasaGibsLayer = null;
+
         // Expanded maxZoom to 22 for deep satellite and street zoom
+        // Dynamic yesterday/today date calculation for NASA GIBS near-real-time satellite tiles
+        var today = new Date();
+        today.setDate(today.getDate() - 1);
+        var nasaDateStr = today.toISOString().split('T')[0];
+
         var tileProviders = {
             'google_hybrid': L.tileLayer('https://mt1.google.com/vt/lyrs=y&hl=ar&x={x}&y={y}&z={z}', { maxZoom: 22, attribution: 'Google' }),
             'google_streets': L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=ar&x={x}&y={y}&z={z}', { maxZoom: 22, attribution: 'Google' }),
             'imagery': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22, maxNativeZoom: 19 }),
             'osm_ar': L.tileLayer('https://tile.openstreetmap.be/osmfr/{z}/{x}/{y}.png', { maxZoom: 22 }),
-            'navigation': L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', { maxZoom: 22 })
+            'navigation': L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', { maxZoom: 22 }),
+            'nasa_gibs': L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/' + nasaDateStr + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg', {
+                maxZoom: 9,
+                maxNativeZoom: 9,
+                attribution: 'NASA GIBS'
+            })
         };
 
         function initMap() {
@@ -108,6 +120,23 @@
                 el.classList.add('night-mode-active');
             } else {
                 el.classList.remove('night-mode-active');
+            }
+        }
+
+        // 🛰️ طبقة الأقمار الصناعية شبه الفورية من NASA GIBS (اختيارية دون المساس بالطبقات الأساسية)
+        function toggleNasaGibsLayer(enable) {
+            if (!map) return;
+            if (enable) {
+                if (!nasaGibsLayer) {
+                    nasaGibsLayer = tileProviders['nasa_gibs'];
+                }
+                if (!map.hasLayer(nasaGibsLayer)) {
+                    nasaGibsLayer.addTo(map);
+                }
+            } else {
+                if (nasaGibsLayer && map.hasLayer(nasaGibsLayer)) {
+                    map.removeLayer(nasaGibsLayer);
+                }
             }
         }
 

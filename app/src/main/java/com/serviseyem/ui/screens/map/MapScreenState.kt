@@ -54,6 +54,7 @@ class MapScreenState(
     var isAddOsmDialogOpen by mutableStateOf(false)
     var isRoutePlannerOpen by mutableStateOf(false)
     var isNightModeActive by mutableStateOf(false)
+    var isNasaGibsActive by mutableStateOf(false)
     var isGroupTrackingActive by mutableStateOf(false)
     var currentGroupCode by mutableStateOf("")
     var isContextualSuggestionVisible by mutableStateOf(true)

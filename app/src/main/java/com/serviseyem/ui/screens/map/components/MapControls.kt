@@ -58,6 +58,8 @@ fun MapControls(
     onTriggerRuralSos: () -> Unit = {},
     isNightMode: Boolean = false,
     onToggleNightMode: () -> Unit = {},
+    isNasaGibsActive: Boolean = false,
+    onToggleNasaGibs: () -> Unit = {},
     isGroupActive: Boolean = false,
     onToggleGroupTracking: () -> Unit = {},
     onOpenGnssDiagnostics: () -> Unit = {},
@@ -282,6 +284,16 @@ fun MapControls(
                 isActive = isNightMode,
                 activeColor = Color(0xFF818CF8),
                 onClick = onToggleNightMode
+            )
+
+            // 🛰️ NASA GIBS Live Satellites Layer (شبه فوري)
+            MapControlItem(
+                icon = Icons.Default.Public,
+                label = "ناسا",
+                isActive = isNasaGibsActive,
+                activeColor = Color(0xFF38BDF8),
+                inactiveColor = Color(0xFF38BDF8).copy(alpha = 0.8f),
+                onClick = onToggleNasaGibs
             )
 
             // 4. Group Members Tracking
