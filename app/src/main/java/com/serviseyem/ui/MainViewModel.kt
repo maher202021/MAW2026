@@ -670,4 +670,55 @@ class MainViewModel @Inject constructor(
             .addOnFailureListener { onError(it) }
     }
 
+    /**
+     * 16. التنبؤ بالازدحام (Predictive Congestion) محلياً بدون استهلاك Firebase
+     * يحلل الحجوزات التاريخية لحساب أوقات وساعات الذروة في كل حي أو منطقة
+     */
+    data class CongestionForecast(
+        val area: String,
+        val hourOfDay: Int,
+        val level: String, // "منخفض", "متوسط", "ذروة وازدحام"
+        val congestionColorHex: Long,
+        val advisory: String
+    )
+
+    fun predictAreaCongestion(areaName: String, targetHour: Int = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)): CongestionForecast {
+        val areaBookings = bookings.value.filter { b ->
+            val provider = providers.value.find { it.id == b.providerId }
+            (provider?.area?.contains(areaName, ignoreCase = true) == true) ||
+            (b.customerArea.contains(areaName, ignoreCase = true))
+        }
+
+        // حساب عدد الطلبات في نفس الساعة
+        val hourlyCount = areaBookings.count { b ->
+            val timeMs = if (b.scheduledAt > 0) b.scheduledAt else b.createdAt
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = if (timeMs > 0) timeMs else System.currentTimeMillis() }
+            cal.get(java.util.Calendar.HOUR_OF_DAY) == targetHour
+        }
+
+        return when {
+            hourlyCount >= 5 || targetHour in 17..20 -> CongestionForecast(
+                area = areaName,
+                hourOfDay = targetHour,
+                level = "ذروة وازدحام 🚗🔴",
+                congestionColorHex = 0xFFEF4444,
+                advisory = "هذه المنطقة تشهد نشاطاً وازدحاماً مرتفعاً عادةً في الساعة $targetHour:00، يفضل التحرك مبكراً."
+            )
+            hourlyCount in 2..4 || targetHour in 12..14 -> CongestionForecast(
+                area = areaName,
+                hourOfDay = targetHour,
+                level = "حركة متوسطة 🟡",
+                congestionColorHex = 0xFFF59E0B,
+                advisory = "حركة طبيعية مع بعض الكثافة عند التقاطعات والأسواق."
+            )
+            else -> CongestionForecast(
+                area = areaName,
+                hourOfDay = targetHour,
+                level = "طريق سالك وسلس 🟢",
+                congestionColorHex = 0xFF10B981,
+                advisory = "حركة السير سلسة ولا توجد مؤشرات ازدحام حالياً."
+            )
+        }
+    }
+
 }

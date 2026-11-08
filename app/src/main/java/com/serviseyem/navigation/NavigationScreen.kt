@@ -255,8 +255,18 @@ fun NavigationScreen(
             }
         }
 
-        // Update user marker on Leaflet map
-        val script = "if (window.updateUserPosition) { window.updateUserPosition(${locationFix.latitude}, ${locationFix.longitude}, ${locationFix.bearingDegrees}); }"
+        // 9. التكبير الذكي (Smart Zoom) عند الاقتراب من منعطف (< 200 متر)
+        val distToTurn = if (routeResult is NavigationRouteResult.Success) {
+            val res = routeResult as NavigationRouteResult.Success
+            if (res.instructions.isNotEmpty() && activeInstructionIndex < res.instructions.size) {
+                res.instructions[activeInstructionIndex].segmentDistance
+            } else 999.0
+        } else 999.0
+
+        val smartZoom = if (distToTurn < 200.0) 18 else 15
+
+        // Update user marker and apply Smart Zoom on Leaflet map
+        val script = "if (window.updateUserPosition) { window.updateUserPosition(${locationFix.latitude}, ${locationFix.longitude}, ${locationFix.bearingDegrees}); } if (window.applySmartZoom) { window.applySmartZoom($smartZoom); }"
         webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
     }
 

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.serviseyem.ui.screens.map.MapMode
@@ -69,99 +70,94 @@ fun MapControls(
     val scrollState = rememberScrollState()
 
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         color = Color(0xFF0F172A).copy(alpha = 0.95f),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
         shadowElevation = 12.dp,
         modifier = modifier
-            .width(54.dp)
-            .heightIn(max = 580.dp)
+            .width(56.dp)
+            .heightIn(max = 600.dp)
             .padding(vertical = 4.dp)
     ) {
         Column(
             modifier = Modifier
                 .verticalScroll(scrollState)
-                .padding(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(vertical = 6.dp, horizontal = 2.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // --- Section 1: Navigation & GPS ---
-            IconButton(
+            MapControlItem(
+                icon = Icons.Default.MyLocation,
+                label = "موقعي",
+                isActive = isGpsActive,
+                activeColor = Color(0xFF10B981),
+                inactiveColor = Color.White.copy(alpha = 0.8f),
                 onClick = {
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                     onRecenterLocation()
-                },
-                modifier = Modifier.size(38.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MyLocation,
-                    contentDescription = "موقعي",
-                    tint = if (isGpsActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+                }
+            )
 
             val isNavActive = currentLayer == "navigation"
-            IconButton(
+            MapControlItem(
+                icon = Icons.Default.Navigation,
+                label = "ملاحة",
+                isActive = isNavActive,
+                activeColor = Color(0xFF10B981),
+                inactiveColor = Color.White.copy(alpha = 0.8f),
                 onClick = {
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                     if (isNavActive) onSwitchLayer("google_satellite") else onSwitchLayer("navigation")
-                },
-                modifier = Modifier.size(38.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Navigation,
-                    contentDescription = "ملاحة",
-                    tint = if (isNavActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+                }
+            )
 
-            Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.width(30.dp))
+            Divider(color = Color.White.copy(alpha = 0.12f), modifier = Modifier.width(28.dp))
 
             // --- Section 2: View Controls (Zoom & Layers) ---
-            IconButton(onClick = {
-                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                onZoomIn()
-            }, modifier = Modifier.size(38.dp)) {
-                Icon(Icons.Default.Add, contentDescription = "+", tint = Color.White)
-            }
+            MapControlItem(
+                icon = Icons.Default.Add,
+                label = "تكبير",
+                isActive = false,
+                onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                    onZoomIn()
+                }
+            )
 
-            IconButton(onClick = {
-                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                onZoomOut()
-            }, modifier = Modifier.size(38.dp)) {
-                Icon(Icons.Default.Remove, contentDescription = "-", tint = Color.White)
-            }
+            MapControlItem(
+                icon = Icons.Default.Remove,
+                label = "تصغير",
+                isActive = false,
+                onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                    onZoomOut()
+                }
+            )
 
-            IconButton(
+            MapControlItem(
+                icon = if (isRadarMode) Icons.Default.Map else Icons.Default.Explore,
+                label = if (isRadarMode) "خريطة" else "رادار",
+                isActive = isRadarMode,
+                activeColor = Color(0xFF10B981),
                 onClick = {
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                     onToggleRadarMode()
-                },
-                modifier = Modifier.size(38.dp)
-            ) {
-                Icon(
-                    imageVector = if (isRadarMode) Icons.Default.Map else Icons.Default.Explore,
-                    contentDescription = "رادار",
-                    tint = if (isRadarMode) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+                }
+            )
 
-            IconButton(
-                onClick = onToggleTilt,
-                modifier = Modifier.size(38.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ViewInAr,
-                    contentDescription = "ثلاثي الأبعاد",
-                    tint = if (tiltAngle > 0) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            MapControlItem(
+                icon = Icons.Default.ViewInAr,
+                label = "3D",
+                isActive = tiltAngle > 0,
+                activeColor = Color(0xFF10B981),
+                onClick = onToggleTilt
+            )
 
-            IconButton(
+            MapControlItem(
+                icon = Icons.Default.Layers,
+                label = "طبقات",
+                isActive = false,
                 onClick = {
                     val nextLayer = when(currentLayer) {
                         "google_satellite" -> "osm"
@@ -170,147 +166,192 @@ fun MapControls(
                         else -> "google_satellite"
                     }
                     onSwitchLayer(nextLayer)
-                },
-                modifier = Modifier.size(38.dp)
-            ) {
-                Icon(Icons.Default.Layers, contentDescription = "طبقات", tint = Color.White)
-            }
+                }
+            )
 
-            Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.width(30.dp))
+            Divider(color = Color.White.copy(alpha = 0.12f), modifier = Modifier.width(28.dp))
 
             // --- Section 3: Modes (Vela) ---
             com.serviseyem.ui.screens.map.MapMode.values().forEach { mode ->
                 val isSelected = currentMode == mode
-                IconButton(
-                    onClick = {
-                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                        if (mode == com.serviseyem.ui.screens.map.MapMode.ALEPH_AI) onOpenAleph() else onModeChange(mode)
-                    },
-                    modifier = Modifier
-                        .size(38.dp)
-                        .background(
-                            if (isSelected) Color(0xFF10B981).copy(alpha = 0.2f) else Color.Transparent,
-                            CircleShape
-                        )
+                val modeLabel = when(mode) {
+                    com.serviseyem.ui.screens.map.MapMode.VELA_3D -> "فيلا"
+                    com.serviseyem.ui.screens.map.MapMode.AERIAL_OAM -> "أقمار"
+                    com.serviseyem.ui.screens.map.MapMode.AR_VPS -> "واقع معزز"
+                    com.serviseyem.ui.screens.map.MapMode.NAVIGATION -> "ملاحة"
+                    com.serviseyem.ui.screens.map.MapMode.ALEPH_AI -> "ألف"
+                }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(vertical = 1.dp)
                 ) {
-                    Text(text = mode.icon, fontSize = 18.sp)
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            if (mode == com.serviseyem.ui.screens.map.MapMode.ALEPH_AI) onOpenAleph() else onModeChange(mode)
+                        },
+                        modifier = Modifier
+                            .size(34.dp)
+                            .background(
+                                if (isSelected) Color(0xFF10B981).copy(alpha = 0.3f) else Color.Transparent,
+                                CircleShape
+                            )
+                    ) {
+                        Text(text = mode.icon, fontSize = 16.sp)
+                    }
+                    Text(
+                        text = modeLabel,
+                        fontSize = 8.5.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
+                        maxLines = 1
+                    )
                 }
             }
 
-            Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.width(30.dp))
-
-            Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.width(30.dp))
+            Divider(color = Color.White.copy(alpha = 0.12f), modifier = Modifier.width(28.dp))
 
             // --- Section 4: Advanced Local Map Tools (GNSS, DeadZone, Night HUD, GPX) ---
             // 1. GNSS Live Satellites Signal Panel
-            IconButton(onClick = onOpenGnssDiagnostics, modifier = Modifier.size(38.dp)) {
-                Icon(
-                    imageVector = Icons.Default.SatelliteAlt,
-                    tint = themeColors.accent,
-                    contentDescription = "تشخيص الأقمار",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            MapControlItem(
+                icon = Icons.Default.SatelliteAlt,
+                label = "أقمار",
+                isActive = false,
+                inactiveColor = themeColors.accent,
+                onClick = onOpenGnssDiagnostics
+            )
 
             // 2. Dead Zone Service Heatmap Overlay
-            IconButton(onClick = onToggleDeadZoneOverlay, modifier = Modifier.size(38.dp)) {
-                Icon(
-                    imageVector = if (isDeadZoneActive) Icons.Default.GridOff else Icons.Default.GridOn,
-                    tint = if (isDeadZoneActive) Color(0xFFEF4444) else Color.White.copy(alpha = 0.6f),
-                    contentDescription = "مناطق التغطية",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            MapControlItem(
+                icon = if (isDeadZoneActive) Icons.Default.GridOff else Icons.Default.GridOn,
+                label = "تغطية",
+                isActive = isDeadZoneActive,
+                activeColor = Color(0xFFEF4444),
+                onClick = onToggleDeadZoneOverlay
+            )
 
-            // 🥇 الفكرة الأولى: "خريطة الموثوقية" (Reliability Layer) - أخضر (متاح)، أصفر (مشغول)، أحمر (غير مغطى)
-            IconButton(onClick = onToggleReliability, modifier = Modifier.size(38.dp)) {
-                Icon(
-                    imageVector = Icons.Default.VerifiedUser,
-                    tint = if (isReliabilityActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.6f),
-                    contentDescription = "خريطة الموثوقية وتوافر الفنيين",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            // 🥇 الفكرة الأولى: "خريطة الموثوقية" (Reliability Layer)
+            MapControlItem(
+                icon = Icons.Default.VerifiedUser,
+                label = "موثوقية",
+                isActive = isReliabilityActive,
+                activeColor = Color(0xFF10B981),
+                onClick = onToggleReliability
+            )
 
             // 🎖️ الفكرة الخامسة: "الخريطة كأداة تخطيط للمسارات والمحطات" (Multi-Stop Route Planner)
-            IconButton(onClick = onOpenRoutePlanner, modifier = Modifier.size(38.dp)) {
-                Icon(
-                    imageVector = Icons.Default.Polyline,
-                    tint = Color(0xFF00E5FF),
-                    contentDescription = "تخطيط مسار مخصص",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            MapControlItem(
+                icon = Icons.Default.Polyline,
+                label = "مسار",
+                isActive = false,
+                inactiveColor = Color(0xFF00E5FF),
+                onClick = onOpenRoutePlanner
+            )
 
             // طبقة سلامة الطريق وصعوبات الطرق اليمنية (Road Safety Layer)
-            IconButton(onClick = onToggleRoadSafety, modifier = Modifier.size(38.dp)) {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    tint = if (isRoadSafetyActive) Color(0xFFF59E0B) else Color.White.copy(alpha = 0.6f),
-                    contentDescription = "سلامة وصعوبة الطريق",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            MapControlItem(
+                icon = Icons.Default.Warning,
+                label = "سلامة",
+                isActive = isRoadSafetyActive,
+                activeColor = Color(0xFFF59E0B),
+                onClick = onToggleRoadSafety
+            )
 
             // 🏅 الفكرة الرابعة: إضافة معلم لتوأمة OpenStreetMap (OSM Node)
-            IconButton(onClick = onOpenAddOsmLandmark, modifier = Modifier.size(38.dp)) {
-                Icon(
-                    imageVector = Icons.Default.AddLocationAlt,
-                    tint = Color(0xFF10B981),
-                    contentDescription = "إضافة معلم OSM",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            MapControlItem(
+                icon = Icons.Default.AddLocationAlt,
+                label = "معلم",
+                isActive = false,
+                inactiveColor = Color(0xFF10B981),
+                onClick = onOpenAddOsmLandmark
+            )
 
             // 🥉 الفكرة الثالثة: زر نجدة طوارئ ريفية بدون إنترنت (Rural Emergency SMS)
-            IconButton(onClick = onTriggerRuralSos, modifier = Modifier.size(38.dp)) {
-                Icon(
-                    imageVector = Icons.Default.Sos,
-                    tint = Color(0xFFEF4444),
-                    contentDescription = "نجدة ريفية SMS",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            MapControlItem(
+                icon = Icons.Default.Sos,
+                label = "طوارئ",
+                isActive = false,
+                inactiveColor = Color(0xFFEF4444),
+                onClick = onTriggerRuralSos
+            )
 
             // 3. Night Mode / HUD
-            IconButton(onClick = onToggleNightMode, modifier = Modifier.size(38.dp)) {
-                Icon(
-                    imageVector = if (isNightMode) Icons.Default.Bedtime else Icons.Default.WbSunny,
-                    tint = if (isNightMode) Color(0xFF818CF8) else Color.White.copy(alpha = 0.6f),
-                    contentDescription = "الوضع الليلي / HUD",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            MapControlItem(
+                icon = if (isNightMode) Icons.Default.Bedtime else Icons.Default.WbSunny,
+                label = "ليلي",
+                isActive = isNightMode,
+                activeColor = Color(0xFF818CF8),
+                onClick = onToggleNightMode
+            )
 
             // 4. Group Members Tracking
-            IconButton(onClick = onToggleGroupTracking, modifier = Modifier.size(38.dp)) {
-                Icon(
-                    imageVector = Icons.Default.Group,
-                    tint = if (isGroupActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.6f),
-                    contentDescription = "تتبع المجموعة",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            MapControlItem(
+                icon = Icons.Default.Group,
+                label = "مجموعة",
+                isActive = isGroupActive,
+                activeColor = Color(0xFF10B981),
+                onClick = onToggleGroupTracking
+            )
 
             // 5. GPX Track Export / Import
-            IconButton(onClick = onExportGpx, modifier = Modifier.size(38.dp)) {
-                Icon(
-                    imageVector = Icons.Default.AltRoute,
-                    tint = Color(0xFF38BDF8),
-                    contentDescription = "تصدير GPX",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            MapControlItem(
+                icon = Icons.Default.AltRoute,
+                label = "GPX",
+                isActive = false,
+                inactiveColor = Color(0xFF38BDF8),
+                onClick = onExportGpx
+            )
 
             // 6. Printable Map PDF Summary
-            IconButton(onClick = onPrintMapPdf, modifier = Modifier.size(38.dp)) {
-                Icon(
-                    imageVector = Icons.Default.Print,
-                    tint = Color.White.copy(alpha = 0.8f),
-                    contentDescription = "طباعة الخريطة",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            MapControlItem(
+                icon = Icons.Default.Print,
+                label = "طباعة",
+                isActive = false,
+                inactiveColor = Color.White.copy(alpha = 0.8f),
+                onClick = onPrintMapPdf
+            )
         }
+    }
+}
+
+/**
+ * عنصر تحكم مصغر وأنيق مع أيقونة واسم توضيحي أسفلها
+ */
+@Composable
+private fun MapControlItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    isActive: Boolean,
+    activeColor: Color = Color(0xFF10B981),
+    inactiveColor: Color = Color.White.copy(alpha = 0.75f),
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(vertical = 1.dp)
+    ) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier
+                .size(34.dp)
+                .background(
+                    if (isActive) activeColor.copy(alpha = 0.3f) else Color.Transparent,
+                    CircleShape
+                )
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (isActive) activeColor else inactiveColor,
+                modifier = Modifier.size(19.dp)
+            )
+        }
+        Text(
+            text = label,
+            fontSize = 8.5.sp,
+            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+            color = if (isActive) activeColor else Color.White.copy(alpha = 0.75f),
+            maxLines = 1
+        )
     }
 }

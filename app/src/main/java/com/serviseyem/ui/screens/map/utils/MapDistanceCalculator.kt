@@ -51,11 +51,41 @@ object MapDistanceCalculator {
      * Compute Estimated Time of Arrival (ETA) text with specified or auto transport mode:
      * Walking speed: 3.5 km/h
      */
-    fun computeEta(distanceMeters: Double, mode: TransportMode? = null): String {
-        val distKm = distanceMeters / 1000.0
-        val selectedMode = mode ?: if (distKm < 1.0) TransportMode.WALKING else TransportMode.CAR
-        val minutes = max(1, (distKm / selectedMode.speedKmH * 60).roundToInt())
-        val distFormatted = if (distKm < 1.0) "${distanceMeters.roundToInt()} م" else "${String.format(java.util.Locale.US, "%.1f", distKm)} كم"
-        return "${selectedMode.icon} ~ $minutes دقيقة ${selectedMode.labelArabic} ($distFormatted)"
+     fun computeEta(distanceMeters: Double, mode: TransportMode? = null): String {
+         val distKm = distanceMeters / 1000.0
+         val selectedMode = mode ?: if (distKm < 1.0) TransportMode.WALKING else TransportMode.CAR
+         val minutes = max(1, (distKm / selectedMode.speedKmH * 60).roundToInt())
+         val distFormatted = if (distKm < 1.0) "${distanceMeters.roundToInt()} م" else "${String.format(java.util.Locale.US, "%.1f", distKm)} كم"
+         return "${selectedMode.icon} ~ $minutes دقيقة ${selectedMode.labelArabic} ($distFormatted)"
+     }
+
+    /**
+     * 3. خوارزمية الجار الأقرب (Nearest Neighbor) لتحسين ترتيب محطات التوقف محلياً بدون خوادم
+     */
+    data class Waypoint(val name: String, val lat: Double, val lng: Double)
+
+    fun optimizeWaypoints(
+        startLat: Double,
+        startLng: Double,
+        waypoints: List<Waypoint>,
+        destLat: Double,
+        destLng: Double
+    ): List<Waypoint> {
+        if (waypoints.size <= 1) return waypoints
+        val unvisited = waypoints.toMutableList()
+        val optimized = mutableListOf<Waypoint>()
+        var currentLat = startLat
+        var currentLng = startLng
+
+        while (unvisited.isNotEmpty()) {
+            val nearest = unvisited.minByOrNull { wp ->
+                calculateDistanceMeters(currentLat, currentLng, wp.lat, wp.lng)
+            } ?: break
+            optimized.add(nearest)
+            currentLat = nearest.lat
+            currentLng = nearest.lng
+            unvisited.remove(nearest)
+        }
+        return optimized
     }
 }

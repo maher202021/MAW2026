@@ -468,6 +468,77 @@ class WalletManager(private val context: Context? = null) {
         }
     }
 
+    /**
+     * 14. الدفع المعلق (Authorization Hold):
+     * حجز المبلغ على المحفظة عند الطلب دون خصم نهائي، ويُحرر عند الإلغاء أو يُلتقط عند تأكيد التسليم
+     */
+    suspend fun authorizeAmount(
+        walletId: String,
+        amount: Double,
+        currency: String = "YER",
+        orderId: String
+    ): Result<Transaction> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            if (amount <= 0) return@withContext Result.failure(IllegalArgumentException("مبلغ الحجز غير صالح"))
+            val cur = currency.uppercase()
+            val available = getBalance(walletId, cur)
+            if (available < amount) {
+                return@withContext Result.failure(IllegalStateException("رصيد المحفظة غير كافٍ للحجز"))
+            }
+
+            // اقتطاع المبلغ ووضعه في حالة حجز مؤقت PENDING_HOLD
+            withdraw(walletId, amount, cur, "حجز مالي مؤقت للطلب #$orderId").fold(
+                onSuccess = { tx ->
+                    val holdTx = tx.copy(
+                        status = "PENDING_HOLD",
+                        referenceNumber = orderId,
+                        note = "حجز مالي معلق للطلب #$orderId"
+                    )
+                    Result.success(holdTx)
+                },
+                onFailure = { Result.failure(it) }
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun captureAmount(
+        walletId: String,
+        holdTransactionId: String,
+        providerWalletId: String,
+        amount: Double,
+        currency: String = "YER"
+    ): Result<Boolean> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            // تحويل المبلغ المحجوز نهائياً لحساب الفني بعد إتمام وتسليم الخدمة
+            deposit(providerWalletId, amount, currency, "سداد مستحقات الخدمة من الحجز $holdTransactionId").fold(
+                onSuccess = { Result.success(true) },
+                onFailure = { Result.failure(it) }
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun releaseAmount(
+        walletId: String,
+        holdTransactionId: String,
+        amount: Double,
+        currency: String = "YER",
+        reason: String = "إلغاء الطلب"
+    ): Result<Boolean> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            // تحرير الحجز وإعادة المبلغ فوراً لمحفظة العميل عند الإلغاء
+            deposit(walletId, amount, currency, "استرجاع مبلغ الحجز المعلق: $reason").fold(
+                onSuccess = { Result.success(true) },
+                onFailure = { Result.failure(it) }
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     private fun getOrCreateWallet(walletId: String): Wallet {
         return localWallets[walletId] ?: run {
             val w = Wallet(id = walletId, userId = walletId, balanceYer = 0.0, balance = 0.0)

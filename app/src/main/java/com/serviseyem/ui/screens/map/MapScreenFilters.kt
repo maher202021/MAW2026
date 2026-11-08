@@ -46,13 +46,10 @@ object MapScreenFilters {
         return providers.filter { p ->
             val matchesCat = selectedCategory == "ALL" || selectedCategory == "PROVIDERS"
             val matchesCity = matchesCityFilter(selectedCity, p.cityId, p.area, p.localNeighborhood)
+            val combinedTarget = "${p.name} ${p.profession} ${p.customCategoryName} ${p.specialization} ${p.area} ${p.localNeighborhood}"
             val matchesQuery = cleanQuery.isEmpty() ||
-                    p.name.lowercase().contains(cleanQuery) ||
-                    p.profession.lowercase().contains(cleanQuery) ||
-                    p.customCategoryName.lowercase().contains(cleanQuery) ||
-                    p.specialization.lowercase().contains(cleanQuery) ||
-                    p.area.lowercase().contains(cleanQuery) ||
-                    p.localNeighborhood.lowercase().contains(cleanQuery)
+                    combinedTarget.lowercase().contains(cleanQuery) ||
+                    com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(cleanQuery, combinedTarget)
             matchesCat && matchesCity && matchesQuery
         }
     }
@@ -77,12 +74,10 @@ object MapScreenFilters {
                 else -> false
             }
             val matchesCity = matchesCityFilter(selectedCity, s.cityId, "", s.localNeighborhood)
+            val combinedTarget = "${s.name} ${s.description} ${s.localNeighborhood} ${s.sectionId} ${s.categoryId}"
             val matchesQuery = cleanQuery.isEmpty() ||
-                    s.name.lowercase().contains(cleanQuery) ||
-                    s.description.lowercase().contains(cleanQuery) ||
-                    s.localNeighborhood.lowercase().contains(cleanQuery) ||
-                    s.sectionId.lowercase().contains(cleanQuery) ||
-                    s.categoryId.lowercase().contains(cleanQuery)
+                    combinedTarget.lowercase().contains(cleanQuery) ||
+                    com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(cleanQuery, combinedTarget)
             matchesCat && matchesCity && matchesQuery
         }
     }
@@ -97,10 +92,10 @@ object MapScreenFilters {
         return properties.filter { pr ->
             val matchesCat = selectedCategory == "ALL" || selectedCategory == "PROPERTIES"
             val matchesCity = matchesCityFilter(selectedCity, pr.cityId, "", pr.localNeighborhood)
+            val combinedTarget = "${pr.title} ${pr.description} ${pr.localNeighborhood}"
             val matchesQuery = cleanQuery.isEmpty() ||
-                    pr.title.lowercase().contains(cleanQuery) ||
-                    pr.description.lowercase().contains(cleanQuery) ||
-                    pr.localNeighborhood.lowercase().contains(cleanQuery)
+                    combinedTarget.lowercase().contains(cleanQuery) ||
+                    com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(cleanQuery, combinedTarget)
             matchesCat && matchesCity && matchesQuery
         }
     }

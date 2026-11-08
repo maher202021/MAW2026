@@ -173,6 +173,30 @@ fun RoutePlannerDialog(
                     }
                 }
 
+                // 3. زر "حسّن الترتيب محلياً" (Nearest Neighbor Algorithm)
+                OutlinedButton(
+                    onClick = {
+                        val startCoord = com.serviseyem.ui.screens.map.utils.OfflineMapManager.getCityCoordinates(startCity)
+                        val destCoord = com.serviseyem.ui.screens.map.utils.OfflineMapManager.getCityCoordinates(destinationCity)
+                        val stopCoord = com.serviseyem.ui.screens.map.utils.OfflineMapManager.getCityCoordinates(selectedStop)
+                        val waypoints = listOf(com.serviseyem.ui.screens.map.utils.MapDistanceCalculator.Waypoint(selectedStop, stopCoord.latitude, stopCoord.longitude))
+                        val opt = com.serviseyem.ui.screens.map.utils.MapDistanceCalculator.optimizeWaypoints(
+                            startCoord.latitude, startCoord.longitude, waypoints, destCoord.latitude, destCoord.longitude
+                        )
+                        if (opt.isNotEmpty()) {
+                            selectedStop = opt.first().name
+                        }
+                    },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF59E0B)),
+                    border = BorderStroke(1.dp, Color(0xFFF59E0B)),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth().height(36.dp)
+                ) {
+                    Icon(Icons.Default.Route, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("حسّن ترتيب المحطات تلقائياً حسب الأقرب ⚡", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
                 Button(
                     onClick = {
                         onCalculatePlannedRoute(startCity, listOf(selectedStop), destinationCity)

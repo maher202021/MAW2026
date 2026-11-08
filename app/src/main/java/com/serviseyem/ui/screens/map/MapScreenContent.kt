@@ -509,7 +509,7 @@ fun MapScreenContent(
                 },
                 isGroupActive = state.isGroupTrackingActive,
                 onToggleGroupTracking = {
-                    state.isGroupTrackingActive = true
+                    state.isGroupTrackingActive = !state.isGroupTrackingActive
                 },
                 onOpenGnssDiagnostics = {
                     state.isGnssPanelOpen = true

@@ -25,10 +25,26 @@
         
         .hud-mirrored { transform: scaleX(-1) scaleY(-1) !important; }
         .night-mode-active .leaflet-tile-pane {
-            filter: brightness(60%) invert(100%) contrast(300%) hue-rotate(200deg) saturate(30%) !important;
+            filter: brightness(45%) contrast(140%) saturate(75%) !important;
+        }
+        .night-mode-active .custom-pin-label {
+            background: rgba(15, 23, 42, 0.95) !important;
+            color: #00E5FF !important;
+            border: 1.5px solid #00E5FF !important;
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.6) !important;
+            font-weight: 800 !important;
+        }
+        .night-mode-active .custom-pin-head {
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.8) !important;
         }
         .dead-zone-circle { fill-color: #EF4444; fill-opacity: 0.18; stroke: #F59E0B; stroke-width: 1.5; stroke-dasharray: 6,4; }
         
+        .navigating-transparent-buildings .leaflet-tile-pane {
+            opacity: 0.65;
+            filter: contrast(110%) brightness(95%);
+            transition: opacity 0.5s ease;
+        }
+
         .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
     </style>
 </head>
@@ -373,6 +389,23 @@
                     animate: true,
                     duration: 1.5
                 });
+            }
+        }
+
+        // 9. التكبير الذكي (Smart Zoom)
+        function applySmartZoom(targetZoom) {
+            if (map && targetZoom && Math.abs(map.getZoom() - targetZoom) >= 1) {
+                map.setZoom(targetZoom, { animate: true });
+            }
+        }
+
+        // 10. المباني الشفافة أثناء الملاحة (Transparent Buildings / High Route Contrast)
+        function setNavigationBuildingsTransparent(isNavigating) {
+            var el = document.getElementById('map');
+            if (isNavigating) {
+                el.classList.add('navigating-transparent-buildings');
+            } else {
+                el.classList.remove('navigating-transparent-buildings');
             }
         }
 

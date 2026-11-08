@@ -112,18 +112,51 @@ class NavigationVoice(private val context: Context) : UtteranceProgressListener(
         lastAnnouncedDistanceBucket = bucket
 
         val speechText = when (bucket) {
-            3 -> "الآن، $instructionText"
-            2 -> "بعد ${HaversinePrecisionNavigator.formatDistanceArabic(distanceToTurnMeters)}، $instructionText"
-            1 -> "بعد ${HaversinePrecisionNavigator.formatDistanceArabic(distanceToTurnMeters)}، $instructionText"
-            else -> instructionText
+            3 -> "الحين، ${toYemeniDialect(instructionText)}"
+            2 -> "بعد ${formatYemeniDistance(distanceToTurnMeters)}، ${toYemeniDialect(instructionText)}"
+            1 -> "بعد ${formatYemeniDistance(distanceToTurnMeters)}، ${toYemeniDialect(instructionText)}"
+            else -> toYemeniDialect(instructionText)
         }
 
         speak(speechText, queueMode = TextToSpeech.QUEUE_FLUSH)
     }
 
+    private fun toYemeniDialect(text: String): String {
+        var res = text
+        val dialectMap = mapOf(
+            "انعطف يساراً" to "لف يسار",
+            "انعطف يميناً" to "لف يمين",
+            "اتجه إلى اليسار" to "خلك على اليسار",
+            "اتجه إلى اليمين" to "خلك على اليمين",
+            "تابع السير" to "واصل على طول",
+            "استمر في السير" to "واصل سيدة",
+            "استمر إلى الأمام" to "واصل قبالك",
+            "عند الدوار" to "عند الجولة",
+            "الدوار" to "الجولة",
+            "متر" to "متر",
+            "كيلومتر" to "كيلو"
+        )
+        for ((fusha, ammiya) in dialectMap) {
+            res = res.replace(fusha, ammiya)
+        }
+        return res
+    }
+
+    private fun formatYemeniDistance(meters: Double): String {
+        return if (meters in 180.0..220.0) {
+            "ميتين متر"
+        } else if (meters in 90.0..115.0) {
+            "مية متر"
+        } else if (meters in 400.0..600.0) {
+            "نص كيلو"
+        } else {
+            HaversinePrecisionNavigator.formatDistanceArabic(meters)
+        }
+    }
+
     fun announceArrival(destinationName: String) {
         if (_isMuted.value) return
-        val text = "لقد وصلت إلى وجهتك: $destinationName."
+        val text = "وصلت بالسلامة يا غالي إلى وجهتك: $destinationName."
         speak(text, queueMode = TextToSpeech.QUEUE_FLUSH)
     }
 
@@ -131,7 +164,7 @@ class NavigationVoice(private val context: Context) : UtteranceProgressListener(
         if (_isMuted.value) return
         lastAnnouncedKey = ""
         lastAnnouncedDistanceBucket = -1
-        speak("جارٍ إعادة حساب المسار...", queueMode = TextToSpeech.QUEUE_FLUSH)
+        speak("بنعدل المسار الحين...", queueMode = TextToSpeech.QUEUE_FLUSH)
     }
 
     fun speak(text: String, queueMode: Int = TextToSpeech.QUEUE_ADD) {
