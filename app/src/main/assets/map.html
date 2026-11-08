@@ -40,9 +40,13 @@
         .dead-zone-circle { fill-color: #EF4444; fill-opacity: 0.18; stroke: #F59E0B; stroke-width: 1.5; stroke-dasharray: 6,4; }
         
         .navigating-transparent-buildings .leaflet-tile-pane {
-            opacity: 0.65;
-            filter: contrast(110%) brightness(95%);
-            transition: opacity 0.5s ease;
+            opacity: 0.55;
+            filter: contrast(125%) brightness(105%) saturate(85%);
+            transition: opacity 0.4s ease;
+        }
+        .navigating-transparent-buildings .leaflet-overlay-pane {
+            z-index: 600 !important;
+            filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.8));
         }
 
         .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
@@ -71,15 +75,48 @@
         today.setDate(today.getDate() - 1);
         var nasaDateStr = today.toISOString().split('T')[0];
 
+        function createResilientTileLayer(url, options, fallbackUrl) {
+            var layer = L.tileLayer(url, options);
+            if (fallbackUrl) {
+                layer.on('tileerror', function(error, tile) {
+                    if (tile && !tile._hasFallback) {
+                        tile._hasFallback = true;
+                        tile.src = fallbackUrl.replace('{z}', error.coords.z).replace('{x}', error.coords.x).replace('{y}', error.coords.y);
+                    }
+                });
+            }
+            return layer;
+        }
+
         var tileProviders = {
-            'google_hybrid': L.tileLayer('https://mt1.google.com/vt/lyrs=y&hl=ar&x={x}&y={y}&z={z}', { maxZoom: 22, attribution: 'Google' }),
-            'google_streets': L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=ar&x={x}&y={y}&z={z}', { maxZoom: 22, attribution: 'Google' }),
-            'imagery': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22, maxNativeZoom: 19 }),
-            'osm_ar': L.tileLayer('https://tile.openstreetmap.be/osmfr/{z}/{x}/{y}.png', { maxZoom: 22 }),
-            'navigation': L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', { maxZoom: 22 }),
+            'google_hybrid': createResilientTileLayer(
+                'https://mt1.google.com/vt/lyrs=y&hl=ar&x={x}&y={y}&z={z}',
+                { maxZoom: 22, attribution: 'Google' },
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+            ),
+            'google_streets': createResilientTileLayer(
+                'https://mt1.google.com/vt/lyrs=m&hl=ar&x={x}&y={y}&z={z}',
+                { maxZoom: 22, attribution: 'Google' },
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+            ),
+            'imagery': createResilientTileLayer(
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                { maxZoom: 22, maxNativeZoom: 19, attribution: 'ArcGIS' },
+                'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+            ),
+            'osm_ar': createResilientTileLayer(
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                { maxZoom: 22, attribution: 'OSM' }
+            ),
+            'navigation': createResilientTileLayer(
+                'https://mt1.google.com/vt/lyrs=m&hl=ar&x={x}&y={y}&z={z}',
+                { maxZoom: 22, attribution: 'Navigation' },
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+            ),
             'nasa_gibs': L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/' + nasaDateStr + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg', {
-                maxZoom: 9,
+                maxZoom: 18,
                 maxNativeZoom: 9,
+                opacity: 0.85,
                 attribution: 'NASA GIBS'
             })
         };
@@ -275,6 +312,8 @@
 
             if (tileProviders[targetKey]) {
                 currentTileLayer = tileProviders[targetKey].addTo(map);
+            } else {
+                currentTileLayer = tileProviders['google_hybrid'].addTo(map);
             }
         }
 

@@ -8,12 +8,14 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.SatelliteAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -172,12 +174,8 @@ fun MapScreenContent(
     val gnssDiagnosticsManager = remember { GnssDiagnosticsManager(context) }
     val satelliteStatus by gnssDiagnosticsManager.gnssStatusFlow.collectAsState()
 
-    LaunchedEffect(state.isGnssPanelOpen) {
-        if (state.isGnssPanelOpen) {
-            gnssDiagnosticsManager.startMonitoring()
-        } else {
-            gnssDiagnosticsManager.stopMonitoring()
-        }
+    LaunchedEffect(Unit) {
+        gnssDiagnosticsManager.startMonitoring()
     }
 
     LaunchedEffect(Unit) {
@@ -361,6 +359,43 @@ fun MapScreenContent(
                         .statusBarsPadding()
                         .padding(top = 70.dp, start = 16.dp, end = 16.dp)
                 )
+            }
+
+            // 🛰️ ثالثاً: مكوّن تشخيص GNSS الحي المدمج في زاوية الشاشة (تحديث محلي 100% بصفر استهلاك لـ Firebase)
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFF0F172A).copy(alpha = 0.90f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.5f)),
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .statusBarsPadding()
+                    .padding(top = 70.dp, start = 12.dp)
+                    .clickable { state.isGnssPanelOpen = true }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.SatelliteAlt,
+                        contentDescription = "أقمار صناعية",
+                        tint = if (satelliteStatus.usedSatellites > 0) Color(0xFF10B981) else Color(0xFFF59E0B),
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = "🛰️ ${satelliteStatus.usedSatellites}/${satelliteStatus.totalSatellites}",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "• ${satelliteStatus.qualityRating.take(6)}",
+                        fontSize = 9.sp,
+                        color = Color(0xFFA7F3D0)
+                    )
+                }
             }
 
             // --- 2. Unified Floating Control Dock (Right Side) ---
