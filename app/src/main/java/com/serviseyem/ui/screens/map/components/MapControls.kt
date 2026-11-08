@@ -62,6 +62,8 @@ fun MapControls(
     onToggleNasaGibs: () -> Unit = {},
     isEoxCloudlessActive: Boolean = false,
     onToggleEoxCloudless: () -> Unit = {},
+    isEsriImageryActive: Boolean = false,
+    onToggleEsriImagery: () -> Unit = {},
     isGroupActive: Boolean = false,
     onToggleGroupTracking: () -> Unit = {},
     onOpenGnssDiagnostics: () -> Unit = {},
@@ -306,6 +308,16 @@ fun MapControls(
                 activeColor = Color(0xFF10B981),
                 inactiveColor = Color(0xFF10B981).copy(alpha = 0.8f),
                 onClick = onToggleEoxCloudless
+            )
+
+            // 🛰️ Esri World Imagery (فائقة الدقة بدون مفاتيح)
+            MapControlItem(
+                icon = Icons.Default.PhotoCamera,
+                label = "Esri دقيقة",
+                isActive = isEsriImageryActive,
+                activeColor = Color(0xFFF59E0B),
+                inactiveColor = Color(0xFFF59E0B).copy(alpha = 0.8f),
+                onClick = onToggleEsriImagery
             )
 
             // 4. Group Members Tracking

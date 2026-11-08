@@ -546,8 +546,11 @@ fun MapScreenContent(
                 onToggleNasaGibs = {
                     state.isNasaGibsActive = !state.isNasaGibsActive
                     val active = state.isNasaGibsActive
-                    if (active) state.isEoxCloudlessActive = false // تبديل اختياري ذكي بين الطبقتين
-                    val script = "if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer($active); } if (window.toggleEoxCloudlessLayer) { window.toggleEoxCloudlessLayer(false); }"
+                    if (active) {
+                        state.isEoxCloudlessActive = false
+                        state.isEsriImageryActive = false
+                    }
+                    val script = "if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer($active); } if (window.toggleEoxCloudlessLayer) { window.toggleEoxCloudlessLayer(false); } if (window.toggleEsriWorldImageryLayer) { window.toggleEsriWorldImageryLayer(false); }"
                     webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar(
@@ -560,13 +563,33 @@ fun MapScreenContent(
                 onToggleEoxCloudless = {
                     state.isEoxCloudlessActive = !state.isEoxCloudlessActive
                     val active = state.isEoxCloudlessActive
-                    if (active) state.isNasaGibsActive = false
-                    val script = "if (window.toggleEoxCloudlessLayer) { window.toggleEoxCloudlessLayer($active); } if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer(false); }"
+                    if (active) {
+                        state.isNasaGibsActive = false
+                        state.isEsriImageryActive = false
+                    }
+                    val script = "if (window.toggleEoxCloudlessLayer) { window.toggleEoxCloudlessLayer($active); } if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer(false); } if (window.toggleEsriWorldImageryLayer) { window.toggleEsriWorldImageryLayer(false); }"
                     webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar(
                             if (active) "تم تفعيل طبقة EOX Cloudless عالية الدقة (10 أمتار) 🛰️"
                             else "تم إيقاف طبقة EOX Cloudless والعودة للطبقة الافتراضية"
+                        )
+                    }
+                },
+                isEsriImageryActive = state.isEsriImageryActive,
+                onToggleEsriImagery = {
+                    state.isEsriImageryActive = !state.isEsriImageryActive
+                    val active = state.isEsriImageryActive
+                    if (active) {
+                        state.isNasaGibsActive = false
+                        state.isEoxCloudlessActive = false
+                    }
+                    val script = "if (window.toggleEsriWorldImageryLayer) { window.toggleEsriWorldImageryLayer($active); } if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer(false); } if (window.toggleEoxCloudlessLayer) { window.toggleEoxCloudlessLayer(false); }"
+                    webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(
+                            if (active) "تم تفعيل طبقة Esri عالية الدقة والوضوح (مجانية 100%) 🛰️"
+                            else "تم إيقاف طبقة Esri والعودة للطبقة الافتراضية"
                         )
                     }
                 },
