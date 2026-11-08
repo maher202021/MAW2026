@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>ServiSeyem Map - خريطة اليمن الذكية الحية</title>
+    <link rel="stylesheet" href="leaflet.css" />
+    <link rel="stylesheet" href="MarkerCluster.css" />
+    <link rel="stylesheet" href="MarkerCluster.Default.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { width: 100%; height: 100%; background-color: #0F172A; overflow: hidden; font-family: sans-serif; }
+        #map { width: 100%; height: 100vh; background-color: #0F172A; }
+        .mode-3d-tilted { transform: rotateX(25deg) scale(1.05); transform-origin: 50% 80%; transition: transform 0.5s ease; }
+        
+        .custom-pin-container { display: flex; flex-direction: column; align-items: center; cursor: pointer; transform: translate(-50%, -100%); }
+        .custom-pin-head { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #ffffff; border: 2px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.7); z-index: 10; }
+        .custom-pin-arrow { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #ffffff; margin-top: -1px; }
+        .custom-pin-label { background: rgba(15, 23, 42, 0.95); color: #ffffff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; margin-top: 3px; white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; border: 1px solid rgba(255,255,255,0.35); box-shadow: 0 3px 8px rgba(0,0,0,0.5); direction: rtl; text-align: right; }
+
+        .user-pulse-marker { position: relative; width: 28px; height: 28px; }
+        .user-dot { width: 18px; height: 18px; background: #00E5FF; border: 3px solid #ffffff; border-radius: 50%; position: absolute; top: 5px; left: 5px; box-shadow: 0 0 16px #00E5FF; z-index: 5; }
+        .user-pulse { width: 48px; height: 48px; background: rgba(0, 229, 255, 0.5); border-radius: 50%; position: absolute; top: -10px; left: -10px; animation: userPulsing 2s infinite ease-out; z-index: 1; }
+        @keyframes userPulsing { 0% { transform: scale(0.4); opacity: 0.95; } 100% { transform: scale(1.9); opacity: 0; } }
+        
+        .hud-mirrored { transform: scaleX(-1) scaleY(-1) !important; }
+        .night-mode-active .leaflet-tile-pane {
+            filter: brightness(45%) contrast(140%) saturate(75%) !important;
+        }
+        .night-mode-active .custom-pin-label {
+            background: rgba(15, 23, 42, 0.95) !important;
+            color: #00E5FF !important;
+            border: 1.5px solid #00E5FF !important;
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.6) !important;
+            font-weight: 800 !important;
+        }
+        .night-mode-active .custom-pin-head {
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.8) !important;
+        }
+        .dead-zone-circle { fill-color: #EF4444; fill-opacity: 0.18; stroke: #F59E0B; stroke-width: 1.5; stroke-dasharray: 6,4; }
+        
+        .navigating-transparent-buildings .leaflet-tile-pane {
+            opacity: 0.55;
+            filter: contrast(125%) brightness(105%) saturate(85%);
+            transition: opacity 0.4s ease;
+        }
+        .navigating-transparent-buildings .leaflet-overlay-pane {
+            z-index: 600 !important;
+            filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.8));
+        }
+
+        .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
+
+        /* 🛰️ Sleek Collapsible Satellite Layers Control */
+        .sat-dropdown-container {
+            position: absolute;
+            bottom: 24px;
+            left: 12px;
+            z-index: 1000;
+            direction: rtl;
+            font-family: system-ui, -apple-system, Roboto, sans-serif;
+        }
+        .sat-dropdown-btn {
+            background: rgba(15, 23, 42, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 229, 255, 0.4);
+            border-radius: 20px;
+            padding: 8px 14px;
+            color: #00E5FF;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+            transition: all 0.25s ease;
+        }
+        .sat-dropdown-btn:hover {
+            border-color: rgba(0, 229, 255, 0.7);
+            background: rgba(15, 23, 42, 0.98);
+        }
+        .sat-dropdown-btn:active {
+            transform: scale(0.96);
+        }
+        .sat-arrow {
+            font-size: 10px;
+            color: #94A3B8;
+            transition: transform 0.25s ease;
+        }
+        .sat-dropdown-container.open .sat-arrow {
+            transform: rotate(180deg);
+        }
+
+        .sat-dropdown-menu {
+            display: none;
+            position: absolute;
+            bottom: 44px;
+            left: 0;
+            width: 240px;
+            background: rgba(15, 23, 42, 0.96);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 8px;
+            flex-direction: column;
+            gap: 4px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.75);
+            animation: fadeInSat 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .sat-dropdown-container.open .sat-dropdown-menu {
+            display: flex;
+        }
+
+        @keyframes fadeInSat {
+            from { opacity: 0; transform: translateY(8px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .sat-menu-header {
+            font-size: 11px;
+            font-weight: 700;
+            color: #94A3B8;
+            padding: 4px 8px 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sat-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #E2E8F0;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid transparent;
+        }
+        .sat-menu-item:hover, .sat-menu-item.active {
+            background: rgba(0, 229, 255, 0.15);
+            border-color: rgba(0, 229, 255, 0.35);
+        }
+        .sat-menu-item.active .sat-item-title {
+            color: #00E5FF;
+            font-weight: 700;
+        }
+
+        .sat-item-icon {
+            font-size: 16px;
+        }
+        .sat-item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .sat-item-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #F8FAFC;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sat-item-desc {
+            font-size: 9px;
+            color: #94A3B8;
+        }
+        .badge-live {
+            background: #EF4444;
+            color: white;
+            font-size: 8px;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 8px;
+            animation: pulseLive 1.5s infinite;
+        }
+        @keyframes pulseLive {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <!-- 🛰️ Sleek Collapsible Satellite Layers Dropdown Menu -->
+    <div class="sat-dropdown-container" id="satelliteDropdown">
+        <button class="sat-dropdown-btn" onclick="toggleSatelliteMenu(event)">
+            <span class="sat-icon">🛰️</span>
+            <span class="sat-text" id="satCurrentLabel">خريطة فضائية</span>
+            <span class="sat-arrow">▾</span>
+        </button>
+        <div class="sat-dropdown-menu" id="satMenu">
+            <div class="sat-menu-header">
+                <span>🛰️ الطبقات الفضائية الحية</span>
+                <span style="font-size: 9px; color: #00E5FF; font-weight: normal;">مجاني 100%</span>
+            </div>
+
+            <div class="sat-menu-item active" data-key="default" onclick="selectSatLayer('default', 'افتراضي (هجين)')">
+                <span class="sat-item-icon">🌐</span>
+                <div class="sat-item-info">
+                    <div class="sat-item-title">خريطة هجينة (مع أسماء المدن)</div>
+                    <div class="sat-item-desc">افتراضي عالِ الدقة مع أسماء وتفاصيل عربية</div>
+                </div>
+            </div>
+
+            <div class="sat-menu-item" data-key="rainviewer" onclick="selectSatLayer('rainviewer', 'سحب وساتلايت حي')">
+                <span class="sat-item-icon">⚡</span>
+                <div class="sat-item-info">
+                    <div class="sat-item-title">سحب ورادار حي (10 دقائق) <span class="badge-live">مباشر</span></div>
+                    <div class="sat-item-desc">تحديث حي لحظي للأقمار والسحب كل 10 دقائق</div>
+                </div>
+            </div>
+
+            <div class="sat-menu-item" data-key="nasa" onclick="selectSatLayer('nasa', 'ناسا اليومية (أمس)')">
+                <span class="sat-item-icon">🛰️</span>
+                <div class="sat-item-info">
+                    <div class="sat-item-title">أقمار ناسا اليومية (NASA GIBS)</div>
+                    <div class="sat-item-desc">تاريخ "أمس" برمجياً (new Date) لضمان روابط حديثة ومستقرة</div>
+                </div>
+            </div>
+
+            <div class="sat-menu-item" data-key="sentinel2" onclick="selectSatLayer('sentinel2', 'Sentinel-2 OGC حية')">
+                <span class="sat-item-icon">🛰️</span>
+                <div class="sat-item-info">
+                    <div class="sat-item-title">Sentinel-2 يومية (Sentinel Hub OGC) <span class="badge-live" style="background:#10B981">طبقة 4 جديدة</span></div>
+                    <div class="sat-item-desc">أحدث صور Sentinel-2 المباشرة بدون مفاتيح</div>
+                </div>
+            </div>
+
+            <div class="sat-menu-item" data-key="esri" onclick="selectSatLayer('esri', 'Esri عالية الوضوح')">
+                <span class="sat-item-icon">📸</span>
+                <div class="sat-item-info">
+                    <div class="sat-item-title">Esri فضائية دقيقة</div>
+                    <div class="sat-item-desc">صور أقمار صناعية عالية التباين والوضوح</div>
+                </div>
+            </div>
+
+            <div class="sat-menu-item" data-key="eox" onclick="selectSatLayer('eox', 'EOX Sentinel-2 (10م)')">
+                <span class="sat-item-icon">🗺️</span>
+                <div class="sat-item-info">
+                    <div class="sat-item-title">EOX Sentinel-2 (10م)</div>
+                    <div class="sat-item-desc">تغطية فضائية بدون غيوم بدقة 10 أمتار</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="leaflet.js"></script>
+    <script src="leaflet.markercluster.js"></script>
+    <script>
+        var map;
+        var currentTileLayer = null;
+        var markerClusterGroup;
+        var deadZoneLayerGroup = null;
+        var gpxTrackLayer = null;
+        var groupMembersLayerGroup = null;
+        var userMarker = null;
+        var userLat = 15.3694;
+        var userLng = 44.1910;
+
+        var nasaGibsLayer = null;
+        var sentinel2HubLayer = null;
+        var eoxCloudlessLayer = null;
+        var esriWorldImageryLayer = null;
+
+        // Expanded maxZoom to 22 for deep satellite and street zoom
+        // Dynamic "Yesterday" UTC date calculation using JavaScript new Date() for NASA GIBS near-real-time satellite tiles
+        function getNasaGibsYesterdayDateString() {
+            var d = new Date();
+            // Subtract 1 day to compute yesterday's date programmatically
+            d.setUTCDate(d.getUTCDate() - 1);
+            var yyyy = d.getUTCFullYear();
+            var mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+            var dd = String(d.getUTCDate()).padStart(2, '0');
+            return yyyy + '-' + mm + '-' + dd;
+        }
+
+        function getNasaGibsTileUrl(layerName) {
+            var name = layerName || 'VIIRS_SNPP_CorrectedReflectance_TrueColor';
+            var dateStr = getNasaGibsYesterdayDateString();
+            return 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/' + name + '/default/' + dateStr + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg';
+        }
+
+        function createResilientTileLayer(url, options, fallbackUrl) {
+            var layer = L.tileLayer(url, options);
+            if (fallbackUrl) {
+                layer.on('tileerror', function(error, tile) {
+                    if (tile && !tile._hasFallback) {
+                        tile._hasFallback = true;
+                        tile.src = fallbackUrl.replace('{z}', error.coords.z).replace('{x}', error.coords.x).replace('{y}', error.coords.y);
+                    }
+                });
+            }
+            return layer;
+        }
+
+        var tileProviders = {
+            'google_hybrid': createResilientTileLayer(
+                'https://mt1.google.com/vt/lyrs=y&hl=ar&x={x}&y={y}&z={z}',
+                { maxZoom: 22, attribution: 'Google' },
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+            ),
+            'google_streets': createResilientTileLayer(
+                'https://mt1.google.com/vt/lyrs=m&hl=ar&x={x}&y={y}&z={z}',
+                { maxZoom: 22, attribution: 'Google' },
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+            ),
+            'imagery': createResilientTileLayer(
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                { maxZoom: 22, maxNativeZoom: 19, attribution: 'Esri World Imagery' },
+                'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+            ),
+            'osm_ar': createResilientTileLayer(
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                { maxZoom: 22, attribution: 'OSM' }
+            ),
+            'navigation': createResilientTileLayer(
+                'https://mt1.google.com/vt/lyrs=m&hl=ar&x={x}&y={y}&z={z}',
+                { maxZoom: 22, attribution: 'Navigation' },
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+            ),
+            'nasa_gibs': L.tileLayer(getNasaGibsTileUrl(), {
+                maxZoom: 18,
+                maxNativeZoom: 9,
+                opacity: 0.90,
+                attribution: 'NASA GIBS'
+            }),
+            'eox_cloudless': L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2016_3857/default/g/{z}/{y}/{x}.jpg', {
+                maxZoom: 18,
+                maxNativeZoom: 14,
+                attribution: 'Sentinel-2 cloudless by EOX IT Services GmbH'
+            }),
+            'esri_world_imagery': createResilientTileLayer(
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                { maxZoom: 22, maxNativeZoom: 19, attribution: 'Esri World Imagery (High-Res 100% Free)' },
+                'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
+            )
+        };
+
+        function initMap() {
+            try {
+                map = L.map('map', {
+                    center: [userLat, userLng],
+                    zoom: 14,
+                    zoomControl: false,
+                    attributionControl: false,
+                    maxZoom: 22,
+                    minZoom: 4
+                });
+
+                // Default to Arabic Hybrid (Satellite + Arabic Labels)
+                switchLayer('google_hybrid');
+
+                markerClusterGroup = L.markerClusterGroup({ maxClusterRadius: 35, spiderfyOnMaxZoom: true });
+                map.addLayer(markerClusterGroup);
+
+                deadZoneLayerGroup = L.layerGroup().addTo(map);
+                groupMembersLayerGroup = L.layerGroup().addTo(map);
+
+                map.on('click', function() {
+                    if (window.AndroidBridge) window.AndroidBridge.onMapClicked();
+                });
+
+                if (window.AndroidBridge) window.AndroidBridge.onMapReady();
+            } catch(e) {
+                document.body.innerHTML = '<div style="color:white; padding:20px; text-align:center;">خطأ في تحميل الخريطة</div>';
+            }
+        }
+
+        function toggleNightMode(enable) {
+            var el = document.getElementById('map');
+            if (enable) {
+                el.classList.add('night-mode-active');
+            } else {
+                el.classList.remove('night-mode-active');
+            }
+        }
+
+        var rainViewerLayer = null;
+
+        // ⚡ طبقة السحب والرادار الفضائي الحي (تحديث مباشر كل 10 دقائق من RainViewer)
+        function toggleRainViewerLayer(enable) {
+            if (!map) return;
+            if (enable) {
+                if (rainViewerLayer && map.hasLayer(rainViewerLayer)) {
+                    map.removeLayer(rainViewerLayer);
+                }
+                fetch('https://api.rainviewer.com/public/weather-maps.json')
+                    .then(function(res) { return res.json(); })
+                    .then(function(data) {
+                        if (data && data.satellite && data.satellite.infrared && data.satellite.infrared.length > 0) {
+                            var latestObj = data.satellite.infrared[data.satellite.infrared.length - 1];
+                            var timeStamp = latestObj.time;
+                            var host = data.host || 'https://tilecache.rainviewer.com';
+                            var tileUrl = host + '/v2/satellite/' + timeStamp + '/256/{z}/{x}/{y}/0/0_0.png';
+                            rainViewerLayer = L.tileLayer(tileUrl, {
+                                maxZoom: 18,
+                                opacity: 0.85,
+                                attribution: 'RainViewer Live Satellite'
+                            });
+                            rainViewerLayer.addTo(map);
+                        } else {
+                            var fallbackUrl = 'https://tilecache.rainviewer.com/v2/satellite/latest/256/{z}/{x}/{y}/0/0_0.png';
+                            rainViewerLayer = L.tileLayer(fallbackUrl, { maxZoom: 18, opacity: 0.85 });
+                            rainViewerLayer.addTo(map);
+                        }
+                    })
+                    .catch(function(e) {
+                        var fallbackUrl = 'https://tilecache.rainviewer.com/v2/satellite/latest/256/{z}/{x}/{y}/0/0_0.png';
+                        rainViewerLayer = L.tileLayer(fallbackUrl, { maxZoom: 18, opacity: 0.85 });
+                        rainViewerLayer.addTo(map);
+                    });
+            } else {
+                if (rainViewerLayer && map.hasLayer(rainViewerLayer)) {
+                    map.removeLayer(rainViewerLayer);
+                }
+            }
+        }
+
+        // 🛰️ طبقة الأقمار الصناعية شبه الفورية من NASA GIBS (اختيارية)
+        function toggleNasaGibsLayer(enable) {
+            if (!map) return;
+            if (enable) {
+                if (nasaGibsLayer && map.hasLayer(nasaGibsLayer)) {
+                    map.removeLayer(nasaGibsLayer);
+                }
+                var freshTileUrl = getNasaGibsTileUrl();
+                nasaGibsLayer = L.tileLayer(freshTileUrl, {
+                    maxZoom: 18,
+                    maxNativeZoom: 9,
+                    opacity: 0.92,
+                    attribution: 'NASA GIBS'
+                });
+                nasaGibsLayer.addTo(map);
+            } else {
+                if (nasaGibsLayer && map.hasLayer(nasaGibsLayer)) {
+                    map.removeLayer(nasaGibsLayer);
+                }
+            }
+        }
+
+        // 🛰️ طبقة الأقمار الصناعية عالية الدقة (10 أمتار) EOX Cloudless 2016 (اختيارية)
+        function toggleEoxCloudlessLayer(enable) {
+            if (!map) return;
+            if (enable) {
+                if (!eoxCloudlessLayer) {
+                    eoxCloudlessLayer = tileProviders['eox_cloudless'];
+                }
+                if (!map.hasLayer(eoxCloudlessLayer)) {
+                    eoxCloudlessLayer.addTo(map);
+                }
+            } else {
+                if (eoxCloudlessLayer && map.hasLayer(eoxCloudlessLayer)) {
+                    map.removeLayer(eoxCloudlessLayer);
+                }
+            }
+        }
+
+        // 🛰️ طبقة الأقمار الصناعية فائقة الدقة والاقتراب Esri World Imagery (اختيارية مجانية 100%)
+        function toggleEsriWorldImageryLayer(enable) {
+            if (!map) return;
+            if (enable) {
+                if (!esriWorldImageryLayer) {
+                    esriWorldImageryLayer = tileProviders['esri_world_imagery'];
+                }
+                if (!map.hasLayer(esriWorldImageryLayer)) {
+                    esriWorldImageryLayer.addTo(map);
+                }
+            } else {
+                if (esriWorldImageryLayer && map.hasLayer(esriWorldImageryLayer)) {
+                    map.removeLayer(esriWorldImageryLayer);
+                }
+            }
+        }
+
+        // 🛰️ طبقة Sentinel-2 اليومية المباشرة عبر Sentinel Hub OGC API
+        function toggleSentinel2HubLayer(enable) {
+            if (!map) return;
+            if (enable) {
+                if (!sentinel2HubLayer) {
+                    sentinel2HubLayer = createResilientTileLayer(
+                        'https://services.sentinel-hub.com/ogc/wmts/426742d7-5264-4424-9b2d-f952c4819d45?LAYER=TRUE-COLOR&REQUEST=GetTile&TILEMATRIXSET=PopularWebMercator&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+                        { maxZoom: 18, maxNativeZoom: 14, attribution: 'Sentinel-2 Hub OGC API' },
+                        'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg'
+                    );
+                }
+                if (!map.hasLayer(sentinel2HubLayer)) {
+                    sentinel2HubLayer.addTo(map);
+                }
+            } else {
+                if (sentinel2HubLayer && map.hasLayer(sentinel2HubLayer)) {
+                    map.removeLayer(sentinel2HubLayer);
+                }
+            }
+        }
+
+        // 🔽 فتح/إغلاق القائمة المنسدلة للطبقات الفضائية
+        function toggleSatelliteMenu(event) {
+            if (event) event.stopPropagation();
+            var container = document.getElementById('satelliteDropdown');
+            if (container) {
+                container.classList.toggle('open');
+            }
+        }
+
+        // 🎯 اختيار الطبقة الفضائية من القائمة المنسدلة
+        function selectSatLayer(key, labelName) {
+            var labelEl = document.getElementById('satCurrentLabel');
+            if (labelEl) labelEl.textContent = labelName || 'خريطة فضائية';
+
+            var container = document.getElementById('satelliteDropdown');
+            if (container) container.classList.remove('open');
+
+            var items = document.querySelectorAll('.sat-menu-item');
+            items.forEach(function(item) {
+                if (item.getAttribute('data-key') === key) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            // إيقاف الطبقات الثانوية أولاً
+            toggleNasaGibsLayer(false);
+            toggleSentinel2HubLayer(false);
+            toggleEoxCloudlessLayer(false);
+            toggleEsriWorldImageryLayer(false);
+            toggleRainViewerLayer(false);
+
+            if (key === 'sentinel2') {
+                toggleSentinel2HubLayer(true);
+            } else if (key === 'rainviewer') {
+                switchLayer('google_hybrid');
+                toggleRainViewerLayer(true);
+            } else if (key === 'nasa') {
+                switchLayer('google_hybrid');
+                toggleNasaGibsLayer(true);
+            } else if (key === 'esri') {
+                toggleEsriWorldImageryLayer(true);
+            } else if (key === 'eox') {
+                toggleEoxCloudlessLayer(true);
+            } else {
+                switchLayer('google_hybrid');
+            }
+        }
+
+        // إغلاق القائمة تلقائياً عند النقر خارجها أو على الخريطة
+        document.addEventListener('click', function(e) {
+            var container = document.getElementById('satelliteDropdown');
+            if (container && !container.contains(e.target)) {
+                container.classList.remove('open');
+            }
+        });
+
+        function toggleHudMirror(enable) {
+            var el = document.getElementById('map');
+            if (enable) {
+                el.classList.add('hud-mirrored');
+            } else {
+                el.classList.remove('hud-mirrored');
+            }
+        }
+
+        function setDeadZones(deadZonesJson) {
+            if (!deadZoneLayerGroup) return;
+            deadZoneLayerGroup.clearLayers();
+            var zones = (typeof deadZonesJson === 'string') ? JSON.parse(deadZonesJson) : deadZonesJson;
+            if (!zones || !Array.isArray(zones)) return;
+
+            zones.forEach(function(z) {
+                var circle = L.circle([z.lat, z.lng], {
+                    color: '#EF4444',
+                    fillColor: '#EF4444',
+                    fillOpacity: 0.18,
+                    radius: z.radiusMeters || 1200,
+                    weight: 1.5,
+                    dashArray: '6, 4'
+                });
+                circle.bindTooltip(z.label || "منطقة غير مغطاة بخدمات ⚠️", { permanent: false, direction: 'top' });
+                deadZoneLayerGroup.addLayer(circle);
+            });
+        }
+
+        var roadSafetyLayerGroup = null;
+
+        function setRoadSafetyHazards(hazardsJson) {
+            if (!roadSafetyLayerGroup) {
+                roadSafetyLayerGroup = L.layerGroup().addTo(map);
+            }
+            roadSafetyLayerGroup.clearLayers();
+            var hazards = (typeof hazardsJson === 'string') ? JSON.parse(hazardsJson) : hazardsJson;
+            if (!hazards || !Array.isArray(hazards)) return;
+
+            hazards.forEach(function(h) {
+                var color = h.difficulty >= 4 ? '#DC2626' : (h.difficulty >= 3 ? '#F59E0B' : '#3B82F6');
+                var circle = L.circle([h.lat, h.lng], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.25,
+                    radius: h.radius || 800,
+                    weight: 2,
+                    dashArray: '4, 4'
+                });
+                var tooltipText = '⚠️ ' + (h.title || 'طريق وعر') + '<br><small>' + (h.desc || 'صعوبة الطريق: ' + h.difficulty + '/5') + '</small>';
+                circle.bindTooltip(tooltipText, { permanent: false, direction: 'top' });
+                roadSafetyLayerGroup.addLayer(circle);
+            });
+        }
+
+        var reliabilityLayerGroup = null;
+
+        function setReliabilityZones(zonesJson) {
+            if (!reliabilityLayerGroup) {
+                reliabilityLayerGroup = L.layerGroup().addTo(map);
+            }
+            reliabilityLayerGroup.clearLayers();
+            var zones = (typeof zonesJson === 'string') ? JSON.parse(zonesJson) : zonesJson;
+            if (!zones || !Array.isArray(zones)) return;
+
+            zones.forEach(function(z) {
+                // z.status: 'AVAILABLE' (أخضر)، 'BUSY' (أصفر)، 'UNCOVERED' (أحمر)
+                var color = z.status === 'AVAILABLE' ? '#10B981' : (z.status === 'BUSY' ? '#F59E0B' : '#EF4444');
+                var circle = L.circle([z.lat, z.lng], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.22,
+                    radius: z.radius || 900,
+                    weight: 2
+                });
+                var badgeIcon = z.status === 'AVAILABLE' ? '🟢 متاح الآن' : (z.status === 'BUSY' ? '🟡 منشغل حالياً' : '🔴 غير مغطى');
+                var tooltipText = '<b>' + (z.areaName || 'منطقة') + '</b><br>' + badgeIcon + '<br><small>' + (z.details || '') + '</small>';
+                circle.bindTooltip(tooltipText, { permanent: false, direction: 'top' });
+                reliabilityLayerGroup.addLayer(circle);
+            });
+        }
+
+        function setGroupMembers(membersJson) {
+            if (!groupMembersLayerGroup) return;
+            groupMembersLayerGroup.clearLayers();
+            var members = (typeof membersJson === 'string') ? JSON.parse(membersJson) : membersJson;
+            if (!members || !Array.isArray(members)) return;
+
+            members.forEach(function(m) {
+                var html = '<div class="custom-pin-container">' +
+                    '<div class="custom-pin-head" style="background-color:#10B981;">👤</div>' +
+                    '<div class="custom-pin-arrow" style="border-top-color:#10B981;"></div>' +
+                    '<div class="custom-pin-label">'+m.name+'</div></div>';
+                var marker = L.marker([m.lat, m.lng], {
+                    icon: L.divIcon({ className:'', html: html, iconSize:[32,46], iconAnchor:[16,44] })
+                });
+                groupMembersLayerGroup.addLayer(marker);
+            });
+        }
+
+        function drawGpxTrack(coordsJson) {
+            if (gpxTrackLayer) {
+                map.removeLayer(gpxTrackLayer);
+                gpxTrackLayer = null;
+            }
+            var coords = (typeof coordsJson === 'string') ? JSON.parse(coordsJson) : coordsJson;
+            if (!coords || !Array.isArray(coords) || coords.length === 0) return;
+
+            var latLngs = coords.map(function(pt) { return [pt[0], pt[1]]; });
+            gpxTrackLayer = L.polyline(latLngs, {
+                color: '#00E5FF',
+                weight: 5,
+                opacity: 0.9
+            }).addTo(map);
+            map.fitBounds(gpxTrackLayer.getBounds(), { padding: [40, 40] });
+        }
+
+        function switchLayer(key) {
+            if (currentTileLayer) {
+                if (Array.isArray(currentTileLayer)) {
+                    currentTileLayer.forEach(function(l) { map.removeLayer(l); });
+                } else {
+                    map.removeLayer(currentTileLayer);
+                }
+                currentTileLayer = null;
+            }
+
+            // Mapping legacy keys to new Arabic ones
+            var targetKey = key;
+            if (key === 'google_satellite' || key === 'hybrid') targetKey = 'google_hybrid';
+            if (key === 'streets') targetKey = 'google_streets';
+            if (key === 'osm') targetKey = 'osm_ar';
+
+            if (tileProviders[targetKey]) {
+                currentTileLayer = tileProviders[targetKey].addTo(map);
+            } else {
+                currentTileLayer = tileProviders['google_hybrid'].addTo(map);
+            }
+        }
+
+        function setVelaMode(mode) {
+            var el = document.getElementById('map');
+            if (mode === 'VELA_3D' || mode === 'AERIAL_OAM') {
+                el.classList.add('mode-3d-tilted');
+                switchLayer('google_satellite');
+            } else {
+                el.classList.remove('mode-3d-tilted');
+            }
+        }
+
+        function setTilt(angle) {
+            var el = document.getElementById('map');
+            if (angle > 0) {
+                el.classList.add('mode-3d-tilted');
+            } else {
+                el.classList.remove('mode-3d-tilted');
+            }
+        }
+
+        function updateUserLocation(lat, lng, acc, pan) {
+            userLat = lat; userLng = lng;
+            var icon = L.divIcon({
+                className: '',
+                html: '<div class="user-pulse-marker"><div class="user-pulse"></div><div class="user-dot"></div></div>',
+                iconSize: [28, 28], iconAnchor: [14, 14]
+            });
+            if (!userMarker) {
+                userMarker = L.marker([lat, lng], { icon: icon, zIndexOffset: 2000 }).addTo(map);
+            } else {
+                userMarker.setLatLng([lat, lng]);
+            }
+            if (pan) map.panTo([lat, lng], { animate: true });
+        }
+
+        function setMarkers(json) {
+            if (!markerClusterGroup) return;
+            markerClusterGroup.clearLayers();
+            var items = (typeof json === 'string') ? JSON.parse(json) : json;
+            items.forEach(function(item) {
+                var iconHtml = '<div class="custom-pin-container">' +
+                    '<div class="custom-pin-head" style="background-color:'+(item.badgeColor||'#00E5FF')+';">'+(item.emoji||'📍')+'</div>' +
+                    '<div class="custom-pin-arrow" style="border-top-color:'+(item.badgeColor||'#00E5FF')+';"></div>' +
+                    '<div class="custom-pin-label">'+item.name+'</div></div>';
+                var marker = L.marker([item.lat, item.lng], {
+                    icon: L.divIcon({ className:'', html: iconHtml, iconSize:[32,46], iconAnchor:[16,44] })
+                });
+                marker.on('click', function(e) {
+                    L.DomEvent.stopPropagation(e);
+                    if (window.AndroidBridge) window.AndroidBridge.onMarkerClicked(item.id, item.type);
+                });
+                markerClusterGroup.addLayer(marker);
+            });
+        }
+
+        var activeRouteLine = null;
+        var destinationMarker = null;
+
+        function drawRoute(lat1, lng1, lat2, lng2, color, destName) {
+            drawRealRoute(lat1, lng1, lat2, lng2, color, destName);
+        }
+
+        function drawRealRoute(lat1, lng1, lat2, lng2, color, destName) {
+            clearRoute();
+            var routeColor = color || '#0D5C3A';
+
+            var destHtml = '<div style="background:#0D5C3A; color:#E0F2FE; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; border:2px solid #D4A017; box-shadow:0 0 12px #0D5C3A; font-size:18px;">🏁</div>';
+            destinationMarker = L.marker([lat2, lng2], {
+                icon: L.divIcon({ className: '', html: destHtml, iconSize: [36, 36], iconAnchor: [18, 18] })
+            }).addTo(map);
+
+            if (destName) {
+                destinationMarker.bindTooltip(destName, { permanent: true, direction: 'top', className: 'custom-pin-label' });
+            }
+
+            // Real Road Routing via OSRM Demo API
+            var osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' + lng1 + ',' + lat1 + ';' + lng2 + ',' + lat2 + '?overview=full&geometries=geojson';
+
+            fetch(osrmUrl)
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data && data.routes && data.routes.length > 0) {
+                        var coordinates = data.routes[0].geometry.coordinates;
+                        var latLngs = coordinates.map(function(pt) { return [pt[1], pt[0]]; });
+                        activeRouteLine = L.polyline(latLngs, {
+                            color: routeColor,
+                            weight: 6,
+                            opacity: 0.95,
+                            lineJoin: 'round',
+                            lineCap: 'round'
+                        }).addTo(map);
+                        map.fitBounds(activeRouteLine.getBounds(), { padding: [60, 60], maxZoom: 18 });
+                    } else {
+                        drawFallbackStraightRoute(lat1, lng1, lat2, lng2, routeColor);
+                    }
+                })
+                .catch(function(e) {
+                    drawFallbackStraightRoute(lat1, lng1, lat2, lng2, routeColor);
+                });
+        }
+
+        function drawFallbackStraightRoute(lat1, lng1, lat2, lng2, color) {
+            var midLat = (lat1 + lat2) / 2;
+            var midLng = (lng1 + lng2) / 2;
+            var waypoints = [
+                [lat1, lng1],
+                [midLat, midLng],
+                [lat2, lng2]
+            ];
+            activeRouteLine = L.polyline(waypoints, {
+                color: color || '#0D5C3A',
+                weight: 5,
+                opacity: 0.9,
+                dashArray: '10, 8'
+            }).addTo(map);
+            map.fitBounds(activeRouteLine.getBounds(), { padding: [60, 60], maxZoom: 18 });
+        }
+
+        function clearRoute() {
+            if (activeRouteLine) {
+                map.removeLayer(activeRouteLine);
+                activeRouteLine = null;
+            }
+            if (destinationMarker) {
+                map.removeLayer(destinationMarker);
+                destinationMarker = null;
+            }
+        }
+
+        function setCity(n, lat, lng, z) { map.setView([lat, lng], z || 15, { animate: true }); }
+        function zoomIn() { if (map) map.zoomIn(); }
+        function zoomOut() { if (map) map.zoomOut(); }
+        function recenterUser() { if (map) map.setView([userLat, userLng], 17, { animate: true }); }
+        
+        // Fly smoothly to a specific result
+        function flyToLocation(lat, lng, z) {
+            if (map) {
+                map.flyTo([lat, lng], z || 18, {
+                    animate: true,
+                    duration: 1.5
+                });
+            }
+        }
+
+        // 9. التكبير الذكي (Smart Zoom)
+        function applySmartZoom(targetZoom) {
+            if (map && targetZoom && Math.abs(map.getZoom() - targetZoom) >= 1) {
+                map.setZoom(targetZoom, { animate: true });
+            }
+        }
+
+        // 10. المباني الشفافة أثناء الملاحة (Transparent Buildings / High Route Contrast)
+        function setNavigationBuildingsTransparent(isNavigating) {
+            var el = document.getElementById('map');
+            if (isNavigating) {
+                el.classList.add('navigating-transparent-buildings');
+            } else {
+                el.classList.remove('navigating-transparent-buildings');
+            }
+        }
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>

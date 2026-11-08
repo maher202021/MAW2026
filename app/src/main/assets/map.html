@@ -218,11 +218,19 @@
                 </div>
             </div>
 
-            <div class="sat-menu-item" data-key="nasa" onclick="selectSatLayer('nasa', 'ناسا اليومية (VIIRS)')">
+            <div class="sat-menu-item" data-key="nasa" onclick="selectSatLayer('nasa', 'ناسا اليومية (أمس)')">
                 <span class="sat-item-icon">🛰️</span>
                 <div class="sat-item-info">
                     <div class="sat-item-title">أقمار ناسا اليومية (NASA GIBS)</div>
-                    <div class="sat-item-desc">مسح فضائي حقيقي بتاريخ اليوم (VIIRS NRT)</div>
+                    <div class="sat-item-desc">تاريخ "أمس" برمجياً (new Date) لضمان روابط حديثة ومستقرة</div>
+                </div>
+            </div>
+
+            <div class="sat-menu-item" data-key="sentinel2" onclick="selectSatLayer('sentinel2', 'Sentinel-2 OGC حية')">
+                <span class="sat-item-icon">🛰️</span>
+                <div class="sat-item-info">
+                    <div class="sat-item-title">Sentinel-2 يومية (Sentinel Hub OGC) <span class="badge-live" style="background:#10B981">طبقة 4 جديدة</span></div>
+                    <div class="sat-item-desc">أحدث صور Sentinel-2 المباشرة بدون مفاتيح</div>
                 </div>
             </div>
 
@@ -258,27 +266,25 @@
         var userLng = 44.1910;
 
         var nasaGibsLayer = null;
+        var sentinel2HubLayer = null;
         var eoxCloudlessLayer = null;
         var esriWorldImageryLayer = null;
 
         // Expanded maxZoom to 22 for deep satellite and street zoom
-        // Dynamic today/yesterday UTC date calculation for NASA GIBS near-real-time satellite tiles
-        function getNasaGibsCurrentDateString() {
-            var now = new Date();
-            // NASA GIBS near-real-time products are compiled continuously.
-            // Early in UTC day (< 3:00 UTC), yesterday's full composite is 100% complete globally.
-            if (now.getUTCHours() < 3) {
-                now.setUTCDate(now.getUTCDate() - 1);
-            }
-            var yyyy = now.getUTCFullYear();
-            var mm = String(now.getUTCMonth() + 1).padStart(2, '0');
-            var dd = String(now.getUTCDate()).padStart(2, '0');
+        // Dynamic "Yesterday" UTC date calculation using JavaScript new Date() for NASA GIBS near-real-time satellite tiles
+        function getNasaGibsYesterdayDateString() {
+            var d = new Date();
+            // Subtract 1 day to compute yesterday's date programmatically
+            d.setUTCDate(d.getUTCDate() - 1);
+            var yyyy = d.getUTCFullYear();
+            var mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+            var dd = String(d.getUTCDate()).padStart(2, '0');
             return yyyy + '-' + mm + '-' + dd;
         }
 
         function getNasaGibsTileUrl(layerName) {
             var name = layerName || 'VIIRS_SNPP_CorrectedReflectance_TrueColor';
-            var dateStr = getNasaGibsCurrentDateString();
+            var dateStr = getNasaGibsYesterdayDateString();
             return 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/' + name + '/default/' + dateStr + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg';
         }
 
@@ -474,6 +480,27 @@
             }
         }
 
+        // 🛰️ طبقة Sentinel-2 اليومية المباشرة عبر Sentinel Hub OGC API
+        function toggleSentinel2HubLayer(enable) {
+            if (!map) return;
+            if (enable) {
+                if (!sentinel2HubLayer) {
+                    sentinel2HubLayer = createResilientTileLayer(
+                        'https://services.sentinel-hub.com/ogc/wmts/426742d7-5264-4424-9b2d-f952c4819d45?LAYER=TRUE-COLOR&REQUEST=GetTile&TILEMATRIXSET=PopularWebMercator&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+                        { maxZoom: 18, maxNativeZoom: 14, attribution: 'Sentinel-2 Hub OGC API' },
+                        'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg'
+                    );
+                }
+                if (!map.hasLayer(sentinel2HubLayer)) {
+                    sentinel2HubLayer.addTo(map);
+                }
+            } else {
+                if (sentinel2HubLayer && map.hasLayer(sentinel2HubLayer)) {
+                    map.removeLayer(sentinel2HubLayer);
+                }
+            }
+        }
+
         // 🔽 فتح/إغلاق القائمة المنسدلة للطبقات الفضائية
         function toggleSatelliteMenu(event) {
             if (event) event.stopPropagation();
@@ -502,11 +529,14 @@
 
             // إيقاف الطبقات الثانوية أولاً
             toggleNasaGibsLayer(false);
+            toggleSentinel2HubLayer(false);
             toggleEoxCloudlessLayer(false);
             toggleEsriWorldImageryLayer(false);
             toggleRainViewerLayer(false);
 
-            if (key === 'rainviewer') {
+            if (key === 'sentinel2') {
+                toggleSentinel2HubLayer(true);
+            } else if (key === 'rainviewer') {
                 switchLayer('google_hybrid');
                 toggleRainViewerLayer(true);
             } else if (key === 'nasa') {
