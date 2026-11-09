@@ -64,6 +64,8 @@ fun MapControls(
     onToggleEoxCloudless: () -> Unit = {},
     isEsriImageryActive: Boolean = false,
     onToggleEsriImagery: () -> Unit = {},
+    isEarthquakeActive: Boolean = false,
+    onToggleEarthquake: () -> Unit = {},
     isGroupActive: Boolean = false,
     onToggleGroupTracking: () -> Unit = {},
     onOpenGnssDiagnostics: () -> Unit = {},
@@ -318,6 +320,16 @@ fun MapControls(
                 activeColor = Color(0xFFF59E0B),
                 inactiveColor = Color(0xFFF59E0B).copy(alpha = 0.8f),
                 onClick = onToggleEsriImagery
+            )
+
+            // 🌋 Earthquake Layer (مرصد الزلازل الحية)
+            MapControlItem(
+                icon = Icons.Default.Warning,
+                label = "زلازل",
+                isActive = isEarthquakeActive,
+                activeColor = Color(0xFFEF4444),
+                inactiveColor = Color(0xFFF97316),
+                onClick = onToggleEarthquake
             )
 
             // 4. Group Members Tracking

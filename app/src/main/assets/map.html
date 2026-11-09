@@ -859,6 +859,88 @@
             }
         }
 
+        // 🌋 11. طبقة الزلازل الحية من USGS (Realtime Earthquakes Layer)
+        var earthquakeLayerGroup = null;
+
+        window.loadEarthquakes = function() {
+            window.clearEarthquakes();
+
+            var url = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson';
+
+            fetch(url)
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (!data || !data.features) return;
+
+                    earthquakeLayerGroup = L.geoJSON(data, {
+                        pointToLayer: function(feature, latlng) {
+                            var mag = (feature.properties && feature.properties.mag !== null && feature.properties.mag !== undefined) ? feature.properties.mag : 1.0;
+                            var color = '#10B981'; // أخضر أقل من 2.5
+                            var fillColor = '#10B981';
+
+                            if (mag >= 5.5) {
+                                color = '#991B1B';
+                                fillColor = '#DC2626'; // أحمر قوي
+                            } else if (mag >= 4.0) {
+                                color = '#C2410C';
+                                fillColor = '#EA580C'; // برتقالي متوسط
+                            } else if (mag >= 2.5) {
+                                color = '#D97706';
+                                fillColor = '#F59E0B'; // أصفر خفيف
+                            }
+
+                            var radius = Math.max(4, Math.min(26, Math.round(mag * 3.5)));
+
+                            return L.circleMarker(latlng, {
+                                radius: radius,
+                                fillColor: fillColor,
+                                color: color,
+                                weight: 2,
+                                opacity: 0.95,
+                                fillOpacity: 0.75
+                            });
+                        },
+                        onEachFeature: function(feature, layer) {
+                            var props = feature.properties || {};
+                            var mag = (props.mag !== null && props.mag !== undefined) ? props.mag.toFixed(1) : 'غير محدد';
+                            var place = props.place || 'موقع غير معروف';
+                            var date = props.time ? new Date(props.time).toLocaleString('ar-YE', { dateStyle: 'short', timeStyle: 'short' }) : '';
+                            var depth = (feature.geometry && feature.geometry.coordinates && feature.geometry.coordinates.length > 2)
+                                ? feature.geometry.coordinates[2] + ' كم' : 'غير محدد';
+
+                            var popupContent = 
+                                '<div style="direction:rtl; text-align:right; font-family:sans-serif; min-width:170px; line-height:1.4;">' +
+                                    '<div style="font-weight:bold; color:#DC2626; font-size:13px; margin-bottom:4px;">🌋 هزة أرضية مسجلة</div>' +
+                                    '<div style="font-size:12px; color:#1E293B; margin-bottom:3px;"><b>الموقع:</b> ' + place + '</div>' +
+                                    '<div style="font-size:12px; color:#1E293B; margin-bottom:3px;"><b>القوة:</b> <span style="font-weight:bold; color:#DC2626;">' + mag + ' ريختر</span></div>' +
+                                    '<div style="font-size:12px; color:#64748B; margin-bottom:3px;"><b>العمق:</b> ' + depth + '</div>' +
+                                    '<div style="font-size:11px; color:#94A3B8;"><b>الوقت:</b> ' + date + '</div>' +
+                                '</div>';
+
+                            layer.bindPopup(popupContent);
+                        }
+                    }).addTo(map);
+
+                    var count = (data.features && data.features.length) ? data.features.length : 0;
+                    if (window.AndroidBridge && window.AndroidBridge.onEarthquakeDataLoaded) {
+                        window.AndroidBridge.onEarthquakeDataLoaded(Date.now(), count);
+                    }
+                })
+                .catch(function(err) {
+                    console.error('Earthquake fetch error:', err);
+                    if (window.AndroidBridge && window.AndroidBridge.onEarthquakeDataError) {
+                        window.AndroidBridge.onEarthquakeDataError(String(err));
+                    }
+                });
+        };
+
+        window.clearEarthquakes = function() {
+            if (earthquakeLayerGroup) {
+                map.removeLayer(earthquakeLayerGroup);
+                earthquakeLayerGroup = null;
+            }
+        };
+
         window.onload = initMap;
     </script>
 </body>

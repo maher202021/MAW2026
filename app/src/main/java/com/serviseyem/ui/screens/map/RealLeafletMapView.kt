@@ -58,6 +58,10 @@ fun RealLeafletMapView(
     onSwitchToRadar: (() -> Unit)? = null,
     onMapLoadFailed: (() -> Unit)? = null,
     onWebViewCreated: (WebView) -> Unit = {},
+    isEarthquakeLayerActive: Boolean = false,
+    earthquakeUpdateTrigger: Int = 0,
+    onEarthquakeDataLoaded: ((Long, Int) -> Unit)? = null,
+    onEarthquakeDataError: ((String) -> Unit)? = null,
     themeColors: VisualThemePalette = resolveThemePalette(AdminSettingsEntity()),
     modifier: Modifier = Modifier
 ) {
@@ -120,6 +124,17 @@ fun RealLeafletMapView(
         if (isMapReady && webViewRef != null && mapMode == MapMode.VELA_3D) {
             val script = "if (window.setTilt) { window.setTilt($tiltAngle); }"
             webViewRef?.evaluateJavascript(script, null)
+        }
+    }
+
+    // 🌋 تفعيل/إيقاف وتحديث طبقة الزلازل الحية
+    LaunchedEffect(isMapReady, isEarthquakeLayerActive, earthquakeUpdateTrigger) {
+        if (isMapReady && webViewRef != null) {
+            if (isEarthquakeLayerActive) {
+                webViewRef?.evaluateJavascript("if (window.loadEarthquakes) { window.loadEarthquakes(); }", null)
+            } else {
+                webViewRef?.evaluateJavascript("if (window.clearEarthquakes) { window.clearEarthquakes(); }", null)
+            }
         }
     }
 
@@ -208,6 +223,16 @@ fun RealLeafletMapView(
                                 webViewRef?.post {
                                     webViewRef?.evaluateJavascript("if (window.switchLayer) { window.switchLayer('$layerKey'); }", null)
                                 }
+                            }
+
+                            @JavascriptInterface
+                            fun onEarthquakeDataLoaded(timestamp: Long, count: Int) {
+                                onEarthquakeDataLoaded?.invoke(timestamp, count)
+                            }
+
+                            @JavascriptInterface
+                            fun onEarthquakeDataError(error: String) {
+                                onEarthquakeDataError?.invoke(error)
                             }
                         }, "AndroidBridge")
 

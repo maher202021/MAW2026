@@ -291,6 +291,16 @@ fun MapScreenContent(
                             state.isRadarMode = true
                         },
                         onWebViewCreated = { webViewRef = it },
+                        isEarthquakeLayerActive = state.isEarthquakeLayerActive,
+                        earthquakeUpdateTrigger = state.earthquakeUpdateTrigger,
+                        onEarthquakeDataLoaded = { timestamp, count ->
+                            state.lastEarthquakeUpdateTime = timestamp
+                            state.earthquakeCount = count
+                            state.isEarthquakeLoading = false
+                        },
+                        onEarthquakeDataError = { _ ->
+                            state.isEarthquakeLoading = false
+                        },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -592,6 +602,10 @@ fun MapScreenContent(
                             else "تم إيقاف طبقة Esri والعودة للطبقة الافتراضية"
                         )
                     }
+                },
+                isEarthquakeActive = state.isEarthquakeLayerActive,
+                onToggleEarthquake = {
+                    state.isEarthquakeBottomSheetOpen = true
                 },
                 isGroupActive = state.isGroupTrackingActive,
                 onToggleGroupTracking = {
@@ -976,6 +990,30 @@ fun MapScreenContent(
                 }
             },
             onDismiss = { state.isRoutePlannerOpen = false }
+        )
+    }
+
+    // 🌋 نافذة التحكم بطبقة الزلازل الحية
+    if (state.isEarthquakeBottomSheetOpen) {
+        EarthquakeBottomSheet(
+            isActive = state.isEarthquakeLayerActive,
+            onToggleActive = { active ->
+                state.isEarthquakeLayerActive = active
+                if (active) {
+                    state.isEarthquakeLoading = true
+                    state.earthquakeUpdateTrigger++
+                }
+            },
+            lastUpdateTime = state.lastEarthquakeUpdateTime,
+            earthquakeCount = state.earthquakeCount,
+            isLoading = state.isEarthquakeLoading,
+            onRefreshNow = {
+                state.isEarthquakeLoading = true
+                state.isEarthquakeLayerActive = true
+                state.earthquakeUpdateTrigger++
+            },
+            themeColors = themeColors,
+            onDismiss = { state.isEarthquakeBottomSheetOpen = false }
         )
     }
 }
