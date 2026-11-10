@@ -33,6 +33,10 @@ android {
     }
     val agoraId = agoraProps.getProperty("AGORA_APP_ID") ?: System.getenv("AGORA_APP_ID") ?: ""
     buildConfigField("String", "AGORA_APP_ID", "\"$agoraId\"")
+
+    ndk {
+      abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
+    }
   }
 
   signingConfigs {
@@ -93,13 +97,21 @@ android {
       signingConfig = signingConfigs.getByName("debugConfig")
     }
   }
+
+  packaging {
+    jniLibs {
+      useLegacyPackaging = true
+    }
+  }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
   }
-  kotlinOptions {
-    jvmTarget = "17"
-    freeCompilerArgs += listOf("-Xskip-metadata-version-check")
+  kotlin {
+    compilerOptions {
+      jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+      freeCompilerArgs.addAll(listOf("-Xskip-metadata-version-check"))
+    }
   }
   buildFeatures {
     compose = true
@@ -179,8 +191,7 @@ dependencies {
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
   implementation(libs.logging.interceptor)
   implementation("io.github.rallista:valhalla-mobile:0.6.1")
-  implementation("io.github.rallista:valhalla-models:0.5.2")
-  implementation("io.github.rallista:valhalla-models-config:0.5.2")
+  // valhalla-models and valhalla-models-config commented out to reduce APK size
   implementation(libs.moshi.kotlin)
   implementation(libs.okhttp)
   implementation(libs.play.services.location)
