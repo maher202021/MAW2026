@@ -240,10 +240,4 @@ afterEvaluate {
 }
 
 
-// Global Kotlin JVM configuration
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        freeCompilerArgs.add("-Xskip-metadata-version-check")
-    }
-}
+// Finalized configuration
