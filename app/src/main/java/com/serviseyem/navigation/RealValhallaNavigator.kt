@@ -6,24 +6,25 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.File
 import kotlin.math.*
 
 /**
  * 🗺️ RealValhallaNavigator
- * Production-grade offline routing engine:
- * - Real routing is driven strictly by Valhalla offline tiles (valhalla_tiles.tar).
- * - When tiles are unavailable, Basic Mode returns ONLY a straight-line direct vector
- *   with label "تقريبي - مسافة مباشرة" (strictly NO fabricated street turns).
- * - Computes progress, remaining distance, and ETA along the route polyline.
- * - Detects off-route conditions with 5-second hysteresis and reroutes.
- * - Thread-safe native execution using Mutex on IO dispatcher.
+ * محرك الملاحة الحقيقي المعتمد على C++ و Valhalla Mobile:
+ * - يقرأ حزم شوارع OpenStreetMap الحقيقية من ملف valhalla_tiles.tar.
+ * - يفك تشفير الـ polyline6 الحقيقي للشوارع الفعلية في اليمن.
+ * - يستخرج مناورات التوجيه خطوة بخطوة (تعليمات الانعطافات وأسماء الشوارع).
+ * - يعود للمسار المباشر الصريح فقط عند عدم تنزيل حزم الأوفلاين بعد، مع تنبيه واضح.
  */
 class RealValhallaNavigator(private val context: Context) {
 
     private val TAG = "RealValhallaNavigator"
     private val mutex = Mutex()
     private var isEngineInitialized = false
+    private var valhallaBridge: ValhallaNativeBridge? = null
+    private var currentConfigPath: String? = null
 
     init {
         initializeEngine()
@@ -35,17 +36,50 @@ class RealValhallaNavigator(private val context: Context) {
             val marker = File(valhallaDir, OfflineMapLifecycleManager.MARKER_FILE)
             val archive = File(valhallaDir, OfflineMapLifecycleManager.TILES_ARCHIVE)
 
-            if (marker.exists() && archive.exists() && archive.length() > 0) {
-                Log.d(TAG, "Valhalla tile archive verified at: ${archive.absolutePath} (${archive.length()} bytes)")
-                isEngineInitialized = true
+            if (marker.exists() && archive.exists() && archive.length() >= 10_000_000L) {
+                val configFile = ensureConfigFile(valhallaDir, archive)
+                currentConfigPath = configFile.absolutePath
+
+                try {
+                    valhallaBridge?.close()
+                    valhallaBridge = ValhallaNativeBridge(configFile.absolutePath)
+                    isEngineInitialized = true
+                    Log.d(TAG, "Valhalla C++ Native Engine successfully initialized with archive: ${archive.absolutePath}")
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Failed to instantiate ValhallaNativeBridge: ${e.message}")
+                    isEngineInitialized = false
+                }
             } else {
-                Log.i(TAG, "Valhalla tiles not found. Basic direct mode active.")
+                Log.i(TAG, "Valhalla tiles not found or smaller than 10MB. Offline navigation pending download.")
                 isEngineInitialized = false
             }
         } catch (e: Exception) {
             Log.e(TAG, "Valhalla engine initialization error: ${e.message}")
             isEngineInitialized = false
         }
+    }
+
+    private fun ensureConfigFile(valhallaDir: File, archiveFile: File): File {
+        val configFile = File(valhallaDir, "valhalla.json")
+        val configJson = JSONObject().apply {
+            put("mjolnir", JSONObject().apply {
+                put("tile_dir", valhallaDir.absolutePath)
+                put("tile_extract", archiveFile.absolutePath)
+                put("admin", File(valhallaDir, "admin.sqlite").absolutePath)
+                put("timezone", File(valhallaDir, "tz.sqlite").absolutePath)
+            })
+            put("loki", JSONObject().apply {
+                put("actions", org.json.JSONArray(listOf("route", "locate", "sources_to_targets")))
+            })
+            put("thor", JSONObject().apply {
+                put("source_to_target_algorithm", "select_optimal")
+            })
+            put("meili", JSONObject().apply {
+                put("customizable", org.json.JSONArray(listOf("mode")))
+            })
+        }
+        configFile.writeText(configJson.toString(2))
+        return configFile
     }
 
     fun isReady(): Boolean = isEngineInitialized
@@ -58,24 +92,196 @@ class RealValhallaNavigator(private val context: Context) {
         destinationName: String = "الوجهة"
     ): NavigationRouteResult = withContext(Dispatchers.IO) {
         mutex.withLock {
-            if (!isEngineInitialized) {
-                // Basic Mode: Strictly straight-line direct geodesic path without fabricated street curves
+            if (!isEngineInitialized || valhallaBridge == null) {
+                initializeEngine()
+            }
+
+            if (!isEngineInitialized || valhallaBridge == null) {
                 return@withContext calculateBasicDirectRoute(startLat, startLon, endLat, endLon, destinationName)
             }
 
             try {
-                // When Valhalla offline tiles are available, generate real road-following polyline
                 calculateValhallaOfflineRoute(startLat, startLon, endLat, endLon, destinationName)
             } catch (e: Exception) {
-                Log.e(TAG, "Valhalla calculation error, falling back safely: ${e.message}")
+                Log.e(TAG, "Valhalla native route error, falling back to direct line: ${e.message}")
                 calculateBasicDirectRoute(startLat, startLon, endLat, endLon, destinationName)
             }
         }
     }
 
     /**
-     * Basic Mode: Direct Geodesic Line.
-     * Shows straight-line distance, bearing, and clear disclaimer without fabricated streets.
+     * المسار الحقيقي المشتق من Valhalla C++ Engine
+     */
+    private fun calculateValhallaOfflineRoute(
+        startLat: Double,
+        startLon: Double,
+        endLat: Double,
+        endLon: Double,
+        destinationName: String
+    ): NavigationRouteResult {
+        val bridge = valhallaBridge ?: throw IllegalStateException("Valhalla bridge not initialized")
+
+        val requestJson = JSONObject().apply {
+            put("locations", org.json.JSONArray().apply {
+                put(JSONObject().apply {
+                    put("lat", startLat)
+                    put("lon", startLon)
+                })
+                put(JSONObject().apply {
+                    put("lat", endLat)
+                    put("lon", endLon)
+                })
+            })
+            put("costing", "auto")
+            put("directions_options", JSONObject().apply {
+                put("units", "kilometers")
+                put("language", "ar-YE")
+            })
+        }
+
+        val rawResponse = bridge.route(requestJson.toString())
+        val responseObj = JSONObject(rawResponse)
+
+        if (!responseObj.has("trip")) {
+            val errorMsg = responseObj.optString("error", "لم يتم العثور على مسار صالح")
+            throw IllegalStateException("Valhalla error: $errorMsg")
+        }
+
+        val tripObj = responseObj.getJSONObject("trip")
+        val summaryObj = tripObj.optJSONObject("summary")
+        val totalDistanceKm = summaryObj?.optDouble("length", 0.0) ?: 0.0
+        val totalDurationSec = summaryObj?.optInt("time", 60) ?: 60
+
+        val legsArray = tripObj.getJSONArray("legs")
+        if (legsArray.length() == 0) {
+            throw IllegalStateException("Trip contains no legs")
+        }
+
+        val firstLeg = legsArray.getJSONObject(0)
+        val shapeEncoded = firstLeg.getString("shape")
+        val decodedPoints = decodePolyline6(shapeEncoded)
+
+        val maneuversArray = firstLeg.optJSONArray("maneuvers")
+        val instructions = mutableListOf<NavigationInstruction>()
+        var remainingDistMeters = totalDistanceKm * 1000.0
+
+        if (maneuversArray != null && maneuversArray.length() > 0) {
+            for (i in 0 until maneuversArray.length()) {
+                val m = maneuversArray.getJSONObject(i)
+                val instructionText = m.optString("instruction", "تابع السير")
+                val typeCode = m.optInt("type", 0)
+                val lengthKm = m.optDouble("length", 0.0)
+                val segMeters = lengthKm * 1000.0
+
+                val streetNamesArr = m.optJSONArray("street_names")
+                val streetName = if (streetNamesArr != null && streetNamesArr.length() > 0) {
+                    streetNamesArr.getString(0)
+                } else {
+                    ""
+                }
+
+                val maneuverType = mapValhallaManeuverType(typeCode)
+
+                instructions.add(
+                    NavigationInstruction(
+                        text = instructionText,
+                        maneuverType = maneuverType,
+                        distanceRemaining = remainingDistMeters,
+                        segmentDistance = segMeters,
+                        streetName = streetName
+                    )
+                )
+
+                remainingDistMeters = (remainingDistMeters - segMeters).coerceAtLeast(0.0)
+            }
+        }
+
+        if (instructions.isEmpty()) {
+            instructions.add(
+                NavigationInstruction(
+                    text = "انطلق نحو $destinationName",
+                    maneuverType = ManeuverType.START,
+                    distanceRemaining = totalDistanceKm * 1000.0,
+                    segmentDistance = totalDistanceKm * 1000.0
+                )
+            )
+            instructions.add(
+                NavigationInstruction(
+                    text = "الوصول إلى $destinationName",
+                    maneuverType = ManeuverType.DESTINATION,
+                    distanceRemaining = 0.0,
+                    segmentDistance = 0.0,
+                    streetName = destinationName
+                )
+            )
+        }
+
+        return NavigationRouteResult.Success(
+            points = decodedPoints,
+            instructions = instructions,
+            totalDistanceMeters = totalDistanceKm * 1000.0,
+            estimatedDurationSeconds = totalDurationSec,
+            isOfflineEngine = true,
+            modeLabel = "ملاحة أوفلاين حقيقية (Valhalla)"
+        )
+    }
+
+    /**
+     * فك تشفير مسار Valhalla Polyline6 الدقيق
+     */
+    private fun decodePolyline6(encoded: String): List<RoutePoint> {
+        val poly = ArrayList<RoutePoint>()
+        var index = 0
+        val len = encoded.length
+        var lat = 0
+        var lng = 0
+
+        while (index < len) {
+            var b: Int
+            var shift = 0
+            var result = 0
+            do {
+                b = encoded[index++].code - 63
+                result = result or ((b and 0x1f) shl shift)
+                shift += 5
+            } while (b >= 0x20)
+            val dlat = if ((result and 1) != 0) (result shr 1).inv() else (result shr 1)
+            lat += dlat
+
+            shift = 0
+            result = 0
+            do {
+                b = encoded[index++].code - 63
+                result = result or ((b and 0x1f) shl shift)
+                shift += 5
+            } while (b >= 0x20)
+            val dlng = if ((result and 1) != 0) (result shr 1).inv() else (result shr 1)
+            lng += dlng
+
+            poly.add(RoutePoint(lat / 1e6, lng / 1e6))
+        }
+        return poly
+    }
+
+    private fun mapValhallaManeuverType(type: Int): ManeuverType {
+        return when (type) {
+            0, 1 -> ManeuverType.START
+            2, 3 -> ManeuverType.STRAIGHT
+            4, 7 -> ManeuverType.SLIGHT_RIGHT
+            5, 8 -> ManeuverType.TURN_RIGHT
+            6, 9 -> ManeuverType.SHARP_RIGHT
+            10, 13 -> ManeuverType.U_TURN
+            14, 17 -> ManeuverType.SHARP_LEFT
+            15, 18 -> ManeuverType.TURN_LEFT
+            16, 19 -> ManeuverType.SLIGHT_LEFT
+            26, 27 -> ManeuverType.ROUNDABOUT
+            4, 5, 6 -> ManeuverType.DESTINATION
+            else -> ManeuverType.STRAIGHT
+        }
+    }
+
+    /**
+     * الوضع المباشر الأساسي مع توضيح صريح عند عدم تنزيل حزم الأوفلاين
      */
     private fun calculateBasicDirectRoute(
         startLat: Double,
@@ -85,7 +291,6 @@ class RealValhallaNavigator(private val context: Context) {
         destinationName: String
     ): NavigationRouteResult {
         val directDistance = HaversinePrecisionNavigator.distanceMeters(startLat, startLon, endLat, endLon)
-        val directBearing = HaversinePrecisionNavigator.initialBearing(startLat, startLon, endLat, endLon)
 
         val directPoints = listOf(
             RoutePoint(startLat, startLon),
@@ -94,7 +299,7 @@ class RealValhallaNavigator(private val context: Context) {
 
         val basicInstructions = listOf(
             NavigationInstruction(
-                text = "تقريبي - مسافة مباشرة نحو $destinationName",
+                text = "تقريبي - مسافة مباشرة نحو $destinationName (يرجى تحميل خرائط الأوفلاين للتوجيه الشارعي)",
                 maneuverType = ManeuverType.START,
                 distanceRemaining = directDistance,
                 segmentDistance = directDistance,
@@ -109,7 +314,6 @@ class RealValhallaNavigator(private val context: Context) {
             )
         )
 
-        // Conservative travel time: 40 km/h baseline
         val durationSeconds = ((directDistance / 11.11)).toInt().coerceAtLeast(60)
 
         return NavigationRouteResult.Success(
@@ -118,114 +322,10 @@ class RealValhallaNavigator(private val context: Context) {
             totalDistanceMeters = directDistance,
             estimatedDurationSeconds = durationSeconds,
             isOfflineEngine = false,
-            modeLabel = "تقريبي - مسافة مباشرة"
+            modeLabel = "تقريبي - مسافة مباشرة (حزمة الأوفلاين غير محملة)"
         )
     }
 
-    /**
-     * Valhalla Offline Routing Engine.
-     */
-    private fun calculateValhallaOfflineRoute(
-        startLat: Double,
-        startLon: Double,
-        endLat: Double,
-        endLon: Double,
-        destinationName: String
-    ): NavigationRouteResult {
-        // Compute geodesic distance and detailed waypoints along road network
-        val totalDistMeters = HaversinePrecisionNavigator.distanceMeters(startLat, startLon, endLat, endLon)
-
-        // Read or resolve road path from Valhalla archive
-        val roadPoints = mutableListOf<RoutePoint>()
-        roadPoints.add(RoutePoint(startLat, startLon))
-
-        // Inter-city or urban segments
-        val isIntercity = totalDistMeters > 18000.0
-        val steps = if (isIntercity) 12 else 6
-        for (i in 1 until steps) {
-            val fraction = i.toDouble() / steps
-            val curveFactor = sin(fraction * Math.PI) * (if (isIntercity) 0.012 else 0.003)
-            val pLat = startLat + (endLat - startLat) * fraction + curveFactor
-            val pLon = startLon + (endLon - startLon) * fraction + (curveFactor * 0.4)
-            roadPoints.add(RoutePoint(pLat, pLon))
-        }
-        roadPoints.add(RoutePoint(endLat, endLon))
-
-        // Generate verified turn maneuvers
-        val instructions = mutableListOf<NavigationInstruction>()
-        var remainingDist = totalDistMeters
-
-        for (i in 0 until roadPoints.size - 1) {
-            val segDist = HaversinePrecisionNavigator.distanceMeters(
-                roadPoints[i].lat, roadPoints[i].lon,
-                roadPoints[i + 1].lat, roadPoints[i + 1].lon
-            )
-
-            val maneuver = if (i == 0) {
-                ManeuverType.START
-            } else {
-                val bPrev = HaversinePrecisionNavigator.initialBearing(
-                    roadPoints[i - 1].lat, roadPoints[i - 1].lon,
-                    roadPoints[i].lat, roadPoints[i].lon
-                )
-                val bNext = HaversinePrecisionNavigator.initialBearing(
-                    roadPoints[i].lat, roadPoints[i].lon,
-                    roadPoints[i + 1].lat, roadPoints[i + 1].lon
-                )
-                val delta = HaversinePrecisionNavigator.angleDelta(bPrev, bNext)
-                HaversinePrecisionNavigator.classifyTurn(delta)
-            }
-
-            val text = when (maneuver) {
-                ManeuverType.START -> "انطلق نحو مسار الرحلة"
-                ManeuverType.STRAIGHT -> "تابع السير للأمام"
-                ManeuverType.SLIGHT_RIGHT -> "انحرف قليلاً إلى اليمين"
-                ManeuverType.TURN_RIGHT -> "انعطف يميناً"
-                ManeuverType.SHARP_RIGHT -> "انعطاف حاد إلى اليمين"
-                ManeuverType.SLIGHT_LEFT -> "انحرف قليلاً إلى اليسار"
-                ManeuverType.TURN_LEFT -> "انعطف يساراً"
-                ManeuverType.SHARP_LEFT -> "انعطاف حاد إلى اليسار"
-                ManeuverType.U_TURN -> "قم بالدوران للخلف"
-                ManeuverType.ROUNDABOUT -> "ادخل الدوار واتخذ المخرج الثاني"
-                ManeuverType.DESTINATION -> "الوصول إلى الوجهة"
-            }
-
-            instructions.add(
-                NavigationInstruction(
-                    text = text,
-                    maneuverType = maneuver,
-                    distanceRemaining = remainingDist,
-                    segmentDistance = segDist
-                )
-            )
-            remainingDist = (remainingDist - segDist).coerceAtLeast(0.0)
-        }
-
-        instructions.add(
-            NavigationInstruction(
-                text = "وصلت إلى وجهتك: $destinationName",
-                maneuverType = ManeuverType.DESTINATION,
-                distanceRemaining = 0.0,
-                segmentDistance = 0.0,
-                streetName = destinationName
-            )
-        )
-
-        val durationSeconds = ((totalDistMeters / 12.5)).toInt().coerceAtLeast(60)
-
-        return NavigationRouteResult.Success(
-            points = roadPoints,
-            instructions = instructions,
-            totalDistanceMeters = totalDistMeters,
-            estimatedDurationSeconds = durationSeconds,
-            isOfflineEngine = true,
-            modeLabel = "ملاحة أوفلاين (Valhalla)"
-        )
-    }
-
-    /**
-     * Checks if current GPS fix is off-route (distance to polyline > max(30m, 2 * accuracy)).
-     */
     fun isOffRoute(
         currentLat: Double,
         currentLon: Double,
@@ -234,7 +334,7 @@ class RealValhallaNavigator(private val context: Context) {
     ): Boolean {
         if (routePoints.size < 2) return false
 
-        val threshold = max(30.0, (2.0 * accuracyMeters).toDouble())
+        val threshold = max(35.0, (2.0 * accuracyMeters).toDouble())
         var minCrossTrack = Double.MAX_VALUE
 
         for (i in 0 until routePoints.size - 1) {
@@ -252,40 +352,13 @@ class RealValhallaNavigator(private val context: Context) {
 
         return minCrossTrack > threshold
     }
-}
 
-class MockValhallaNavigator {
-    fun calculateRoute(
-        startLat: Double,
-        startLon: Double,
-        endLat: Double,
-        endLon: Double,
-        destinationName: String = "الوجهة"
-    ): NavigationRouteResult {
-        val dist = HaversinePrecisionNavigator.distanceMeters(startLat, startLon, endLat, endLon)
-        val pts = listOf(RoutePoint(startLat, startLon), RoutePoint(endLat, endLon))
-        val instrs = listOf(
-            NavigationInstruction(
-                text = "تقريبي - مسافة مباشرة نحو $destinationName",
-                maneuverType = ManeuverType.START,
-                distanceRemaining = dist,
-                segmentDistance = dist
-            ),
-            NavigationInstruction(
-                text = "الوصول إلى $destinationName",
-                maneuverType = ManeuverType.DESTINATION,
-                distanceRemaining = 0.0,
-                segmentDistance = 0.0
-            )
-        )
-        return NavigationRouteResult.Success(
-            points = pts,
-            instructions = instrs,
-            totalDistanceMeters = dist,
-            estimatedDurationSeconds = (dist / 11.0).toInt().coerceAtLeast(60),
-            isOfflineEngine = false,
-            modeLabel = "تقريبي - مسافة مباشرة"
-        )
+    fun close() {
+        try {
+            valhallaBridge?.close()
+            valhallaBridge = null
+        } catch (_: Exception) {}
+        isEngineInitialized = false
     }
 }
 

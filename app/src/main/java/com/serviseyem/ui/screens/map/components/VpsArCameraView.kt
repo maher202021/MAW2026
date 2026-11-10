@@ -33,6 +33,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.core.content.ContextCompat
 import com.serviseyem.data.PropertyEntity
 import com.serviseyem.data.ProviderEntity
@@ -52,6 +58,7 @@ fun VpsArCameraView(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
@@ -93,6 +100,51 @@ fun VpsArCameraView(
             .fillMaxSize()
             .background(Color(0xFF030712))
     ) {
+        // Real Live Camera Feed via CameraX
+        if (hasCameraPermission) {
+            var cameraProviderInstance by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+            DisposableEffect(lifecycleOwner) {
+                onDispose {
+                    try {
+                        cameraProviderInstance?.unbindAll()
+                    } catch (e: Exception) {}
+                }
+            }
+
+            AndroidView(
+                factory = { ctx ->
+                    val previewView = PreviewView(ctx).apply {
+                        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                    }
+                    val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                    val executor = ContextCompat.getMainExecutor(ctx)
+                    cameraProviderFuture.addListener({
+                        try {
+                            val provider = cameraProviderFuture.get()
+                            cameraProviderInstance = provider
+                            provider.unbindAll()
+                            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                            val preview = Preview.Builder().build().also {
+                                it.setSurfaceProvider(previewView.surfaceProvider)
+                            }
+                            provider.bindToLifecycle(lifecycleOwner, cameraSelector, preview)
+                        } catch (e: Exception) {
+                            // Safe fallback: keeps canvas radar visible
+                        }
+                    }, executor)
+                    previewView
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+
+            // Semi-transparent HUD overlay to keep text and cyber radar clearly readable
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0x66030712))
+            )
+        }
+
         // AR Scanning Background & Radar Grid
         Canvas(modifier = Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)

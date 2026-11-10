@@ -52,18 +52,29 @@ fun MapFilterBar(
     providers: List<ProviderEntity> = emptyList(),
     stores: List<StoreEntity> = emptyList(),
     properties: List<PropertyEntity> = emptyList(),
+    userLat: Double = 0.0,
+    userLng: Double = 0.0,
     onBackClick: () -> Unit = {},
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var showFiltersSheet by remember { mutableStateOf(false) }
     var isSearchFocused by remember { mutableStateOf(false) }
 
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
-    val smartResults = remember(searchQuery, providers, stores, properties) {
+    val smartResults = remember(searchQuery, providers, stores, properties, userLat, userLng) {
         if (searchQuery.isNotBlank()) {
-            CrossFuzzySearchEngine.search(searchQuery, providers, stores, properties)
+            CrossFuzzySearchEngine.searchEverything(
+                query = searchQuery,
+                providers = providers,
+                stores = stores,
+                properties = properties,
+                userLat = userLat,
+                userLng = userLng,
+                context = context
+            )
         } else emptyList()
     }
 
@@ -286,6 +297,7 @@ fun MapFilterBar(
                                     CrossFuzzySearchEngine.SearchType.PERSON -> "👤"
                                     CrossFuzzySearchEngine.SearchType.STORE -> "🏪"
                                     CrossFuzzySearchEngine.SearchType.PROPERTY -> "🏠"
+                                    CrossFuzzySearchEngine.SearchType.LANDMARK -> "🏛️"
                                 }
                                 
                                 Box(

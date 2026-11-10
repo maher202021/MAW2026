@@ -69,7 +69,32 @@ fun RealLeafletMapView(
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     var isMapReady by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
-    var hasLoadError by remember { mutableStateOf(false) }
+    
+    // التحقق المسبق من وجود ملف map.html لتجنب الشاشات السوداء تماماً
+    val isAssetAvailable = remember {
+        try {
+            context.assets.open("map.html").close()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+    var hasLoadError by remember { mutableStateOf(!isAssetAvailable) }
+
+    // تنظيف الموارد لمنع تسريب الذاكرة أو تجمد العرض
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                webViewRef?.apply {
+                    stopLoading()
+                    loadUrl("about:blank")
+                    removeAllViews()
+                    destroy()
+                }
+            } catch (e: Exception) {}
+            webViewRef = null
+        }
+    }
 
     // تحويل البيانات إلى JSON مهيأ للبلاطات والعلامات
     val markersJson = remember(nearbyProviders, nearbyStores, nearbyProperties, selectedCity) {

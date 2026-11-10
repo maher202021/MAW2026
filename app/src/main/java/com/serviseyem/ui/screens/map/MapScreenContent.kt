@@ -333,16 +333,22 @@ fun MapScreenContent(
                     val script = "if (window.flyToLocation) { window.flyToLocation(${result.latitude}, ${result.longitude}, 18); }"
                     webViewRef?.evaluateJavascript(script, null)
                     
-                    // عرض تفاصيل العنصر فوراً إذا كان كياناً
+                    // عرض تفاصيل العنصر فوراً أو الانتقال للملاحة للشوارع والمعالم
                     when (val item = result.originalItem) {
                         is ProviderEntity -> state.selectedEntity = item
                         is StoreEntity -> state.selectedEntity = item
                         is PropertyEntity -> state.selectedEntity = item
+                        is com.serviseyem.ui.screens.map.utils.StreetOrLandmark -> {
+                            state.pendingNavDestination = item
+                            state.currentMapMode = MapMode.NAVIGATION
+                        }
                     }
                 },
                 providers = providers,
                 stores = stores,
                 properties = properties,
+                userLat = safeUserLat,
+                userLng = safeUserLng,
                 onBackClick = onBackClick,
                 themeColors = themeColors,
                 modifier = Modifier
@@ -654,6 +660,7 @@ fun MapScreenContent(
                     userLat = safeUserLat,
                     userLng = safeUserLng,
                     themeColors = themeColors,
+                    initialDestination = state.pendingNavDestination,
                     onDrawRouteOnMap = { lat1, lng1, lat2, lng2, destName ->
                         val escapedName = destName.replace("'", "\\'")
                         val script = "if (window.drawRoute) { window.drawRoute($lat1, $lng1, $lat2, $lng2, '#00E5FF', '$escapedName'); }"

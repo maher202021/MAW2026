@@ -15,59 +15,47 @@ object ValhallaDownloadManager {
     private const val KEY_IS_DOWNLOADED = "is_valhalla_downloaded"
     private const val KEY_DOWNLOAD_TIME = "valhalla_download_time"
     private const val MARKER_FILE_NAME = "is_valhalla_downloaded.txt"
+    private const val VALHALLA_DIR_NAME = "valhalla"
+    private const val TILES_ARCHIVE_NAME = "valhalla_tiles.tar"
+    private const val MIN_VALID_SIZE_BYTES = 10_000_000L // 10 ميجابايت كحد أدنى لمنع الحزم الفارغة أو التالفة
 
-    /**
-     * التحقق مما إذا كانت ملفات الملاحة الدقيقة أوفلاين محملة ومحفوظة مسبقاً
-     */
-    fun isDownloaded(context: Context): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val prefFlag = prefs.getBoolean(KEY_IS_DOWNLOADED, false)
-        val markerFile = File(context.filesDir, MARKER_FILE_NAME)
-        return prefFlag || (markerFile.exists() && markerFile.length() > 0)
+    fun getValhallaDir(context: Context): File {
+        val dir = File(context.filesDir, VALHALLA_DIR_NAME)
+        if (!dir.exists()) dir.mkdirs()
+        return dir
     }
 
+    fun getTilesArchive(context: Context): File = File(getValhallaDir(context), TILES_ARCHIVE_NAME)
+
+    fun getMarkerFile(context: Context): File = File(getValhallaDir(context), MARKER_FILE_NAME)
+
     /**
-     * التحقق من تنزيل حزمة مدينة محددة
+     * التحقق الحقيقي من وجود ملف valhalla_tiles.tar بحجم يتجاوز 10 ميجابايت ووجود علامة النجاح
      */
+    fun isDownloaded(context: Context): Boolean {
+        val archive = getTilesArchive(context)
+        val marker = getMarkerFile(context)
+        return archive.exists() && archive.length() >= MIN_VALID_SIZE_BYTES && marker.exists() && marker.length() > 0
+    }
+
     fun isCityDownloaded(context: Context, cityName: String): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getBoolean("city_offline_$cityName", false) || isDownloaded(context)
     }
 
-    /**
-     * حفظ تنزيل حزمة مدينة محددة
-     */
     fun markCityAsDownloaded(context: Context, cityName: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean("city_offline_$cityName", true).apply()
-        markAsDownloaded(context)
     }
 
-    /**
-     * حفظ حالة التحميل في الذاكرة الدائمة
-     */
-    fun markAsDownloaded(context: Context) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit()
-            .putBoolean(KEY_IS_DOWNLOADED, true)
-            .putLong(KEY_DOWNLOAD_TIME, System.currentTimeMillis())
-            .apply()
-        
-        try {
-            val marker = File(context.filesDir, MARKER_FILE_NAME)
-            marker.writeText("SUCCESS: Valhalla offline navigation downloaded successfully at ${System.currentTimeMillis()}")
-        } catch (_: Exception) {}
-    }
-
-    /**
-     * حذف ملفات الأوفلاين في حال أراد المستخدم إعادة التحميل
-     */
     fun clearOfflineData(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().clear().apply()
         try {
-            val marker = File(context.filesDir, MARKER_FILE_NAME)
+            val marker = getMarkerFile(context)
             if (marker.exists()) marker.delete()
+            val archive = getTilesArchive(context)
+            if (archive.exists()) archive.delete()
         } catch (_: Exception) {}
     }
 
@@ -76,28 +64,29 @@ object ValhallaDownloadManager {
         customUrl: String = "",
         onProgress: (Float, String) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
+        val valhallaDir = getValhallaDir(context)
+        val targetArchive = getTilesArchive(context)
+        val marker = getMarkerFile(context)
+        val tempZipFile = File(valhallaDir, "temp_valhalla_download.zip")
+
         try {
             val defaultUrl = "https://github.com/maher202021/Vela2026/releases/download/yemen-valhalla-1/yemen_valhalla_tiles.zip"
             var currentUrl = if (customUrl.isNotBlank()) customUrl else defaultUrl
 
-            onProgress(0.1f, "جاري الاتصال بسيرفر خرائط اليمن...")
+            onProgress(0.05f, "جاري الاتصال بسيرفر خرائط ومسارات اليمن...")
 
-            // متابعة الروابط المحولة (301, 302, 307 Redirects) لتنزيل الملف من GitHub Assets
             var connection: HttpURLConnection? = null
             var redirects = 0
             while (redirects < 5) {
                 val url = URL(currentUrl)
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     instanceFollowRedirects = true
-                    connectTimeout = 15000
-                    readTimeout = 30000
+                    connectTimeout = 20000
+                    readTimeout = 60000
                     setRequestProperty("User-Agent", "Serviseyem-App/1.2.0")
                 }
                 val status = conn.responseCode
-                if (status == HttpURLConnection.HTTP_MOVED_TEMP ||
-                    status == HttpURLConnection.HTTP_MOVED_PERM ||
-                    status == HttpURLConnection.HTTP_SEE_OTHER ||
-                    status == 307 || status == 308) {
+                if (status in listOf(301, 302, 303, 307, 308)) {
                     val newUrl = conn.getHeaderField("Location")
                     conn.disconnect()
                     if (!newUrl.isNullOrBlank()) {
@@ -112,13 +101,15 @@ object ValhallaDownloadManager {
 
             val conn = connection ?: throw IllegalStateException("تعذر إنشاء اتصال بسيرفر الخرائط")
             conn.connect()
-            val length = conn.contentLength
+            if (conn.responseCode !in 200..299) {
+                throw IllegalStateException("فشل الاتصال: رمز الاستجابة ${conn.responseCode}")
+            }
 
+            val length = conn.contentLength.toLong()
             val input = conn.inputStream
-            val zipFile = File(context.filesDir, "yemen_valhalla_tiles.zip")
-            val output = FileOutputStream(zipFile)
+            val output = FileOutputStream(tempZipFile)
 
-            val data = ByteArray(8192)
+            val data = ByteArray(16384)
             var total: Long = 0
             var count: Int
 
@@ -126,10 +117,10 @@ object ValhallaDownloadManager {
                 total += count.toLong()
                 output.write(data, 0, count)
                 if (length > 0) {
-                    val progress = 0.1f + (total.toFloat() / length.toFloat()) * 0.65f
-                    onProgress(progress.coerceIn(0.1f, 0.75f), "جاري تحميل بيانات الملاحة (${(progress * 100).toInt()}%)...")
+                    val progress = 0.05f + (total.toFloat() / length.toFloat()) * 0.65f
+                    onProgress(progress.coerceIn(0.05f, 0.70f), "جاري تحميل بيانات الملاحة (${(progress * 100).toInt()}%)...")
                 } else {
-                    onProgress(0.45f, "جاري استقبال حزم الخرائط (${total / 1024} KB)...")
+                    onProgress(0.35f, "جاري استقبال حزم الخرائط (${total / (1024 * 1024)} MB)...")
                 }
             }
             output.flush()
@@ -137,52 +128,76 @@ object ValhallaDownloadManager {
             input.close()
             conn.disconnect()
 
-            onProgress(0.78f, "جاري فك ضغط خرائط الملاحة الدقيقة وتثبيتها...")
+            onProgress(0.72f, "جاري فك ضغط خرائط الملاحة الدقيقة والتحقق من سلامتها...")
 
-            // Unzip file safely
-            if (zipFile.exists() && zipFile.length() > 0) {
-                try {
-                    val zipInputStream = ZipInputStream(zipFile.inputStream())
-                    var zipEntry = zipInputStream.nextEntry
-                    val targetDir = context.filesDir
+            // فك الضغط بأمان مع حماية Zip Slip
+            var extractedTarFound = false
+            ZipInputStream(tempZipFile.inputStream().buffered()).use { zis ->
+                var entry = zis.nextEntry
+                while (entry != null) {
+                    val entryName = entry.name
+                    val destinationFile = if (entryName.endsWith(".tar") || entryName.contains("valhalla_tiles")) {
+                        targetArchive
+                    } else {
+                        File(valhallaDir, entryName)
+                    }
 
-                    while (zipEntry != null) {
-                        val newFile = File(targetDir, zipEntry.name)
-                        if (zipEntry.isDirectory) {
-                            newFile.mkdirs()
-                        } else {
-                            newFile.parentFile?.mkdirs()
-                            val fos = FileOutputStream(newFile)
+                    // 🛡️ حماية Zip Slip الصارمة
+                    val canonicalDest = destinationFile.canonicalPath
+                    val canonicalDir = valhallaDir.canonicalPath + File.separator
+                    if (!canonicalDest.startsWith(canonicalDir) && destinationFile != targetArchive) {
+                        zis.closeEntry()
+                        entry = zis.nextEntry
+                        continue
+                    }
+
+                    if (!entry.isDirectory) {
+                        destinationFile.parentFile?.mkdirs()
+                        FileOutputStream(destinationFile).use { fos ->
                             var len: Int
-                            while (zipInputStream.read(data).also { len = it } > 0) {
+                            while (zis.read(data).also { len = it } > 0) {
                                 fos.write(data, 0, len)
                             }
-                            fos.close()
+                            fos.flush()
                         }
-                        zipInputStream.closeEntry()
-                        zipEntry = zipInputStream.nextEntry
+                        if (destinationFile == targetArchive) {
+                            extractedTarFound = true
+                        }
                     }
-                    zipInputStream.close()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                } finally {
-                    if (zipFile.exists()) {
-                        zipFile.delete()
-                    }
+                    zis.closeEntry()
+                    entry = zis.nextEntry
                 }
             }
 
-            // حفظ تأكيد التحميل بالكامل
-            markAsDownloaded(context)
+            if (tempZipFile.exists()) tempZipFile.delete()
 
-            onProgress(1.0f, "اكتمل تنزيل وتفعيل الملاحة الدقيقة بنجاح ✓")
+            // التحقق الدقيق من حجم ملف الـ TAR الفعلي
+            if (!targetArchive.exists() || targetArchive.length() < MIN_VALID_SIZE_BYTES) {
+                targetArchive.delete()
+                marker.delete()
+                throw IllegalStateException("حجم ملف خرائط Valhalla غير مكتمل (${targetArchive.length()} بايت) - يجب أن يكون أكبر من 10 ميجابايت.")
+            }
+
+            // توثيق النجاح الفعلي الحقيقي فقط بعد التحقق
+            marker.writeText("SUCCESS_${System.currentTimeMillis()}\nSIZE=${targetArchive.length()}")
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putBoolean(KEY_IS_DOWNLOADED, true).putLong(KEY_DOWNLOAD_TIME, System.currentTimeMillis()).apply()
+
+            onProgress(1.0f, "اكتمل تنزيل وتفعيل الملاحة الدقيقة لليمن بنجاح ✓ (${targetArchive.length() / (1024 * 1024)} MB)")
             true
         } catch (e: Exception) {
             e.printStackTrace()
-            // في حال وجود مشكلة بالاتصال الخارجي ننشئ ملف تأكيد محلي للملاحة
-            markAsDownloaded(context)
-            onProgress(1.0f, "تم تجهيز وتفعيل مسارات الملاحة المدمجة بنجاح ✓")
-            true
+            // تنظيف أي ملفات جزئية تالفة لمنع التنزيل الكاذب
+            if (tempZipFile.exists()) tempZipFile.delete()
+            if (targetArchive.exists() && targetArchive.length() < MIN_VALID_SIZE_BYTES) {
+                targetArchive.delete()
+            }
+            marker.delete()
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putBoolean(KEY_IS_DOWNLOADED, false).apply()
+
+            onProgress(0.0f, "فشل تحميل خرائط الملاحة: ${e.localizedMessage ?: "خطأ في الشبكة"}")
+            false
         }
     }
 }

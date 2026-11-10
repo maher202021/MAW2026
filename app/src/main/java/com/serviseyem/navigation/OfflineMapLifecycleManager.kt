@@ -60,7 +60,7 @@ class OfflineMapLifecycleManager private constructor(private val context: Contex
         val dir = File(context.filesDir, VALHALLA_DIR)
         val marker = File(dir, MARKER_FILE)
         val archive = File(dir, TILES_ARCHIVE)
-        return marker.exists() && archive.exists() && archive.length() > 1_000_000L
+        return marker.exists() && archive.exists() && archive.length() >= 10_000_000L
     }
 
     /**
@@ -81,7 +81,7 @@ class OfflineMapLifecycleManager private constructor(private val context: Contex
             val targetArchive = File(targetDir, TILES_ARCHIVE)
 
             // التحقق المسبق لمنع أي تنزيل غير ضروري
-            if (!forceRedownload && marker.exists() && targetArchive.exists()) {
+            if (!forceRedownload && marker.exists() && targetArchive.exists() && targetArchive.length() >= 10_000_000L) {
                 _downloadState.value = DownloadState.Completed(
                     archivePath = targetArchive.absolutePath,
                     fileSize = targetArchive.length()
@@ -96,10 +96,10 @@ class OfflineMapLifecycleManager private constructor(private val context: Contex
 
                 val url = URL(DOWNLOAD_URL)
                 val connection = (url.openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 30000
+                    connectTimeout = 20000
                     readTimeout = 60000
                     instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "YemenServicesGuide/1.0 (Android)")
+                    setRequestProperty("User-Agent", "YemenServicesGuide/1.2.0 (Android)")
                 }
                 connection.connect()
 
@@ -135,7 +135,7 @@ class OfflineMapLifecycleManager private constructor(private val context: Contex
                 output.close()
                 input.close()
 
-                // فك الضغط في التخزين الداخلي
+                // فك الضغط في التخزين الداخلي مع حماية Zip Slip
                 _downloadState.value = DownloadState.Extracting(65, "جاري فك ضغط حزم الخرائط...")
 
                 ZipInputStream(tempZipFile.inputStream().buffered()).use { zis ->
@@ -145,12 +145,22 @@ class OfflineMapLifecycleManager private constructor(private val context: Contex
                         val entryName = entry.name
                         _downloadState.value = DownloadState.Extracting(80, entryName)
 
+                        val destFile = if (entryName.endsWith(".tar") || entryName.contains("valhalla_tiles")) {
+                            targetArchive
+                        } else {
+                            File(targetDir, entryName)
+                        }
+
+                        // 🛡️ فحص حماية Zip Slip
+                        val canonicalDest = destFile.canonicalPath
+                        val canonicalDir = targetDir.canonicalPath + File.separator
+                        if (!canonicalDest.startsWith(canonicalDir) && destFile != targetArchive) {
+                            zis.closeEntry()
+                            entry = zis.nextEntry
+                            continue
+                        }
+
                         if (!entry.isDirectory) {
-                            val destFile = if (entryName.endsWith(".tar") || entryName.contains("valhalla_tiles")) {
-                                targetArchive
-                            } else {
-                                File(targetDir, entryName)
-                            }
                             destFile.parentFile?.mkdirs()
                             FileOutputStream(destFile).use { fos ->
                                 val buf = ByteArray(16384)
@@ -166,26 +176,27 @@ class OfflineMapLifecycleManager private constructor(private val context: Contex
                     }
                 }
 
-                if (!targetArchive.exists()) {
-                    if (tempZipFile.exists() && tempZipFile.length() > 0) {
-                        tempZipFile.renameTo(targetArchive)
-                    } else {
-                        targetArchive.createNewFile()
-                    }
+                if (tempZipFile.exists()) tempZipFile.delete()
+
+                // التحقق من أن حجم ملف الـ TAR أكبر من 10 ميجابايت فعلاً
+                if (!targetArchive.exists() || targetArchive.length() < 10_000_000L) {
+                    if (targetArchive.exists()) targetArchive.delete()
+                    if (marker.exists()) marker.delete()
+                    _downloadState.value = DownloadState.Error("حجم حزمة الملاحة غير مكتمل (${targetArchive.length()} بايت) - يجب ألا يقل عن 10MB.")
+                    return@launch
                 }
 
-                // حذف الملف المؤقت وتوثيق العلامة
-                if (tempZipFile.exists()) tempZipFile.delete()
+                // كتابة العلامة الحقيقية فقط بعد التحقق
                 marker.writeText("OFFLINE_READY_${System.currentTimeMillis()}\nSIZE=${targetArchive.length()}")
 
                 _downloadState.value = DownloadState.Completed(targetArchive.absolutePath, targetArchive.length())
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                // تأمين عدم الانهيار وكتابة العلامة الاحتياطية
-                if (!targetArchive.exists()) targetArchive.createNewFile()
-                marker.writeText("FALLBACK_RECOVERY_${System.currentTimeMillis()}")
-                _downloadState.value = DownloadState.Completed(targetArchive.absolutePath, targetArchive.length())
+                if (tempZipFile.exists()) tempZipFile.delete()
+                if (targetArchive.exists() && targetArchive.length() < 10_000_000L) targetArchive.delete()
+                if (marker.exists()) marker.delete()
+                _downloadState.value = DownloadState.Error("فشل تحميل بيانات الملاحة: ${e.localizedMessage ?: "خطأ غير متوقع"}")
             }
         }
     }

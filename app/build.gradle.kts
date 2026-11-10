@@ -18,7 +18,7 @@ android {
 
   defaultConfig {
     applicationId = "com.serviseyem"
-    minSdk = 24
+    minSdk = 26
     targetSdk = 35
     versionCode = 5
     versionName = "1.2.0"
@@ -178,6 +178,9 @@ dependencies {
   implementation(libs.kotlinx.coroutines.core)
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
   implementation(libs.logging.interceptor)
+  implementation("io.github.rallista:valhalla-mobile:0.6.1")
+  implementation("io.github.rallista:valhalla-models:0.5.2")
+  implementation("io.github.rallista:valhalla-models-config:0.5.2")
   implementation(libs.moshi.kotlin)
   implementation(libs.okhttp)
   implementation(libs.play.services.location)

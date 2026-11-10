@@ -39,6 +39,7 @@ fun SmartNavigationPanel(
     userLat: Double,
     userLng: Double,
     themeColors: VisualThemePalette,
+    initialDestination: StreetOrLandmark? = null,
     onDrawRouteOnMap: (lat1: Double, lng1: Double, lat2: Double, lng2: Double, destName: String) -> Unit,
     onClearRoute: () -> Unit,
     onCloseNavigation: () -> Unit,
@@ -53,7 +54,7 @@ fun SmartNavigationPanel(
 
     // 0: ملاحة بين المدن والمحافظات (Inter-City)
     // 1: ملاحة الشوارع والأحياء والمحلات (Street & Urban)
-    var selectedNavTab by remember { mutableIntStateOf(if (isOfflineDownloaded) 1 else 0) }
+    var selectedNavTab by remember { mutableIntStateOf(if (initialDestination != null || isOfflineDownloaded) 1 else 0) }
 
     // Voice announcer toggle
     var isVoiceEnabled by remember { mutableStateOf(true) }
@@ -64,7 +65,14 @@ fun SmartNavigationPanel(
 
     // Street navigation states
     var streetSearchQuery by remember { mutableStateOf("") }
-    var selectedStreetOrLandmark by remember { mutableStateOf<StreetOrLandmark?>(null) }
+    var selectedStreetOrLandmark by remember { mutableStateOf<StreetOrLandmark?>(initialDestination) }
+
+    LaunchedEffect(initialDestination) {
+        if (initialDestination != null) {
+            selectedNavTab = 1
+            selectedStreetOrLandmark = initialDestination
+        }
+    }
 
     // Active Route Calculation
     val activeRoute = remember(selectedNavTab, originCity, destCity, selectedStreetOrLandmark, userLat, userLng) {
@@ -87,15 +95,20 @@ fun SmartNavigationPanel(
         )
     }
 
-    // Filtered streets list for search
-    val filteredStreets = remember(streetSearchQuery) {
+    // Filtered streets and landmarks list for search
+    val allLandmarks = remember { com.serviseyem.utils.CrossFuzzySearchEngine.getOrLoadLandmarks(context) }
+    val filteredStreets = remember(streetSearchQuery, allLandmarks) {
         if (streetSearchQuery.isBlank()) {
-            YemeniNavigationHub.POPULAR_STREETS_LANDMARKS
+            allLandmarks
         } else {
-            YemeniNavigationHub.POPULAR_STREETS_LANDMARKS.filter {
+            allLandmarks.filter {
                 it.name.contains(streetSearchQuery, ignoreCase = true) ||
                 it.area.contains(streetSearchQuery, ignoreCase = true) ||
-                it.city.contains(streetSearchQuery, ignoreCase = true)
+                it.city.contains(streetSearchQuery, ignoreCase = true) ||
+                com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(
+                    streetSearchQuery,
+                    "${it.name} ${it.area} ${it.city} ${it.type}"
+                )
             }
         }
     }

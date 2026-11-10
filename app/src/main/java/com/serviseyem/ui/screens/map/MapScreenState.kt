@@ -69,6 +69,7 @@ class MapScreenState(
 
     var selectedEntity by mutableStateOf<Any?>(null)
     var bookingProviderTarget by mutableStateOf<ProviderEntity?>(null)
+    var pendingNavDestination by mutableStateOf<com.serviseyem.ui.screens.map.utils.StreetOrLandmark?>(null)
     var isAlephDialogOpen by mutableStateOf(false)
     var alephSelectedEntity by mutableStateOf<Any?>(null)
 
