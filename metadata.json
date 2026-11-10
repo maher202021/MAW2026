@@ -1,6 +1,6 @@
 {
   "name": "دليل خدمات اليمن",
-  "description": "التطبيق الشامل للخدمات والحجوزات والفنيين والمتاجر والعقارات في اليمن",
+  "description": "دليلك الشامل للخدمات والحجوزات والفنيين والمتاجر والعقارات في اليمن - نسخة محسنة",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
