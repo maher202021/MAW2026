@@ -187,7 +187,7 @@ class OfflineMapLifecycleManager private constructor(private val context: Contex
                 }
 
                 // كتابة العلامة الحقيقية فقط بعد التحقق
-                marker.writeText("OFFLINE_READY_${System.currentTimeMillis()}\nSIZE=${targetArchive.length()}")
+                marker.writeText("SUCCESS:${System.currentTimeMillis()}\nSIZE=${targetArchive.length()}")
 
                 _downloadState.value = DownloadState.Completed(targetArchive.absolutePath, targetArchive.length())
 

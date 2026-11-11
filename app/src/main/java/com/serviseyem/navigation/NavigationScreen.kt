@@ -201,9 +201,8 @@ fun NavigationScreen(
         }
     }
 
-    // Launch initial route calculation & start foreground service
+    // Launch initial route calculation
     LaunchedEffect(targetLat, targetLng, hasValhallaFiles) {
-        NavigationForegroundService.startService(context, currentInstruction, remainingDistanceText, estimatedArrivalClock)
         recalculateRoute(announce = true)
     }
 
@@ -283,31 +282,37 @@ fun NavigationScreen(
             isSearching = true
             val query = searchQuery.trim()
 
-            // 1. Search local stores, clinics, properties
-            val localResults = mutableListOf<NavigationSearchResult>()
-            viewModel?.stores?.value?.filter {
-                it.name.contains(query, ignoreCase = true) ||
-                it.localNeighborhood.contains(query, ignoreCase = true) ||
-                it.cityId.contains(query, ignoreCase = true)
-            }?.take(3)?.forEach { s ->
-                val subtitle = s.localNeighborhood.ifBlank { s.cityId }.ifBlank { "متجر / خدمة" }
-                localResults.add(NavigationSearchResult(title = s.name, subtitle = subtitle, lat = s.latitude, lng = s.longitude, isLocal = true))
-            }
-            viewModel?.properties?.value?.filter {
-                it.title.contains(query, ignoreCase = true) ||
-                it.localNeighborhood.contains(query, ignoreCase = true) ||
-                it.cityId.contains(query, ignoreCase = true)
-            }?.take(2)?.forEach { p ->
-                val subtitle = p.localNeighborhood.ifBlank { p.cityId }.ifBlank { "عقار" }
-                localResults.add(NavigationSearchResult(title = p.title, subtitle = subtitle, lat = p.latitude, lng = p.longitude, isLocal = true))
+            // 1. Comprehensive Universal Offline & Local Search (Landmarks, Stores, Technicians, Streets)
+            val comprehensiveResults = com.serviseyem.utils.CrossFuzzySearchEngine.searchEverything(
+                query = query,
+                providers = viewModel?.providers?.value ?: emptyList(),
+                stores = viewModel?.stores?.value ?: emptyList(),
+                properties = viewModel?.properties?.value ?: emptyList(),
+                userLat = locationFix.latitude,
+                userLng = locationFix.longitude,
+                context = context
+            )
+
+            val mappedResults = comprehensiveResults.map { res ->
+                NavigationSearchResult(
+                    title = res.title,
+                    subtitle = res.subtitle,
+                    lat = res.latitude,
+                    lng = res.longitude,
+                    isLocal = true
+                )
             }
 
-            // 2. OpenStreetMap Nominatim API in background
-            val onlineResults = withContext(Dispatchers.IO) {
-                fetchNominatimPlaces(query)
+            // 2. Fallback to OpenStreetMap Nominatim only if no local/offline results found
+            val finalResults = if (mappedResults.isEmpty()) {
+                withContext(Dispatchers.IO) {
+                    fetchNominatimPlaces(query)
+                }
+            } else {
+                mappedResults
             }
 
-            searchResults = (localResults + onlineResults).distinctBy { "${it.lat},${it.lng}" }
+            searchResults = finalResults.distinctBy { "${it.lat},${it.lng}" }
             isSearching = false
         }
     }

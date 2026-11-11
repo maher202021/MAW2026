@@ -122,10 +122,26 @@ fun ServicesBrowserLayout(
                 }
             }
 
-            // 3. Search Bar - Floating Glassmorphic
+            // 3. Search Bar - Floating Glassmorphic with Comprehensive Dropdown Results
             item {
                 val isFilterActive = phoneOrNameFilter.isNotEmpty() || neighborFilter.isNotEmpty() || isVipOnly || isAvailableOnly
-                Box(
+                val searchDropdownResults = remember(searchQuery, allProviders, stores, properties) {
+                    if (searchQuery.trim().length >= 2) {
+                        com.serviseyem.utils.CrossFuzzySearchEngine.searchEverything(
+                            query = searchQuery,
+                            providers = allProviders,
+                            stores = stores,
+                            properties = properties,
+                            userLat = viewModel.userLatitude.value,
+                            userLng = viewModel.userLongitude.value,
+                            context = context
+                        )
+                    } else {
+                        emptyList()
+                    }
+                }
+
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
@@ -145,6 +161,99 @@ fun ServicesBrowserLayout(
                         },
                         themeColors = themeColors
                     )
+
+                    if (searchDropdownResults.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color(0xFF0F172A),
+                            border = BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.4f)),
+                            shadowElevation = 8.dp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "نتائج البحث الفوري والملاحة (${searchDropdownResults.size})",
+                                        color = Color(0xFF00E5FF),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "اضغط للمسار المباشر ↗",
+                                        color = Color.White.copy(alpha = 0.6f),
+                                        fontSize = 11.sp
+                                    )
+                                }
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                                searchDropdownResults.take(6).forEach { item ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                viewModel.openNavigation(item.latitude, item.longitude, item.title)
+                                            }
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        val iconBadge = when (item.type) {
+                                            com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.STORE -> "🏪"
+                                            com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.PERSON -> "👤"
+                                            com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.STREET -> "🛣️"
+                                            com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.PROPERTY -> "🏠"
+                                            com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.CITY -> "🇾🇪"
+                                            com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.AREA -> "📍"
+                                            else -> "📍"
+                                        }
+                                        Text(text = iconBadge, fontSize = 18.sp)
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = item.title,
+                                                color = Color.White,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = item.subtitle,
+                                                color = Color.White.copy(alpha = 0.7f),
+                                                fontSize = 12.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xFF00E5FF).copy(alpha = 0.15f),
+                                            border = BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.5f))
+                                        ) {
+                                            Text(
+                                                text = "انطلق",
+                                                color = Color(0xFF00E5FF),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             

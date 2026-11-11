@@ -71,10 +71,11 @@ class LocationEngine(private val context: Context) : SensorEventListener {
     private val maxSpeedMetersPerSec = 70f // ~252 km/h
     private val speedDeadbandKmh = 1.5f
 
-    // Kalman Filter variables
+    // Separate Kalman Filter variables for Latitude and Longitude
     private var kalmanLat = 0.0
     private var kalmanLon = 0.0
-    private var kalmanVariance = -1.0 // Uninitialized
+    private var kalmanVarianceLat = -1.0 // Uninitialized
+    private var kalmanVarianceLon = -1.0 // Uninitialized
     private val kalmanQ = 3.0 // Process noise (meters per second)
 
     private var lastRawLocation: Location? = null
@@ -211,18 +212,23 @@ class LocationEngine(private val context: Context) : SensorEventListener {
 
     private fun smoothCoordinates(lat: Double, lon: Double, accuracy: Float) {
         val variance = (accuracy * accuracy).toDouble()
-        if (kalmanVariance < 0.0) {
+        if (kalmanVarianceLat < 0.0 || kalmanVarianceLon < 0.0) {
             kalmanLat = lat
             kalmanLon = lon
-            kalmanVariance = variance
+            kalmanVarianceLat = variance
+            kalmanVarianceLon = variance
         } else {
-            // Apply time prediction variance
-            kalmanVariance += kalmanQ * kalmanQ
-            // Kalman gain
-            val k = kalmanVariance / (kalmanVariance + variance)
-            kalmanLat += k * (lat - kalmanLat)
-            kalmanLon += k * (lon - kalmanLon)
-            kalmanVariance = (1.0 - k) * kalmanVariance
+            // Apply independent time prediction variance for Latitude
+            kalmanVarianceLat += kalmanQ * kalmanQ
+            val kLat = kalmanVarianceLat / (kalmanVarianceLat + variance)
+            kalmanLat += kLat * (lat - kalmanLat)
+            kalmanVarianceLat = (1.0 - kLat) * kalmanVarianceLat
+
+            // Apply independent time prediction variance for Longitude
+            kalmanVarianceLon += kalmanQ * kalmanQ
+            val kLon = kalmanVarianceLon / (kalmanVarianceLon + variance)
+            kalmanLon += kLon * (lon - kalmanLon)
+            kalmanVarianceLon = (1.0 - kLon) * kalmanVarianceLon
         }
     }
 
