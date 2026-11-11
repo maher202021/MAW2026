@@ -57,59 +57,80 @@ fun MapBottomSheet(
     val context = LocalContext.current
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
-    // Extract standardized information
-    var title by remember { mutableStateOf("") }
-    var subtitle by remember { mutableStateOf("") }
-    var categoryLabel by remember { mutableStateOf("") }
-    var badgeColor by remember { mutableStateOf(Color(0xFF00E5FF)) }
-    var rating by remember { mutableDoubleStateOf(5.0) }
-    var phone by remember { mutableStateOf("") }
-    var imageUrl by remember { mutableStateOf("") }
-    var isAvailable by remember { mutableStateOf(true) }
-    var lat by remember { mutableDoubleStateOf(0.0) }
-    var lng by remember { mutableDoubleStateOf(0.0) }
-
-    when (entity) {
-        is ProviderEntity -> {
-            title = entity.name
-            subtitle = entity.customCategoryName.ifEmpty { entity.specialization.ifEmpty { entity.profession } }
-            categoryLabel = "👷 فني صيانة معتمد"
-            badgeColor = Color(0xFF00E5FF)
-            rating = entity.rating.toDouble()
-            phone = entity.phone
-            imageUrl = entity.profileImage.ifEmpty { entity.coverImage }
-            isAvailable = entity.isAvailable
-            lat = entity.latitude
-            lng = entity.longitude
-        }
-        is StoreEntity -> {
-            title = entity.name
-            val isMedical = entity.sectionId.contains("medical") || entity.categoryId.contains("medical") || entity.name.contains("طبي") || entity.name.contains("صيدلية")
-            val isRestaurant = !isMedical && (entity.sectionId.contains("restaurant") || entity.categoryId.contains("restaurant") || entity.name.contains("مطعم") || entity.name.contains("كافيه"))
-            
-            categoryLabel = if (isMedical) "🏥 مركز طبي / صيدلية" else if (isRestaurant) "🍔 مطعم / كافيه" else "🏪 متجر معتمد"
-            badgeColor = if (isMedical) Color(0xFFEC4899) else if (isRestaurant) Color(0xFFF59E0B) else Color(0xFF10B981)
-            subtitle = entity.description.take(50).ifEmpty { if (isMedical) "خدمات طبية وصيدلانية" else "محل تجاري معتمد" }
-            rating = entity.rating.toDouble()
-            phone = entity.phone
-            imageUrl = entity.logoImage.ifEmpty { entity.coverImage }
-            isAvailable = entity.isActive
-            lat = entity.latitude
-            lng = entity.longitude
-        }
-        is PropertyEntity -> {
-            title = entity.title
-            subtitle = "${entity.price} ${entity.currency} - ${entity.description.take(40)}"
-            categoryLabel = "🏠 عقار معروض"
-            badgeColor = Color(0xFF8B5CF6)
-            rating = 5.0
-            phone = entity.phone
-            imageUrl = entity.images.firstOrNull() ?: ""
-            isAvailable = entity.isActive
-            lat = entity.latitude
-            lng = entity.longitude
+    // Extract standardized information using remember(entity) to prevent recomposition loops
+    val details = remember(entity) {
+        when (entity) {
+            is ProviderEntity -> {
+                BottomSheetEntityDetails(
+                    title = entity.name,
+                    subtitle = entity.customCategoryName.ifEmpty { entity.specialization.ifEmpty { entity.profession } },
+                    categoryLabel = "👷 فني صيانة معتمد",
+                    badgeColor = Color(0xFF00E5FF),
+                    rating = entity.rating.toDouble(),
+                    phone = entity.phone,
+                    imageUrl = entity.profileImage.ifEmpty { entity.coverImage },
+                    isAvailable = entity.isAvailable,
+                    lat = entity.latitude,
+                    lng = entity.longitude
+                )
+            }
+            is StoreEntity -> {
+                val isMedical = entity.sectionId.contains("medical") || entity.categoryId.contains("medical") || entity.name.contains("طبي") || entity.name.contains("صيدلية")
+                val isRestaurant = !isMedical && (entity.sectionId.contains("restaurant") || entity.categoryId.contains("restaurant") || entity.name.contains("مطعم") || entity.name.contains("كافيه"))
+                BottomSheetEntityDetails(
+                    title = entity.name,
+                    subtitle = entity.description.take(50).ifEmpty { if (isMedical) "خدمات طبية وصيدلانية" else "محل تجاري معتمد" },
+                    categoryLabel = if (isMedical) "🏥 مركز طبي / صيدلية" else if (isRestaurant) "🍔 مطعم / كافيه" else "🏪 متجر معتمد",
+                    badgeColor = if (isMedical) Color(0xFFEC4899) else if (isRestaurant) Color(0xFFF59E0B) else Color(0xFF10B981),
+                    rating = entity.rating.toDouble(),
+                    phone = entity.phone,
+                    imageUrl = entity.logoImage.ifEmpty { entity.coverImage },
+                    isAvailable = entity.isActive,
+                    lat = entity.latitude,
+                    lng = entity.longitude
+                )
+            }
+            is PropertyEntity -> {
+                BottomSheetEntityDetails(
+                    title = entity.title,
+                    subtitle = "${entity.price} ${entity.currency} - ${entity.description.take(40)}",
+                    categoryLabel = "🏠 عقار معروض",
+                    badgeColor = Color(0xFF8B5CF6),
+                    rating = 5.0,
+                    phone = entity.phone,
+                    imageUrl = entity.images.firstOrNull() ?: "",
+                    isAvailable = entity.isActive,
+                    lat = entity.latitude,
+                    lng = entity.longitude
+                )
+            }
+            else -> {
+                BottomSheetEntityDetails(
+                    title = "موقع محدد",
+                    subtitle = "نقطة على الخريطة",
+                    categoryLabel = "📍 خريطة",
+                    badgeColor = Color(0xFF00E5FF),
+                    rating = 5.0,
+                    phone = "",
+                    imageUrl = "",
+                    isAvailable = true,
+                    lat = 0.0,
+                    lng = 0.0
+                )
+            }
         }
     }
+
+    val title = details.title
+    val subtitle = details.subtitle
+    val categoryLabel = details.categoryLabel
+    val badgeColor = details.badgeColor
+    val rating = details.rating
+    val phone = details.phone
+    val imageUrl = details.imageUrl
+    val isAvailable = details.isAvailable
+    val lat = details.lat
+    val lng = details.lng
 
     val distanceMeters = MapDistanceCalculator.calculateDistanceMeters(userLat, userLng, lat, lng)
     val distanceText = MapDistanceCalculator.formatDistance(distanceMeters)
@@ -496,3 +517,17 @@ fun MapBottomSheet(
         }
     }
 }
+
+private data class BottomSheetEntityDetails(
+    val title: String,
+    val subtitle: String,
+    val categoryLabel: String,
+    val badgeColor: Color,
+    val rating: Double,
+    val phone: String,
+    val imageUrl: String,
+    val isAvailable: Boolean,
+    val lat: Double,
+    val lng: Double
+)
+
