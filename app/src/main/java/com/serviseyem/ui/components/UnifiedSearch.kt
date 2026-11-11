@@ -65,10 +65,15 @@ fun UnifiedSearch(
                     placeholder = {
                         Text(
                             text = "ابحث عن خدمة، فني، متجر، عقار، أو وظيفة...",
-                            fontSize = 13.sp,
+                            fontSize = 13.5.sp,
                             color = Color(0xFF94A3B8)
                         )
                     },
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                         imeAction = androidx.compose.ui.text.input.ImeAction.Search
                     ),
@@ -81,10 +86,13 @@ fun UnifiedSearch(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        unfocusedTextColor = Color.White,
+                        cursorColor = Color(0xFF00E5FF)
                     ),
                     singleLine = true,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 48.dp)
                 )
 
                 if (query.isNotEmpty()) {

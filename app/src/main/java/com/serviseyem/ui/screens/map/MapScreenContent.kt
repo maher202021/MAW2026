@@ -765,6 +765,7 @@ fun MapScreenContent(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
+                        .imePadding()
                 )
             }
         }

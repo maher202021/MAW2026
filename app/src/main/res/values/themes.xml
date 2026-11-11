@@ -2,6 +2,7 @@
     <!-- [FIX-MEDIUM] إضافة خصائص YemenTheme مع الحفاظ على parent الأصلي
          ⚠️ لا تغيّر parent: المشروع لا يحتوي MaterialComponents أو AppCompat -->
     <style name="Theme.AlYemenServices" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:fitsSystemWindows">true</item>
         <item name="ysColorPrimary">#FFD700</item> <!-- Gold -->
         <item name="ysColorSecondary">#00838F</item> <!-- Dark Cyan -->
         <item name="ysColorAccent">#00838F</item>

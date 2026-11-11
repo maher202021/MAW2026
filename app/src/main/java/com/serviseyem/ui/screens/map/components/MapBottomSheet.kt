@@ -143,6 +143,7 @@ fun MapBottomSheet(
         shadowElevation = 16.dp,
         modifier = modifier
             .fillMaxWidth()
+            .widthIn(max = 600.dp)
             .testTag("map_bottom_sheet")
     ) {
         Column(
