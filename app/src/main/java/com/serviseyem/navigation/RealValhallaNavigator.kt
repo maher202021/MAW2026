@@ -158,6 +158,7 @@ class RealValhallaNavigator(private val context: Context) {
         }
 
         val firstLeg = legsArray.getJSONObject(0)
+        val shapeEncoded = firstLeg.getString("shape")
         val decodedPoints = decodePolyline6(shapeEncoded)
         Log.d("ValhallaTest", "Number of points in route: ${decodedPoints.size}")
         if (decodedPoints.size > 50) {
