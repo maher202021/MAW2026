@@ -130,6 +130,16 @@ fun AdminSystemSettingsScreenContent(
                     )
                 }
 
+                var placesDbDownloadUrl by remember {
+                    mutableStateOf(
+                        context.getSharedPreferences("valhalla_prefs", android.content.Context.MODE_PRIVATE)
+                            .getString("places_db_url", com.serviseyem.utils.NavConfig.PLACES_DB_URL) ?: ""
+                    )
+                }
+
+                var showValhallaManagerDialog by remember { mutableStateOf(false) }
+                var showPlacesManagerDialog by remember { mutableStateOf(false) }
+
                 OutlinedTextField(
                     value = valhallaDownloadUrl,
                     onValueChange = { valhallaDownloadUrl = it },
@@ -139,19 +149,72 @@ fun AdminSystemSettingsScreenContent(
                     colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
                 )
 
+                OutlinedTextField(
+                    value = placesDbDownloadUrl,
+                    onValueChange = { placesDbDownloadUrl = it },
+                    label = { Text("📍 رابط تحميل قاعدة الأماكن المحلية (places.db.zip)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
+                )
+
                 Button(
                     onClick = {
                         context.getSharedPreferences("valhalla_prefs", android.content.Context.MODE_PRIVATE)
                             .edit()
-                            .putString("valhalla_url", valhallaDownloadUrl)
+                            .putString("valhalla_url", valhallaDownloadUrl.trim())
+                            .putString("places_db_url", placesDbDownloadUrl.trim())
                             .apply()
-                        Toast.makeText(context, "تم حفظ رابط Valhalla بنجاح ✓", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "تم حفظ روابط حزم الأوفلاين بنجاح ✓", Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("حفظ رابط خرائط Valhalla المحدث", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("حفظ روابط خرائط Valhalla وقاعدة الأماكن", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showValhallaManagerDialog = true },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f).defaultMinSize(minHeight = 48.dp)
+                    ) {
+                        Text("إدارة خرائط الملاحة 🧭", color = Color(0xFF38BDF8), fontSize = 11.5.sp)
+                    }
+                    OutlinedButton(
+                        onClick = { showPlacesManagerDialog = true },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f).defaultMinSize(minHeight = 48.dp)
+                    ) {
+                        Text("إدارة قاعدة الأماكن 📍", color = Color(0xFF10B981), fontSize = 11.5.sp)
+                    }
+                }
+
+                if (showValhallaManagerDialog) {
+                    com.serviseyem.ui.screens.map.ValhallaOfflineDialog(
+                        onDismiss = { showValhallaManagerDialog = false },
+                        onStartNavigation = { showValhallaManagerDialog = false },
+                        onOpenPlacesDownload = {
+                            showValhallaManagerDialog = false
+                            showPlacesManagerDialog = true
+                        },
+                        onStatusMessage = { msg ->
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+
+                if (showPlacesManagerDialog) {
+                    com.serviseyem.ui.screens.map.PlacesDownloadDialog(
+                        onDismiss = { showPlacesManagerDialog = false },
+                        onCompleted = { msg ->
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
             }
         }

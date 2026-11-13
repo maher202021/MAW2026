@@ -106,23 +106,23 @@ fun MapFilterBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 12.dp, vertical = 6.dp)
                 .widthIn(max = 600.dp)
                 .align(Alignment.CenterHorizontally)
         ) {
             Surface(
-                shape = CircleShape,
+                shape = RoundedCornerShape(28.dp),
                 color = Color(0xFF1E293B).copy(alpha = 0.95f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
-                shadowElevation = 10.dp,
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                shadowElevation = 8.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 56.dp)
+                    .height(52.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 8.dp),
+                        .padding(horizontal = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -130,40 +130,40 @@ fun MapFilterBar(
                             haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                             onBackClick() 
                         },
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "رجوع",
                             tint = Color.White,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-
-                    Spacer(modifier = Modifier.width(4.dp))
 
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "بحث",
                         tint = Color(0xFF10B981),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
 
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
 
                     TextField(
                         value = searchQuery,
                         onValueChange = onSearchQueryChange,
                         placeholder = {
                             Text(
-                                text = "ابحث عن شارع، محل، فني، أو شخص...",
-                                fontSize = 13.5.sp,
-                                color = Color.White.copy(alpha = 0.6f)
+                                text = "ابحث عن شارع، معلم، محل، فني...",
+                                fontSize = 12.5.sp,
+                                color = Color.White.copy(alpha = 0.6f),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                         },
                         textStyle = androidx.compose.ui.text.TextStyle(
                             color = Color.White, 
-                            fontSize = 14.sp,
+                            fontSize = 13.5.sp,
                             fontWeight = FontWeight.Medium,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Start
                         ),
@@ -184,21 +184,21 @@ fun MapFilterBar(
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(
                                     onClick = { onSearchQueryChange("") },
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size(36.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Close,
                                         contentDescription = "مسح",
                                         tint = Color.White.copy(alpha = 0.6f),
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }
                         },
                         singleLine = true,
+                        maxLines = 1,
                         modifier = Modifier
                             .weight(1f)
-                            .defaultMinSize(minHeight = 48.dp)
                             .testTag("map_search_input")
                             .onFocusChanged { isSearchFocused = it.isFocused }
                     )

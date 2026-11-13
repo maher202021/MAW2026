@@ -53,6 +53,8 @@ object OfflineMapManager {
         CityCoordinates("سقطرى", 12.6517, 54.0194, 12)
     )
 
+    fun allCities(): List<CityCoordinates> = MAJOR_YEMENI_CITIES
+
     fun getCityCoordinates(cityName: String): CityCoordinates {
         val trimmed = cityName.trim()
         val direct = MAJOR_YEMENI_CITIES.find { it.nameAr.contains(trimmed) || trimmed.contains(it.nameAr) }

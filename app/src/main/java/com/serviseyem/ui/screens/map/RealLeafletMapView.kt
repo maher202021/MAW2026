@@ -62,6 +62,9 @@ fun RealLeafletMapView(
     earthquakeUpdateTrigger: Int = 0,
     onEarthquakeDataLoaded: ((Long, Int) -> Unit)? = null,
     onEarthquakeDataError: ((String) -> Unit)? = null,
+    pickMode: Boolean = false,
+    onMapPicked: ((Double, Double) -> Unit)? = null,
+    waypointMarkers: List<Triple<String, Double, Double>> = emptyList(),
     themeColors: VisualThemePalette = resolveThemePalette(AdminSettingsEntity()),
     modifier: Modifier = Modifier
 ) {
@@ -69,6 +72,7 @@ fun RealLeafletMapView(
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     var isMapReady by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    val latestOnMapPicked by rememberUpdatedState(onMapPicked)
     
     // التحقق المسبق من وجود ملف map.html لتجنب الشاشات السوداء تماماً
     val isAssetAvailable = remember {
@@ -183,6 +187,27 @@ fun RealLeafletMapView(
         }
     }
 
+    LaunchedEffect(isMapReady, pickMode) {
+        if (isMapReady && webViewRef != null) {
+            webViewRef?.evaluateJavascript("if (window.setPickMode) { window.setPickMode($pickMode); }", null)
+        }
+    }
+
+    LaunchedEffect(isMapReady, waypointMarkers) {
+        if (isMapReady && webViewRef != null) {
+            val arr = org.json.JSONArray()
+            waypointMarkers.forEach { (name, lat, lng) ->
+                arr.put(
+                    org.json.JSONObject()
+                        .put("name", name)
+                        .put("lat", lat)
+                        .put("lng", lng)
+                )
+            }
+            webViewRef?.evaluateJavascript("if (window.setWaypointMarkers) { window.setWaypointMarkers(${arr}); }", null)
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -223,8 +248,18 @@ fun RealLeafletMapView(
 
                             @JavascriptInterface
                             fun onMapClicked() {
-                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                                onDeselect()
+                                webViewRef?.post {
+                                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                                    onDeselect()
+                                }
+                            }
+
+                            @JavascriptInterface
+                            fun onMapPicked(lat: Double, lng: Double) {
+                                webViewRef?.post {
+                                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                    latestOnMapPicked?.invoke(lat, lng)
+                                }
                             }
 
                             @JavascriptInterface
@@ -327,6 +362,8 @@ fun RealLeafletMapView(
                 onPropertySelected = onPropertySelected,
                 onDeselect = onDeselect,
                 onSwitchToRadar = onSwitchToRadar,
+                pickMode = pickMode,
+                onMapPicked = onMapPicked,
                 modifier = Modifier.fillMaxSize()
             )
         }

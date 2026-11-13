@@ -11,6 +11,30 @@
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { width: 100%; height: 100%; background-color: #0F172A; overflow: hidden; font-family: sans-serif; }
         #map { width: 100%; height: 100vh; background-color: #0F172A; }
+        #map.no-tiles {
+            background-color: #0B1220;
+            background-image:
+                linear-gradient(rgba(148,163,184,.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148,163,184,.08) 1px, transparent 1px);
+            background-size: 64px 64px;
+        }
+        #offline-tiles-banner {
+            display: none;
+            position: absolute;
+            top: 86px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 950;
+            background: rgba(15, 23, 42, 0.92);
+            color: #FCD34D;
+            border: 1px solid rgba(245, 158, 11, 0.55);
+            border-radius: 16px;
+            padding: 6px 14px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            pointer-events: none;
+        }
         .mode-3d-tilted { transform: rotateX(25deg) scale(1.05); transform-origin: 50% 80%; transition: transform 0.5s ease; }
         
         .custom-pin-container { display: flex; flex-direction: column; align-items: center; cursor: pointer; transform: translate(-50%, -100%); }
@@ -188,6 +212,7 @@
 </head>
 <body>
     <div id="map"></div>
+    <div id="offline-tiles-banner">الخريطة تحتاج إنترنت أو حزمة عرض</div>
 
     <!-- 🛰️ Sleek Collapsible Satellite Layers Dropdown Menu -->
     <div class="sat-dropdown-container" id="satelliteDropdown">
@@ -261,6 +286,10 @@
         var deadZoneLayerGroup = null;
         var gpxTrackLayer = null;
         var groupMembersLayerGroup = null;
+        var waypointLayerGroup = null;
+        var isPickMode = false;
+        var failedTileCount = 0;
+        var loadedTileCount = 0;
         var userMarker = null;
         var userLat = 15.3694;
         var userLng = 44.1910;
@@ -363,15 +392,72 @@
 
                 deadZoneLayerGroup = L.layerGroup().addTo(map);
                 groupMembersLayerGroup = L.layerGroup().addTo(map);
+                waypointLayerGroup = L.layerGroup().addTo(map);
 
-                map.on('click', function() {
-                    if (window.AndroidBridge) window.AndroidBridge.onMapClicked();
+                map.on('click', function(e) {
+                    if (isPickMode && e && e.latlng && window.AndroidBridge && window.AndroidBridge.onMapPicked) {
+                        window.AndroidBridge.onMapPicked(e.latlng.lat, e.latlng.lng);
+                    } else if (window.AndroidBridge) {
+                        window.AndroidBridge.onMapClicked();
+                    }
                 });
 
                 if (window.AndroidBridge) window.AndroidBridge.onMapReady();
             } catch(e) {
                 document.body.innerHTML = '<div style="color:white; padding:20px; text-align:center;">خطأ في تحميل الخريطة</div>';
             }
+        }
+
+        function notifyTiles(failing) {
+            try { map.getContainer().classList.toggle('no-tiles', !!failing); } catch (e) {}
+            var banner = document.getElementById('offline-tiles-banner');
+            if (banner) {
+                banner.style.display = failing ? 'block' : 'none';
+            }
+        }
+
+        function bindTileStatusListeners(layer) {
+            if (!layer || layer._tileStatusBound) return;
+            layer._tileStatusBound = true;
+            layer.on('tileload', function() {
+                loadedTileCount++;
+                failedTileCount = 0;
+                notifyTiles(false);
+            });
+            layer.on('tileerror', function() {
+                failedTileCount++;
+                if (failedTileCount >= 3 && loadedTileCount === 0) {
+                    notifyTiles(true);
+                } else if (failedTileCount >= 6) {
+                    notifyTiles(true);
+                }
+            });
+        }
+
+        function setPickMode(enabled) {
+            isPickMode = !!enabled;
+            var el = document.getElementById('map');
+            if (el) {
+                el.style.cursor = isPickMode ? 'crosshair' : '';
+            }
+        }
+
+        function setWaypointMarkers(json) {
+            if (!waypointLayerGroup) return;
+            waypointLayerGroup.clearLayers();
+            var items = (typeof json === 'string') ? JSON.parse(json) : json;
+            if (!items || !Array.isArray(items)) return;
+            items.forEach(function(item) {
+                var html = '<div class="custom-pin-container">' +
+                    '<div class="custom-pin-head" style="background-color:#EF4444;">🏁</div>' +
+                    '<div class="custom-pin-arrow" style="border-top-color:#EF4444;"></div>' +
+                    '<div class="custom-pin-label">' + (item.name || 'الوجهة') + '</div></div>';
+                var m = L.marker([item.lat, item.lng], {
+                    icon: L.divIcon({ className: '', html: html, iconSize: [32, 46], iconAnchor: [16, 44] }),
+                    zIndexOffset: 2500
+                });
+                waypointLayerGroup.addLayer(m);
+            });
         }
 
         function toggleNightMode(enable) {
@@ -692,9 +778,13 @@
             if (key === 'streets') targetKey = 'google_streets';
             if (key === 'osm') targetKey = 'osm_ar';
 
+            failedTileCount = 0;
+            loadedTileCount = 0;
             if (tileProviders[targetKey]) {
+                bindTileStatusListeners(tileProviders[targetKey]);
                 currentTileLayer = tileProviders[targetKey].addTo(map);
             } else {
+                bindTileStatusListeners(tileProviders['google_hybrid']);
                 currentTileLayer = tileProviders['google_hybrid'].addTo(map);
             }
         }

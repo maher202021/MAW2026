@@ -169,30 +169,42 @@ object CrossFuzzySearchEngine {
 
         // 3. البحث في المعالم اليمنية (مساجد، مدارس، مستشفيات، جولات، شوارع) من JSON والذاكرة
         val allLandmarks = getOrLoadLandmarks(context)
+        val queryTokens = cleanQuery.split(" ", "-", "•", "/").map { it.trim() }.filter { it.length >= 2 }
         allLandmarks.forEach { landmark ->
-            val combinedTarget = "${landmark.name} ${landmark.area} ${landmark.city} ${landmark.type}"
+            val combinedTarget = normalizeText("${landmark.name} ${landmark.area} ${landmark.city} ${landmark.type}")
             val isDialectMatch = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(rawQuery, combinedTarget)
-            val score = calculateMatchScore(cleanQuery, normalizeText(landmark.name))
-            val effectiveScore = maxOf(score, if (isDialectMatch) 75 else 0)
+            val scoreName = calculateMatchScore(cleanQuery, normalizeText(landmark.name))
+            val scoreCombined = calculateMatchScore(cleanQuery, combinedTarget)
 
-            if (effectiveScore > 30) {
+            // Tokenized matching: check if query tokens match target name or combined string
+            val tokenMatches = queryTokens.count { token -> combinedTarget.contains(token) }
+            val hasTokenMatch = tokenMatches > 0 && queryTokens.isNotEmpty()
+
+            val effectiveScore = maxOf(
+                scoreName,
+                scoreCombined,
+                if (hasTokenMatch) (60 + tokenMatches * 10) else 0,
+                if (isDialectMatch) 75 else 0
+            )
+
+            if (effectiveScore > 25) {
                 val dist = if (hasGps) computeHaversineKm(userLat, userLng, landmark.lat, landmark.lng) else null
                 val distText = dist?.let { " • يبعد ${formatDistance(it)}" } ?: ""
                 val typeIcon = when {
-                    landmark.type.contains("مسجد") || landmark.type.contains("جامع") -> "🕌"
-                    landmark.type.contains("مستشفى") -> "🏥"
-                    landmark.type.contains("مدرسة") || landmark.type.contains("جامعة") -> "🎓"
-                    landmark.type.contains("جولة") || landmark.type.contains("دوار") -> "🔄"
-                    landmark.type.contains("شارع") -> "🛣️"
-                    else -> "📍"
+                    landmark.type.contains("مسجد") || landmark.type.contains("جامع") || landmark.name.contains("جامع") || landmark.name.contains("مسجد") -> "🕌"
+                    landmark.type.contains("مستشفى") || landmark.name.contains("مستشفى") || landmark.name.contains("طبي") -> "🏥"
+                    landmark.type.contains("مدرسة") || landmark.type.contains("جامعة") || landmark.name.contains("مدرسة") || landmark.name.contains("جامعة") -> "🎓"
+                    landmark.type.contains("جولة") || landmark.type.contains("دوار") || landmark.name.contains("جولة") -> "🔄"
+                    landmark.type.contains("شارع") || landmark.name.contains("شارع") || landmark.name.contains("خط") -> "🛣️"
+                    else -> "🏛️"
                 }
 
                 results.add(
                     SearchResult(
-                        id = "landmark_${landmark.name}",
+                        id = "landmark_${landmark.name}_${landmark.lat}",
                         title = landmark.name,
                         subtitle = "$typeIcon ${landmark.type} - ${landmark.area} (${landmark.city})$distText",
-                        type = SearchType.STREET,
+                        type = SearchType.LANDMARK,
                         latitude = landmark.lat,
                         longitude = landmark.lng,
                         originalItem = landmark,

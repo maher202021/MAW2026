@@ -69,6 +69,8 @@ fun OfflineInteractiveMap(
     onPropertySelected: (PropertyEntity) -> Unit,
     onDeselect: () -> Unit,
     onSwitchToRadar: (() -> Unit)? = null,
+    pickMode: Boolean = false,
+    onMapPicked: ((Double, Double) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     // [تعديل] استخدام إحداثيات GPS الحقيقية أو إحداثيات المدينة كبديل آمن ودقيق
@@ -326,13 +328,21 @@ fun OfflineInteractiveMap(
                         onPanOffsetChange(panOffset + pan)
                     }
                 }
-                .pointerInput(screenPoints) {
+                .pointerInput(screenPoints, pickMode, centerX, centerY, metersPerPx) {
                     detectTapGestures(
                         onDoubleTap = {
                             val nextZoom = (zoomScale * 1.4f).coerceIn(0.25f, 8.0f)
                             onZoomScaleChange(nextZoom)
                         },
                         onTap = { tapOffset ->
+                            if (pickMode && onMapPicked != null) {
+                                val dxMeters = (tapOffset.x - centerX) * metersPerPx
+                                val dyMeters = (tapOffset.y - centerY) * metersPerPx
+                                val tappedLat = originLat - (dyMeters / metersPerDegreeLat)
+                                val tappedLng = originLng + (dxMeters / metersPerDegreeLng)
+                                onMapPicked(tappedLat, tappedLng)
+                                return@detectTapGestures
+                            }
                             val clicked = screenPoints.minByOrNull { pt ->
                                 val dx = tapOffset.x - pt.screenX
                                 val dy = tapOffset.y - pt.screenY

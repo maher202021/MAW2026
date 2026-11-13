@@ -44,10 +44,16 @@ fun SmartNavigationPanel(
     onClearRoute: () -> Unit,
     onCloseNavigation: () -> Unit,
     onPromptDownloadOffline: () -> Unit,
+    onOpenDestinationChooser: (() -> Unit)? = null,
+    onOpenPlacesDownload: (() -> Unit)? = null,
+    onLaunchTurnByTurn: ((Double, Double, String) -> Unit)? = null,
+    offlineStateKey: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val isOfflineDownloaded = remember { ValhallaDownloadManager.isDownloaded(context) }
+    val isOfflineDownloaded = remember(offlineStateKey, initialDestination) {
+        ValhallaDownloadManager.isDownloaded(context)
+    }
 
     // Start collapsed by default so the map & route path are 100% visible to the user!
     var isCollapsed by remember { mutableStateOf(true) }
@@ -165,6 +171,18 @@ fun SmartNavigationPanel(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    if (onOpenDestinationChooser != null) {
+                        OutlinedButton(
+                            onClick = onOpenDestinationChooser,
+                            border = BorderStroke(1.dp, Color(0xFF38BDF8)),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Text("الوجهة", color = Color(0xFF38BDF8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
                     // Expand Button
                     Button(
                         onClick = { isCollapsed = false },
@@ -461,7 +479,12 @@ fun SmartNavigationPanel(
                         OutlinedTextField(
                             value = streetSearchQuery,
                             onValueChange = { streetSearchQuery = it },
-                            placeholder = { Text("ابحث عن الشارع، الحي، المستشفى، أو المعلم...", fontSize = 11.sp, color = Color.Gray) },
+                            placeholder = { Text("ابحث عن الشارع، الحي، المستشفى، أو المعلم...", fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f)) },
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                color = Color.White,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF10B981)) },
                             trailingIcon = {
                                 if (streetSearchQuery.isNotEmpty()) {
@@ -470,19 +493,20 @@ fun SmartNavigationPanel(
                                     }
                                 }
                             },
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = Color(0xFF162032),
                                 unfocusedContainerColor = Color(0xFF162032),
                                 focusedBorderColor = Color(0xFF10B981),
                                 unfocusedBorderColor = Color(0xFF334155),
                                 focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
+                                unfocusedTextColor = Color.White,
+                                cursorColor = Color(0xFF10B981)
                             ),
                             singleLine = true,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(46.dp)
+                                .defaultMinSize(minHeight = 52.dp)
                         )
 
                         LazyRow(
@@ -605,6 +629,18 @@ fun SmartNavigationPanel(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    if (onOpenDestinationChooser != null) {
+                        OutlinedButton(
+                            onClick = onOpenDestinationChooser,
+                            border = BorderStroke(1.dp, Color(0xFF38BDF8)),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                            modifier = Modifier.height(40.dp)
+                        ) {
+                            Text("تغيير الوجهة 🎯", color = Color(0xFF38BDF8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
                     Button(
                         onClick = {
                             val speechText = "مسار الملاحة إلى ${activeRoute.destinationName}. المسافة ${activeRoute.distanceKm} كم، والزمن المقدر ${activeRoute.durationText}. رافقتكم السلامة."
@@ -623,21 +659,42 @@ fun SmartNavigationPanel(
                         Text("نطق الإرشادات", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
 
-                    Button(
-                        onClick = {
-                            val arrivalSpeech = "لقد وصلت إلى وجهتك: ${activeRoute.destinationName} بنجاح!"
-                            VoiceManager.speak(arrivalSpeech)
-                            Toast.makeText(context, "🏁 تم إعلان الوصول بنجاح!", Toast.LENGTH_LONG).show()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(40.dp)
-                    ) {
-                        Icon(Icons.Default.Celebration, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("إعلان الوصول", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    if (onLaunchTurnByTurn != null) {
+                        Button(
+                            onClick = {
+                                onLaunchTurnByTurn(
+                                    activeRoute.destCoords.first,
+                                    activeRoute.destCoords.second,
+                                    activeRoute.destinationName
+                                )
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                        ) {
+                            Icon(Icons.Default.Navigation, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("ملاحة تفصيلية", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        Button(
+                            onClick = {
+                                val arrivalSpeech = "لقد وصلت إلى وجهتك: ${activeRoute.destinationName} بنجاح!"
+                                VoiceManager.speak(arrivalSpeech)
+                                Toast.makeText(context, "🏁 تم إعلان الوصول بنجاح!", Toast.LENGTH_LONG).show()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                        ) {
+                            Icon(Icons.Default.Celebration, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("إعلان الوصول", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }

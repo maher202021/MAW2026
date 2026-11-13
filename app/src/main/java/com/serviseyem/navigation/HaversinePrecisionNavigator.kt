@@ -46,6 +46,12 @@ object HaversinePrecisionNavigator {
     }
 
     /**
+     * Alias for distanceMeters used by offline search and nearest place queries.
+     */
+    fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double =
+        distanceMeters(lat1, lon1, lat2, lon2)
+
+    /**
      * Calculates the initial bearing (forward azimuth) from point 1 to point 2 in degrees in range [0, 360).
      */
     fun initialBearing(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {

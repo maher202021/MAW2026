@@ -145,7 +145,7 @@ class OfflineMapLifecycleManager private constructor(private val context: Contex
                         val entryName = entry.name
                         _downloadState.value = DownloadState.Extracting(80, entryName)
 
-                        val destFile = if (entryName.endsWith(".tar") || entryName.contains("valhalla_tiles")) {
+                        val destFile = if (entryName.endsWith(".tar", ignoreCase = true) || entryName.substringAfterLast('/') == TILES_ARCHIVE) {
                             targetArchive
                         } else {
                             File(targetDir, entryName)

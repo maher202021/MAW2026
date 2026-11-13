@@ -78,15 +78,22 @@ fun MapScreenContent(
     var mapRetryCount by remember { mutableIntStateOf(0) }
     var webViewRef by remember { mutableStateOf<android.webkit.WebView?>(null) }
     var showValhallaDialog by remember { mutableStateOf(false) }
-    var isDownloadingValhalla by remember { mutableStateOf(false) }
-    var downloadProgress by remember { mutableFloatStateOf(0f) }
-    var downloadStatusText by remember { mutableStateOf("") }
+    var showPlacesDownload by remember { mutableStateOf(false) }
+    var showDestChooser by remember { mutableStateOf(false) }
+    var pickingDestination by remember { mutableStateOf(false) }
+    var pickedPoint by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var offlinePackVersion by remember { mutableIntStateOf(0) }
+    val addressStore = remember { com.serviseyem.utils.LandmarkAddressStore(context) }
+    var savedAddresses by remember { mutableStateOf(addressStore.all()) }
 
     androidx.activity.compose.BackHandler(enabled = true) {
-        if (state.selectedEntity != null) {
-            state.resetSelection()
-        } else {
-            onBackClick()
+        when {
+            pickingDestination -> {
+                pickingDestination = false
+                pickedPoint = null
+            }
+            state.selectedEntity != null -> state.resetSelection()
+            else -> onBackClick()
         }
     }
 
@@ -98,12 +105,47 @@ fun MapScreenContent(
     val userLatState by viewModel.userLatitude.collectAsState()
     val userLngState by viewModel.userLongitude.collectAsState()
 
+    val hasRealLocation = userLatState != 0.0 && !userLatState.isNaN() && userLngState != 0.0 && !userLngState.isNaN()
+
     // إصلاح 1.1: عند عدم توفر GPS حقيقي نستخدم مركز المدينة المحددة حالياً بدلاً من إحداثيات ثابتة قديمة
     val fallbackCityCoords = remember(state.selectedCity) {
         OfflineMapManager.getCityCoordinates(state.selectedCity)
     }
-    val safeUserLat = if (userLatState != 0.0 && !userLatState.isNaN()) userLatState else fallbackCityCoords.latitude
-    val safeUserLng = if (userLngState != 0.0 && !userLngState.isNaN()) userLngState else fallbackCityCoords.longitude
+    val safeUserLat = if (hasRealLocation) userLatState else fallbackCityCoords.latitude
+    val safeUserLng = if (hasRealLocation) userLngState else fallbackCityCoords.longitude
+
+    LaunchedEffect(pickingDestination) {
+        if (pickingDestination) {
+            snackbarHostState.showSnackbar("اضغط على الخريطة لتحديد الوجهة")
+        }
+    }
+
+    fun startDestinationNavigation(destName: String, la: Double, lo: Double) {
+        com.serviseyem.utils.RecentDestinations(context).add(destName, la, lo)
+        state.pendingNavDestination = com.serviseyem.ui.screens.map.utils.StreetOrLandmark(
+            name = destName,
+            type = "وجهة مختارة",
+            city = state.selectedCity,
+            area = "",
+            lat = la,
+            lng = lo
+        )
+        state.isRadarMode = false
+        state.currentMapMode = MapMode.NAVIGATION
+        state.currentMapLayer = "navigation"
+        webViewRef?.post {
+            webViewRef?.evaluateJavascript(
+                "if (window.switchLayer) { window.switchLayer('navigation'); } if (window.flyToLocation) { window.flyToLocation($la, $lo, 16); }",
+                null
+            )
+        }
+        if (!hasRealLocation) {
+            viewModel.startLocationUpdates()
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("تم اختيار «$destName» — فعّل GPS لتحديث نقطة انطلاقك")
+            }
+        }
+    }
 
     // Location Permission launcher
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -301,6 +343,13 @@ fun MapScreenContent(
                         onEarthquakeDataError = { _ ->
                             state.isEarthquakeLoading = false
                         },
+                        pickMode = pickingDestination,
+                        onMapPicked = { la, lo ->
+                            if (pickingDestination) pickedPoint = la to lo
+                        },
+                        waypointMarkers = pickedPoint?.takeIf { pickingDestination }?.let {
+                            listOf(Triple("الوجهة المختارة", it.first, it.second))
+                        }.orEmpty(),
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -432,10 +481,24 @@ fun MapScreenContent(
                 },
                 currentLayer = state.currentMapLayer,
                 onSwitchLayer = { layerKey ->
-                    state.currentMapLayer = layerKey
-                    if (layerKey == "navigation") state.currentMapMode = MapMode.NAVIGATION
-                    val script = "if (window.switchLayer) { window.switchLayer('$layerKey'); }"
-                    webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                    if (layerKey == "navigation") {
+                        if (state.pendingNavDestination == null) {
+                            showDestChooser = true
+                        } else {
+                            state.currentMapLayer = layerKey
+                            state.currentMapMode = MapMode.NAVIGATION
+                            val script = "if (window.switchLayer) { window.switchLayer('$layerKey'); }"
+                            webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                        }
+                    } else {
+                        state.currentMapLayer = layerKey
+                        if (state.currentMapMode == MapMode.NAVIGATION) {
+                            state.currentMapMode = MapMode.VELA_3D
+                            webViewRef?.post { webViewRef?.evaluateJavascript("if (window.clearRoute) { window.clearRoute(); }", null) }
+                        }
+                        val script = "if (window.switchLayer) { window.switchLayer('$layerKey'); }"
+                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                    }
                 },
                 onZoomIn = {
                     state.zoomScale = (state.zoomScale * 1.3f).coerceIn(0.25f, 8.0f)
@@ -452,13 +515,21 @@ fun MapScreenContent(
                 },
                 isGpsActive = viewModel.isGpsTrackingActive.collectAsState().value,
                 onDownloadValhallaClick = {
-                    state.currentMapMode = MapMode.NAVIGATION
-                    state.currentMapLayer = "navigation"
                     showValhallaDialog = true
                 },
                 // Vela Modes
                 currentMode = state.currentMapMode,
-                onModeChange = { mode -> state.currentMapMode = mode },
+                onModeChange = { mode ->
+                    if (mode == MapMode.NAVIGATION && state.pendingNavDestination == null) {
+                        showDestChooser = true
+                    } else {
+                        state.currentMapMode = mode
+                        if (mode == MapMode.NAVIGATION) {
+                            state.currentMapLayer = "navigation"
+                            webViewRef?.post { webViewRef?.evaluateJavascript("if (window.switchLayer) { window.switchLayer('navigation'); }", null) }
+                        }
+                    }
+                },
                 tiltAngle = state.tiltAngle,
                 onToggleTilt = { state.tiltAngle = if (state.tiltAngle > 0) 0f else 32f },
                 onOpenAleph = {
@@ -654,8 +725,93 @@ fun MapScreenContent(
                 webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
             }
 
+            // 🎯 شريط تأكيد اختيار نقطة الوجهة من الخريطة مباشرة
+            if (pickingDestination) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xF50F172A),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF00E5FF)),
+                    shadowElevation = 10.dp,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(16.dp)
+                        .fillMaxWidth()
+                        .testTag("map_pick_confirm_card")
+                ) {
+                    val pt = pickedPoint
+                    if (pt == null) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "اضغط على أي موقع على الخريطة لتحديده كوجهة 🎯",
+                                color = Color.White,
+                                fontSize = 12.5.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(
+                                onClick = { pickingDestination = false },
+                                modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                            ) {
+                                Text("إلغاء", color = Color(0xFFEF4444))
+                            }
+                        }
+                    } else {
+                        val (la, lo) = pt
+                        val nearest = remember(la, lo) { com.serviseyem.utils.OfflinePlacesDb.nearest(context, la, lo) }
+                        val label = nearest?.let { "قرب $it" } ?: "نقطة على الخريطة"
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "الوجهة: $label",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${"%.4f".format(java.util.Locale.US, la)}, ${"%.4f".format(java.util.Locale.US, lo)}",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 11.5.sp
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = {
+                                        pickingDestination = false
+                                        pickedPoint = null
+                                        startDestinationNavigation(label, la, lo)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .defaultMinSize(minHeight = 48.dp)
+                                        .testTag("map_pick_start_nav_button")
+                                ) {
+                                    Text("ابدأ الملاحة", color = Color.Black, fontWeight = FontWeight.Bold)
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        pickingDestination = false
+                                        pickedPoint = null
+                                    },
+                                    modifier = Modifier
+                                        .defaultMinSize(minHeight = 48.dp)
+                                        .testTag("map_pick_cancel_button")
+                                ) {
+                                    Text("إلغاء", color = Color.White)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // 🧭 Dedicated Smart Navigation Panel (Dual: Inter-City Highways & Urban Street Precision)
-            if (state.currentMapMode == MapMode.NAVIGATION) {
+            if (state.currentMapMode == MapMode.NAVIGATION && !pickingDestination) {
                 com.serviseyem.ui.screens.map.components.SmartNavigationPanel(
                     userLat = safeUserLat,
                     userLng = safeUserLng,
@@ -673,12 +829,23 @@ fun MapScreenContent(
                     onCloseNavigation = {
                         state.currentMapMode = MapMode.VELA_3D
                         state.currentMapLayer = "google_satellite"
+                        state.pendingNavDestination = null
                         val script = "if (window.clearRoute) { window.clearRoute(); } if (window.switchLayer) { window.switchLayer('google_satellite'); }"
                         webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
                     },
                     onPromptDownloadOffline = {
                         showValhallaDialog = true
                     },
+                    onOpenDestinationChooser = {
+                        showDestChooser = true
+                    },
+                    onOpenPlacesDownload = {
+                        showPlacesDownload = true
+                    },
+                    onLaunchTurnByTurn = { la, lo, destTitle ->
+                        viewModel.openNavigation(la, lo, destTitle)
+                    },
+                    offlineStateKey = offlinePackVersion,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
@@ -796,137 +963,73 @@ fun MapScreenContent(
         )
     }
 
-    // 📥 Valhalla Offline Navigation Download Dialog
-    if (showValhallaDialog) {
-        val isAlreadyDownloaded = remember(showValhallaDialog) {
-            com.serviseyem.utils.ValhallaDownloadManager.isDownloaded(context)
-        }
+    // 🎯 لوحة اختيار الوجهة الثلاثية (بحث، خريطة، مدن، عناوين، أخيرة، إحداثيات)
+    if (showDestChooser) {
+        DestinationChooserSheet(
+            userLat = safeUserLat,
+            userLng = safeUserLng,
+            hasRealLocation = hasRealLocation,
+            providers = providers,
+            stores = stores,
+            savedAddresses = savedAddresses,
+            onPick = { name, la, lo ->
+                showDestChooser = false
+                startDestinationNavigation(name, la, lo)
+            },
+            onPickFromMap = {
+                showDestChooser = false
+                state.isRadarMode = false
+                pickedPoint = null
+                pickingDestination = true
+            },
+            onDownloadPlaces = {
+                showDestChooser = false
+                showPlacesDownload = true
+            },
+            onDismiss = { showDestChooser = false },
+            selectedCity = state.selectedCity,
+            onAddressSaved = {
+                savedAddresses = addressStore.all()
+            }
+        )
+    }
 
-        AlertDialog(
-            onDismissRequest = { if (!isDownloadingValhalla) showValhallaDialog = false },
-            title = {
-                Text(
-                    text = if (isAlreadyDownloaded) "🧭 الملاحة الدقيقة (أوفلاين) جاهزة" else "📥 تحميل الملاحة الدقيقة الكاملة (أوفلاين)",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (isAlreadyDownloaded && !isDownloadingValhalla) {
-                        Text(
-                            text = "ملف خرائط ومسارات الملاحة الدقيقة (25 ميجابايت) محفوظ مسبقاً على هذا الهاتف وجاهز للاستخدام أوفلاين دون إنترنت.\n\nيمكنك بدء الملاحة الآن فوراً، أو إعادة تنزيل أحدث ملف خرائط.",
-                            fontSize = 12.sp,
-                            color = Color(0xFFA7F3D0)
-                        )
-                    } else {
-                        Text(
-                            text = "لتفعيل الملاحة الدقيقة والمسارات التفصيلية داخل شوارع اليمن، يحتاج التطبيق إلى تحميل ملف خرائط أوفلاين (حوالي 25 ميجابايت). يُنصح باستخدام شبكة Wi-Fi.",
-                            fontSize = 12.sp,
-                            color = Color.LightGray
-                        )
-                    }
-                    
-                    if (isDownloadingValhalla) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LinearProgressIndicator(
-                            progress = { downloadProgress },
-                            modifier = Modifier.fillMaxWidth().height(8.dp),
-                            color = Color(0xFF00E5FF),
-                            trackColor = Color(0xFF1E293B)
-                        )
-                        Text(downloadStatusText, fontSize = 11.sp, color = Color(0xFF00E5FF))
-                    }
+    // 📥 Valhalla Offline Navigation Download & Storage Import Dialog
+    if (showValhallaDialog) {
+        ValhallaOfflineDialog(
+            onDismiss = { showValhallaDialog = false },
+            onStartNavigation = {
+                offlinePackVersion++
+                if (state.pendingNavDestination == null) {
+                    showDestChooser = true
+                } else {
+                    state.currentMapMode = MapMode.NAVIGATION
+                    state.currentMapLayer = "navigation"
+                    webViewRef?.post { webViewRef?.evaluateJavascript("if (window.switchLayer) { window.switchLayer('navigation'); }", null) }
                 }
             },
-            confirmButton = {
-                if (!isDownloadingValhalla) {
-                    if (isAlreadyDownloaded) {
-                        Button(
-                            onClick = {
-                                state.currentMapMode = MapMode.NAVIGATION
-                                state.currentMapLayer = "navigation"
-                                val script = "if (window.switchLayer) { window.switchLayer('navigation'); }"
-                                webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                                showValhallaDialog = false
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("🧭 تم فتح شاشة الملاحة الدقيقة أوفلاين بنجاح")
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
-                        ) {
-                            Text("بدء الملاحة الآن 🧭", color = Color.Black, fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        Button(
-                            onClick = {
-                                isDownloadingValhalla = true
-                                downloadStatusText = "جاري بدء التحميل..."
-                                coroutineScope.launch {
-                                    val prefs = context.getSharedPreferences("valhalla_prefs", android.content.Context.MODE_PRIVATE)
-                                    val adminUrl = prefs.getString("valhalla_url", "") ?: ""
-                                    val success = com.serviseyem.utils.ValhallaDownloadManager.downloadAndExtractOfflineTiles(context, adminUrl) { prog, msg ->
-                                        downloadProgress = prog
-                                        downloadStatusText = msg
-                                    }
-                                    isDownloadingValhalla = false
-                                    showValhallaDialog = false
-                                    if (success) {
-                                        state.currentMapMode = MapMode.NAVIGATION
-                                        state.currentMapLayer = "navigation"
-                                        val script = "if (window.switchLayer) { window.switchLayer('navigation'); }"
-                                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                                        snackbarHostState.showSnackbar("تم تحميل وحفظ الملاحة بنجاح ✓ تم فتح شاشة الملاحة")
-                                    } else {
-                                        snackbarHostState.showSnackbar("فشل التحميل، يرجى التحقق من الاتصال")
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
-                        ) {
-                            Text("تحميل الآن", color = Color.Black, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
+            onOpenPlacesDownload = {
+                showPlacesDownload = true
             },
-            dismissButton = {
-                if (!isDownloadingValhalla) {
-                    if (isAlreadyDownloaded) {
-                        TextButton(
-                            onClick = {
-                                isDownloadingValhalla = true
-                                downloadStatusText = "جاري إعادة التحميل..."
-                                coroutineScope.launch {
-                                    com.serviseyem.utils.ValhallaDownloadManager.clearOfflineData(context)
-                                    val prefs = context.getSharedPreferences("valhalla_prefs", android.content.Context.MODE_PRIVATE)
-                                    val adminUrl = prefs.getString("valhalla_url", "") ?: ""
-                                    val success = com.serviseyem.utils.ValhallaDownloadManager.downloadAndExtractOfflineTiles(context, adminUrl) { prog, msg ->
-                                        downloadProgress = prog
-                                        downloadStatusText = msg
-                                    }
-                                    isDownloadingValhalla = false
-                                    showValhallaDialog = false
-                                    if (success) {
-                                        state.currentMapMode = MapMode.NAVIGATION
-                                        state.currentMapLayer = "navigation"
-                                        val script = "if (window.switchLayer) { window.switchLayer('navigation'); }"
-                                        webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                                        snackbarHostState.showSnackbar("تم تحديث وحفظ خرائط الملاحة بنجاح ✓")
-                                    }
-                                }
-                            }
-                        ) {
-                            Text("إعادة التنزيل 🔄", color = Color(0xFF00E5FF), fontSize = 12.sp)
-                        }
-                    } else {
-                        TextButton(onClick = { showValhallaDialog = false }) {
-                            Text("لاحقاً", color = Color.Gray)
-                        }
-                    }
+            onStatusMessage = { msg ->
+                offlinePackVersion++
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(msg)
                 }
-            },
-            containerColor = Color(0xFF0F172A),
-            shape = RoundedCornerShape(16.dp)
+            }
+        )
+    }
+
+    // 📍 حوار تحميل/استيراد قاعدة الأماكن المحلية للبحث بلا إنترنت
+    if (showPlacesDownload) {
+        PlacesDownloadDialog(
+            onDismiss = { showPlacesDownload = false },
+            onCompleted = { msg ->
+                offlinePackVersion++
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(msg)
+                }
+            }
         )
     }
 

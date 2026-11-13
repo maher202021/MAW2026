@@ -34,6 +34,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.serviseyem.ui.MainViewModel
 import com.serviseyem.ui.components.BespokePremiumSystem
+import com.serviseyem.ui.screens.map.DestinationChooserSheet
+import com.serviseyem.ui.screens.map.PlacesDownloadDialog
+import com.serviseyem.ui.screens.map.ValhallaOfflineDialog
+import com.serviseyem.utils.LandmarkAddressStore
+import com.serviseyem.utils.OfflinePlacesDb
+import com.serviseyem.utils.PlaceSearch
+import com.serviseyem.utils.PlaceSearchOutcome
+import com.serviseyem.utils.RecentDestinations
 import com.serviseyem.utils.VisualThemePalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -94,16 +102,24 @@ fun NavigationScreen(
         }
     }
 
-    // Destinations
+    // Destinations & Pickers
     var targetLat by remember { mutableDoubleStateOf(initialTargetLat) }
     var targetLng by remember { mutableDoubleStateOf(initialTargetLng) }
     var targetName by remember { mutableStateOf(initialTargetName) }
+    var showDestChooser by remember { mutableStateOf(false) }
+    var showValhallaDialog by remember { mutableStateOf(false) }
+    var showPlacesDownload by remember { mutableStateOf(false) }
+    var pickingOnNavMap by remember { mutableStateOf(false) }
+    var pickedNavPoint by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var statusBannerText by remember { mutableStateOf<String?>(null) }
+
+    val providersList = viewModel?.providers?.collectAsState()?.value ?: emptyList()
+    val storesList = viewModel?.stores?.collectAsState()?.value ?: emptyList()
+    val addressStore = remember { LandmarkAddressStore(context) }
+    var savedAddresses by remember { mutableStateOf(addressStore.all()) }
 
     // Offline / Valhalla State
     var hasValhallaFiles by remember { mutableStateOf(OfflineMapLifecycleManager.getInstance(context).isOfflineDataAvailable()) }
-    var isDownloading by remember { mutableStateOf(false) }
-    var downloadProgress by remember { mutableIntStateOf(0) }
-    var downloadStatusText by remember { mutableStateOf("") }
 
     val realNavigator = remember { RealValhallaNavigator(context) }
 
@@ -125,6 +141,8 @@ fun NavigationScreen(
     // Search state
     var searchQuery by remember { mutableStateOf("") }
     var searchResults by remember { mutableStateOf<List<NavigationSearchResult>>(emptyList()) }
+    var searchMessage by remember { mutableStateOf<String?>(null) }
+    var canDownloadPlacesFromSearch by remember { mutableStateOf(false) }
     var isSearching by remember { mutableStateOf(false) }
     var searchJob by remember { mutableStateOf<Job?>(null) }
 
@@ -269,10 +287,12 @@ fun NavigationScreen(
         webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
     }
 
-    // Search query debouncing with Arabic normalization
+    // Search query debouncing with 3-layer PlaceSearch (local entities + OfflinePlacesDb + Nominatim)
     LaunchedEffect(searchQuery) {
         if (searchQuery.trim().length < 2) {
             searchResults = emptyList()
+            searchMessage = null
+            canDownloadPlacesFromSearch = false
             isSearching = false
             return@LaunchedEffect
         }
@@ -280,39 +300,34 @@ fun NavigationScreen(
         searchJob = coroutineScope.launch {
             delay(500)
             isSearching = true
+            searchMessage = null
+            canDownloadPlacesFromSearch = false
             val query = searchQuery.trim()
-
-            // 1. Comprehensive Universal Offline & Local Search (Landmarks, Stores, Technicians, Streets)
-            val comprehensiveResults = com.serviseyem.utils.CrossFuzzySearchEngine.searchEverything(
+            when (val outcome = PlaceSearch.search(
+                context = context,
                 query = query,
-                providers = viewModel?.providers?.value ?: emptyList(),
-                stores = viewModel?.stores?.value ?: emptyList(),
-                properties = viewModel?.properties?.value ?: emptyList(),
+                providers = providersList,
+                stores = storesList,
                 userLat = locationFix.latitude,
-                userLng = locationFix.longitude,
-                context = context
-            )
-
-            val mappedResults = comprehensiveResults.map { res ->
-                NavigationSearchResult(
-                    title = res.title,
-                    subtitle = res.subtitle,
-                    lat = res.latitude,
-                    lng = res.longitude,
-                    isLocal = true
-                )
-            }
-
-            // 2. Fallback to OpenStreetMap Nominatim only if no local/offline results found
-            val finalResults = if (mappedResults.isEmpty()) {
-                withContext(Dispatchers.IO) {
-                    fetchNominatimPlaces(query)
+                userLng = locationFix.longitude
+            )) {
+                is PlaceSearchOutcome.Results -> {
+                    searchResults = outcome.items.map { res ->
+                        NavigationSearchResult(
+                            title = res.shortName,
+                            subtitle = res.displayName,
+                            lat = res.latitude,
+                            lng = res.longitude,
+                            isLocal = outcome.source != "online" || res.category == "provider" || res.category == "store"
+                        )
+                    }.distinctBy { "${it.lat},${it.lng}" }
                 }
-            } else {
-                mappedResults
+                is PlaceSearchOutcome.Message -> {
+                    searchResults = emptyList()
+                    searchMessage = outcome.text
+                    canDownloadPlacesFromSearch = outcome.canDownloadPlaces
+                }
             }
-
-            searchResults = finalResults.distinctBy { "${it.lat},${it.lng}" }
             isSearching = false
         }
     }
@@ -323,6 +338,10 @@ fun NavigationScreen(
             .background(Color(0xFF070B14))
     ) {
         // 1. Leaflet HTML5 Map View
+        LaunchedEffect(pickingOnNavMap) {
+            webViewRef?.evaluateJavascript("if (window.setPickMode) { window.setPickMode($pickingOnNavMap); }", null)
+        }
+
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
@@ -333,9 +352,23 @@ fun NavigationScreen(
                     settings.cacheMode = WebSettings.LOAD_DEFAULT
                     settings.allowFileAccess = false
                     settings.allowContentAccess = false
+                    addJavascriptInterface(
+                        object {
+                            @android.webkit.JavascriptInterface
+                            fun onNavMapPicked(lat: Double, lng: Double) {
+                                post {
+                                    if (pickingOnNavMap) {
+                                        pickedNavPoint = lat to lng
+                                    }
+                                }
+                            }
+                        },
+                        "NavBridge"
+                    )
                     webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
+                            view?.evaluateJavascript("if (window.setPickMode) { window.setPickMode($pickingOnNavMap); }", null)
                             recalculateRoute()
                         }
                     }
@@ -377,8 +410,9 @@ fun NavigationScreen(
 
                 Surface(
                     shape = RoundedCornerShape(20.dp),
-                    color = if (hasValhallaFiles) Color(0xFF064E3B).copy(alpha = 0.8f) else Color(0xFF0C4A6E).copy(alpha = 0.8f),
-                    border = BorderStroke(1.dp, if (hasValhallaFiles) Color(0xFF10B981) else Color(0xFF0284C7))
+                    color = if (hasValhallaFiles) Color(0xFF064E3B).copy(alpha = 0.85f) else Color(0xFF0C4A6E).copy(alpha = 0.85f),
+                    border = BorderStroke(1.dp, if (hasValhallaFiles) Color(0xFF10B981) else Color(0xFF0284C7)),
+                    modifier = Modifier.clickable { showValhallaDialog = true }
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -392,25 +426,59 @@ fun NavigationScreen(
                                 .background(if (hasValhallaFiles) Color(0xFF10B981) else Color(0xFF38BDF8))
                         )
                         Text(
-                            text = if (hasValhallaFiles) "ملاحة أوفلاين (فالدالا)" else "تقريبي - مسافة مباشرة",
+                            text = if (hasValhallaFiles) "ملاحة أوفلاين (فالدالا)" else "تقريبي • أضف أوفلاين 📥",
                             color = Color.White,
-                            fontSize = 11.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                IconButton(
-                    onClick = { navigationVoice.toggleMute() },
-                    modifier = Modifier
-                        .size(44.dp)
-                        .background(Color(0xFF131C2E).copy(alpha = 0.92f), RoundedCornerShape(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    IconButton(
+                        onClick = { showDestChooser = true },
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(Color(0xFF131C2E).copy(alpha = 0.92f), RoundedCornerShape(12.dp))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AltRoute,
+                            contentDescription = "تغيير الوجهة",
+                            tint = Color(0xFF10B981)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { navigationVoice.toggleMute() },
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(Color(0xFF131C2E).copy(alpha = 0.92f), RoundedCornerShape(12.dp))
+                    ) {
+                        Icon(
+                            imageVector = if (isVoiceMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                            contentDescription = "الصوت",
+                            tint = if (isVoiceMuted) Color.Gray else Color(0xFF00E5FF)
+                        )
+                    }
+                }
+            }
+
+            statusBannerText?.let { banner ->
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFF065F46).copy(alpha = 0.92f),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector = if (isVoiceMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                        contentDescription = "الصوت",
-                        tint = if (isVoiceMuted) Color.Gray else Color(0xFF00E5FF)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(banner, color = Color.White, fontSize = 11.5.sp, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { statusBannerText = null }) {
+                            Text("حسناً", color = Color(0xFFA7F3D0), fontSize = 11.sp)
+                        }
+                    }
                 }
             }
 
@@ -443,7 +511,12 @@ fun NavigationScreen(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("بحث عن مكان، شارع، أو خدمة لتغيير الوجهة...", color = Color.Gray, fontSize = 12.sp) },
+                        placeholder = { Text("بحث عن مكان، شارع، أو خدمة لتغيير الوجهة...", color = Color.White.copy(alpha = 0.6f), fontSize = 12.5.sp) },
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            color = Color.White,
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF00E5FF)) },
                         trailingIcon = {
                             if (isSearching) {
@@ -461,13 +534,16 @@ fun NavigationScreen(
                             focusedBorderColor = Color.Transparent,
                             unfocusedBorderColor = Color.Transparent,
                             focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
+                            unfocusedTextColor = Color.White,
+                            cursorColor = Color(0xFF00E5FF)
                         ),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = 50.dp)
                     )
 
                     if (searchResults.isNotEmpty()) {
-                        Divider(color = Color.White.copy(alpha = 0.1f))
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -478,11 +554,13 @@ fun NavigationScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
+                                            RecentDestinations(context).add(result.title, result.lat, result.lng)
                                             targetLat = result.lat
                                             targetLng = result.lng
                                             targetName = result.title
                                             searchQuery = ""
                                             searchResults = emptyList()
+                                            searchMessage = null
                                             recalculateRoute(announce = true)
                                         }
                                         .padding(horizontal = 14.dp, vertical = 10.dp),
@@ -500,7 +578,36 @@ fun NavigationScreen(
                                         Text(text = result.subtitle, color = Color.Gray, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                 }
-                                Divider(color = Color.White.copy(alpha = 0.05f))
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                            }
+                        }
+                    } else if (searchMessage != null) {
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = searchMessage.orEmpty(),
+                                color = Color(0xFFF59E0B),
+                                fontSize = 12.sp
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    onClick = { showDestChooser = true },
+                                    modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                                ) {
+                                    Text("اختر وجهة بديلة 🎯", color = Color.White, fontSize = 11.5.sp)
+                                }
+                                if (canDownloadPlacesFromSearch) {
+                                    Button(
+                                        onClick = { showPlacesDownload = true },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                        modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                                    ) {
+                                        Text("تحميل الأماكن", color = Color.Black, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
                             }
                         }
                     }
@@ -611,31 +718,150 @@ fun NavigationScreen(
             }
         }
 
-        // 4. Real-Time Navigation Progress HUD Component
-        RealtimeNavigationProgressComponent(
-            isOfflineMode = hasValhallaFiles,
-            progressPercentage = tripProgressFraction,
-            remainingDistanceText = remainingDistanceText,
-            estimatedDurationText = estimatedTimeText,
-            estimatedArrivalTimeText = estimatedArrivalClock,
-            currentSpeedKmh = locationFix.speedKmh.toInt(),
-            currentInstruction = currentInstruction,
-            nextManeuver = nextTurnManeuver,
-            destinationName = targetName,
-            isVoiceMuted = isVoiceMuted,
-            onToggleVoice = { navigationVoice.toggleMute() },
-            onRecenterClick = {
-                val script = "if (window.centerOnUser) { window.centerOnUser(${locationFix.latitude}, ${locationFix.longitude}); }"
-                webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+        // 4. Real-Time Navigation Progress HUD Component or Map Pick Confirmation
+        if (pickingOnNavMap) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xF50F172A),
+                border = BorderStroke(1.5.dp, Color(0xFF00E5FF)),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(14.dp)
+                    .fillMaxWidth()
+            ) {
+                val pt = pickedNavPoint
+                if (pt == null) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("اضغط على الخريطة لتحديد الوجهة الجديدة 🎯", color = Color.White, fontSize = 12.5.sp, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { pickingOnNavMap = false }) {
+                            Text("إلغاء", color = Color(0xFFEF4444))
+                        }
+                    }
+                } else {
+                    val (la, lo) = pt
+                    val nearest = remember(la, lo) { OfflinePlacesDb.nearest(context, la, lo) }
+                    val label = nearest?.let { "قرب $it" } ?: "نقطة على الخريطة"
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("الوجهة: $label", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    pickingOnNavMap = false
+                                    pickedNavPoint = null
+                                    RecentDestinations(context).add(label, la, lo)
+                                    targetLat = la
+                                    targetLng = lo
+                                    targetName = label
+                                    recalculateRoute(announce = true)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                modifier = Modifier.weight(1f).defaultMinSize(minHeight = 48.dp)
+                            ) {
+                                Text("ابدأ الملاحة", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    pickingOnNavMap = false
+                                    pickedNavPoint = null
+                                },
+                                modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                            ) {
+                                Text("إلغاء", color = Color.White)
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            RealtimeNavigationProgressComponent(
+                isOfflineMode = hasValhallaFiles,
+                progressPercentage = tripProgressFraction,
+                remainingDistanceText = remainingDistanceText,
+                estimatedDurationText = estimatedTimeText,
+                estimatedArrivalTimeText = estimatedArrivalClock,
+                currentSpeedKmh = locationFix.speedKmh.toInt(),
+                currentInstruction = currentInstruction,
+                nextManeuver = nextTurnManeuver,
+                destinationName = targetName,
+                isVoiceMuted = isVoiceMuted,
+                onToggleVoice = { navigationVoice.toggleMute() },
+                onRecenterClick = {
+                    val script = "if (window.centerOnUser) { window.centerOnUser(${locationFix.latitude}, ${locationFix.longitude}); }"
+                    webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                },
+                onEndNavigationClick = {
+                    navigationVoice.speak("تم إنهاء رحلة الملاحة بنجاح")
+                    onBackClick()
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+            )
+        }
+    }
+
+    if (showDestChooser) {
+        DestinationChooserSheet(
+            userLat = locationFix.latitude,
+            userLng = locationFix.longitude,
+            hasRealLocation = locationFix.latitude != 0.0 && locationFix.longitude != 0.0,
+            providers = providersList,
+            stores = storesList,
+            savedAddresses = savedAddresses,
+            onPick = { name, la, lo ->
+                showDestChooser = false
+                RecentDestinations(context).add(name, la, lo)
+                targetLat = la
+                targetLng = lo
+                targetName = name
+                recalculateRoute(announce = true)
             },
-            onEndNavigationClick = {
-                navigationVoice.speak("تم إنهاء رحلة الملاحة بنجاح")
-                onBackClick()
+            onPickFromMap = {
+                showDestChooser = false
+                pickedNavPoint = null
+                pickingOnNavMap = true
             },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .padding(horizontal = 14.dp, vertical = 12.dp)
+            onDownloadPlaces = {
+                showDestChooser = false
+                showPlacesDownload = true
+            },
+            onDismiss = { showDestChooser = false },
+            onAddressSaved = {
+                savedAddresses = addressStore.all()
+            }
+        )
+    }
+
+    if (showValhallaDialog) {
+        ValhallaOfflineDialog(
+            onDismiss = { showValhallaDialog = false },
+            onStartNavigation = {
+                realNavigator.refreshEngine()
+                hasValhallaFiles = OfflineMapLifecycleManager.getInstance(context).isOfflineDataAvailable()
+                recalculateRoute(announce = false)
+            },
+            onOpenPlacesDownload = { showPlacesDownload = true },
+            onStatusMessage = { msg ->
+                realNavigator.refreshEngine()
+                hasValhallaFiles = OfflineMapLifecycleManager.getInstance(context).isOfflineDataAvailable()
+                statusBannerText = msg
+                recalculateRoute(announce = false)
+            }
+        )
+    }
+
+    if (showPlacesDownload) {
+        PlacesDownloadDialog(
+            onDismiss = { showPlacesDownload = false },
+            onCompleted = { msg ->
+                statusBannerText = msg
+            }
         )
     }
 }
@@ -700,6 +926,29 @@ private fun buildNavigationLeafletHtml(
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <style>
             html, body, #map { width: 100%; height: 100%; margin: 0; padding: 0; background: #070B14; }
+            #map.no-tiles {
+                background: #131B26;
+                background-image:
+                    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+                background-size: 64px 64px;
+            }
+            #offline-tiles-banner {
+                display: none;
+                position: fixed;
+                bottom: 92px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 900;
+                background: rgba(15, 23, 42, 0.92);
+                color: #FCD34D;
+                border: 1px solid rgba(252, 211, 77, 0.4);
+                border-radius: 999px;
+                padding: 6px 14px;
+                font-size: 11px;
+                font-family: sans-serif;
+                white-space: nowrap;
+            }
             .user-pulse {
                 width: 22px; height: 22px;
                 background: #00E5FF;
@@ -719,6 +968,7 @@ private fun buildNavigationLeafletHtml(
     </head>
     <body>
         <div id="map"></div>
+        <div id="offline-tiles-banner">الخريطة تحتاج إنترنت أو حزمة عرض</div>
         <script>
             var map = L.map('map', {
                 center: [$startLat, $startLon],
@@ -726,10 +976,20 @@ private fun buildNavigationLeafletHtml(
                 zoomControl: false
             });
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            var baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                 maxZoom: 19,
                 subdomains: 'abcd'
             }).addTo(map);
+
+            var tileErrCount = 0;
+            function notifyNavTiles(failing) {
+                var el = document.getElementById('map');
+                var b = document.getElementById('offline-tiles-banner');
+                if (el) el.classList.toggle('no-tiles', failing);
+                if (b) b.style.display = failing ? 'block' : 'none';
+            }
+            baseLayer.on('tileerror', function() { tileErrCount++; if (tileErrCount >= 4) notifyNavTiles(true); });
+            baseLayer.on('tileload', function() { tileErrCount = 0; notifyNavTiles(false); });
 
             var userIcon = L.divIcon({ className: 'user-pulse', iconSize: [22, 22] });
             var destIcon = L.divIcon({ className: 'dest-pulse', iconSize: [26, 26] });
@@ -738,6 +998,18 @@ private fun buildNavigationLeafletHtml(
             var destMarker = L.marker([$endLat, $endLon], { icon: destIcon }).addTo(map).bindPopup('$destName');
 
             var routePolyline = null;
+            var pickMode = false;
+            window.setPickMode = function(on) {
+                pickMode = !!on;
+                var el = document.getElementById('map');
+                if (el) el.style.cursor = on ? 'crosshair' : '';
+            };
+            map.on('click', function(e) {
+                if (!pickMode) return;
+                if (window.NavBridge && window.NavBridge.onNavMapPicked) {
+                    window.NavBridge.onNavMapPicked(e.latlng.lat, e.latlng.lng);
+                }
+            });
 
             window.renderNavigationRouteSafe = function(args) {
                 var sLat = args.sLat;

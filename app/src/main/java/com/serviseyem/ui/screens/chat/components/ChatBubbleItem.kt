@@ -742,7 +742,11 @@ fun ChatBubbleItem(
             // Reactions Pill (if any reacted)
             if (message.reactions.isNotEmpty()) {
                 val reactionCounts = remember(message.reactions) {
-                    message.reactions.values.groupingBy { it }.eachCount()
+                    buildMap<String, Int> {
+                        for (emoji in message.reactions.values) {
+                            put(emoji, (get(emoji) ?: 0) + 1)
+                        }
+                    }
                 }
                 Row(
                     modifier = Modifier

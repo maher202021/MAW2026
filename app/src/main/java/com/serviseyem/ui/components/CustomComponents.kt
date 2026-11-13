@@ -154,22 +154,17 @@ fun Luxury3DNavIcon(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(3.dp))
-        Box(
-            modifier = Modifier.height(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = label,
-                fontSize = 10.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                softWrap = false,
-                color = if (isSelected) Color(0xFFFFC93C) else Color(0xFFC9D2E0),
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-        }
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            fontSize = 10.5.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            softWrap = false,
+            color = if (isSelected) Color(0xFFFFC93C) else Color(0xFFC9D2E0),
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
     }
 }
 

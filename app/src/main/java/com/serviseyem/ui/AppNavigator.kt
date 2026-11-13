@@ -85,11 +85,7 @@ fun AppNavigator(
                 )
             }
         },
-        contentWindowInsets = if (currentScreen == AppScreens.CHAT_DIRECT || currentScreen == AppScreens.MAP_VIEW || currentScreen == AppScreens.SMART_ASSISTANT || currentScreen == AppScreens.NAVIGATION) {
-            WindowInsets(0, 0, 0, 0)
-        } else {
-            ScaffoldDefaults.contentWindowInsets
-        },
+        contentWindowInsets = WindowInsets.systemBars,
         containerColor = themeColors.background
     ) { innerPadding ->
         Box(

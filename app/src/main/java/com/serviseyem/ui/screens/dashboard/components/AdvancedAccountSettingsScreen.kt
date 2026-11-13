@@ -30,6 +30,16 @@ fun AdvancedAccountSettingsScreen(
     var autoAvailability by remember { mutableStateOf(true) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var showValhallaDialog by remember { mutableStateOf(false) }
+    var showPlacesDialog by remember { mutableStateOf(false) }
+    var statusToast by remember { mutableStateOf<String?>(null) }
+    var refreshKey by remember { mutableIntStateOf(0) }
+    val valhallaReady = remember(refreshKey) { com.serviseyem.utils.ValhallaDownloadManager.isDownloaded(context) }
+    val placesCount = remember(refreshKey) {
+        if (com.serviseyem.utils.OfflinePlacesDb.isInstalled(context)) com.serviseyem.utils.OfflinePlacesDb.rowCount(context) else 0L
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -64,6 +74,44 @@ fun AdvancedAccountSettingsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = themeColors.primary)
                 ) {
                     Text("تحديث كلمة المرور")
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("الخرائط والبحث بدون إنترنت 🗺️", fontSize = 14.sp, color = themeColors.primary)
+                Text(
+                    text = "خرائط الملاحة (Valhalla): " + if (valhallaReady) "مثبّتة ✓" else "غير محمّلة",
+                    fontSize = 12.5.sp
+                )
+                Text(
+                    text = "قاعدة الأماكن (places.db): " + if (placesCount > 0L) "$placesCount مكان ✓" else "غير محمّلة",
+                    fontSize = 12.5.sp
+                )
+                statusToast?.let {
+                    Text(it, fontSize = 12.sp, color = themeColors.primary)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { showValhallaDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = themeColors.primary),
+                        modifier = Modifier.weight(1f).defaultMinSize(minHeight = 48.dp)
+                    ) {
+                        Text("خرائط الملاحة", fontSize = 12.sp)
+                    }
+                    OutlinedButton(
+                        onClick = { showPlacesDialog = true },
+                        modifier = Modifier.weight(1f).defaultMinSize(minHeight = 48.dp)
+                    ) {
+                        Text("قاعدة الأماكن", fontSize = 12.sp)
+                    }
                 }
             }
         }
@@ -113,6 +161,28 @@ fun AdvancedAccountSettingsScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteConfirm = false }) { Text("إلغاء") }
+                }
+            )
+        }
+
+        if (showValhallaDialog) {
+            com.serviseyem.ui.screens.map.ValhallaOfflineDialog(
+                onDismiss = { showValhallaDialog = false },
+                onStartNavigation = { refreshKey++ },
+                onOpenPlacesDownload = { showPlacesDialog = true },
+                onStatusMessage = { msg ->
+                    refreshKey++
+                    statusToast = msg
+                }
+            )
+        }
+
+        if (showPlacesDialog) {
+            com.serviseyem.ui.screens.map.PlacesDownloadDialog(
+                onDismiss = { showPlacesDialog = false },
+                onCompleted = { msg ->
+                    refreshKey++
+                    statusToast = msg
                 }
             )
         }

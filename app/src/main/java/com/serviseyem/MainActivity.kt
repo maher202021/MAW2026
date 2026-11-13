@@ -403,13 +403,9 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = if (isInitialized) colors.background else Color.Black
+                        color = colors.background
                     ) {
-                        if (!isInitialized) {
-                            YemenSplashScreen(settingsState = settingsState)
-                        } else {
-                            AppNavigator(viewModel = viewModel, themeColors = colors, permissionLauncher = permissionLauncher, locationPermissions = locationPermissions)
-                        }
+                        AppNavigator(viewModel = viewModel, themeColors = colors, permissionLauncher = permissionLauncher, locationPermissions = locationPermissions)
                     }
                 }
             }

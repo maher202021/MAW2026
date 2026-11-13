@@ -186,19 +186,27 @@ fun ServicesBrowserLayout(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "نتائج البحث الفوري والملاحة (${searchDropdownResults.size})",
+                                        text = "نتائج البحث المفلترة بالمسافة (${searchDropdownResults.size})",
                                         color = Color(0xFF00E5FF),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = "اضغط للمسار المباشر ↗",
+                                        text = "المسار والملاحة ↗",
                                         color = Color.White.copy(alpha = 0.6f),
                                         fontSize = 11.sp
                                     )
                                 }
                                 HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                                searchDropdownResults.take(6).forEach { item ->
+                                searchDropdownResults.take(8).forEach { item ->
+                                    val userLat = viewModel.userLatitude.value
+                                    val userLng = viewModel.userLongitude.value
+                                    val distMeters = com.serviseyem.ui.screens.map.utils.MapDistanceCalculator.calculateDistanceMeters(
+                                        userLat, userLng, item.latitude, item.longitude
+                                    )
+                                    val distFormatted = if (distMeters > 0) com.serviseyem.ui.screens.map.utils.MapDistanceCalculator.formatDistance(distMeters) else ""
+                                    val etaFormatted = if (distMeters > 0) com.serviseyem.ui.screens.map.utils.MapDistanceCalculator.computeEta(distMeters) else ""
+
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -211,8 +219,8 @@ fun ServicesBrowserLayout(
                                     ) {
                                         val iconBadge = when (item.type) {
                                             com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.STORE -> "🏪"
-                                            com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.PERSON -> "👤"
-                                            com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.STREET -> "🛣️"
+                                            com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.PERSON -> "🛠️"
+                                            com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.STREET -> "📍"
                                             com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.PROPERTY -> "🏠"
                                             com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.CITY -> "🇾🇪"
                                             com.serviseyem.utils.CrossFuzzySearchEngine.SearchType.AREA -> "📍"
@@ -223,18 +231,26 @@ fun ServicesBrowserLayout(
                                             Text(
                                                 text = item.title,
                                                 color = Color.White,
-                                                fontSize = 14.sp,
+                                                fontSize = 13.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
                                             Text(
-                                                text = item.subtitle,
+                                                text = if (distFormatted.isNotEmpty()) "${item.subtitle} • $distFormatted" else item.subtitle,
                                                 color = Color.White.copy(alpha = 0.7f),
-                                                fontSize = 12.sp,
+                                                fontSize = 11.5.sp,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
+                                            if (etaFormatted.isNotEmpty()) {
+                                                Text(
+                                                    text = etaFormatted,
+                                                    color = Color(0xFF00E5FF),
+                                                    fontSize = 10.5.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
                                         }
                                         Surface(
                                             shape = RoundedCornerShape(8.dp),
@@ -242,7 +258,7 @@ fun ServicesBrowserLayout(
                                             border = BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.5f))
                                         ) {
                                             Text(
-                                                text = "انطلق",
+                                                text = "انطلق 📍",
                                                 color = Color(0xFF00E5FF),
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
