@@ -157,13 +157,13 @@ fun Luxury3DNavIcon(
         Text(
             text = label,
             fontSize = 11.sp,
-            lineHeight = 17.sp,
-            maxLines = 2,
-            softWrap = true,
+            lineHeight = 15.sp,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            softWrap = false,
             color = if (isSelected) Color(0xFFFFC93C) else Color(0xFFC9D2E0),
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
+            textAlign = TextAlign.Center
         )
     }
 }

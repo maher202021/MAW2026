@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,19 +24,20 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.serviseyem.ui.MainViewModel
 import com.serviseyem.utils.VisualThemePalette
 
 /**
- * 👑 AppFooterBar (الشريط السفلي الذهبي مع زر الطلبات البارز)
- * الترتيب الصارم:
- * 1. الحماية (Protection / Admin)
- * 2. اللغة (Language Switcher)
- * 3. [الطلبات] (Floating Orders button in Center - بارز بارتفاع 26.dp وتوهج ذهبي)
- * 4. الباقات (Packages / Membership)
- * 5. معلومات (Info / About)
+ * 👑 AppFooterBar (الشريط السفلي المتكامل المكون من 5 أيقونات واضحة ومتوازنة)
+ * الترتيب الصارم الموزع بالتساوي:
+ * 1. عن التطبيق (About)
+ * 2. الحجوزات (Bookings)
+ * 3. الرئيسية / ASH (Home Button في المنتصف بارتفاع دائري مميز)
+ * 4. اللغة (English / العربية)
+ * 5. الإدارة (Admin / القفل)
  */
 @Composable
 fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onInfoClick: () -> Unit) {
@@ -49,90 +52,119 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
             .navigationBarsPadding()
             .testTag("app_footer_bar")
     ) {
-        Row(
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 70.dp)
-                .background(Color(0xFF121A26))
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
+                .height(72.dp)
+                .align(Alignment.BottomCenter),
+            color = Color(0xFF121A26),
+            shadowElevation = 8.dp
         ) {
-            // 1. الإدارة (قفل)
-            val isAdmin = currentScreen == AppScreens.ADMIN_PANEL
-            Luxury3DNavIcon(
-                emojiIcon = "🔒",
-                vectorIcon = Icons.Default.Lock,
-                label = if (isEn) "Admin" else "الإدارة",
-                isSelected = isAdmin,
-                iconSizeDp = 30,
-                iconStyle = settingsState.topNavIconStyle,
-                forceWhiteText = false,
-                onClick = { viewModel.navigateTo("ADMIN_PANEL") }
-            )
-
-            // 2. English / العربية
-            Luxury3DNavIcon(
-                emojiIcon = "🌐",
-                vectorIcon = null,
-                label = if (isEn) "العربية" else "English",
-                isSelected = false,
-                iconSizeDp = 30,
-                iconStyle = settingsState.topNavIconStyle,
-                forceWhiteText = false,
-                onClick = {
-                    viewModel.switchLanguage()
-                    viewModel.triggerNotification(
-                        if (isEn) "تم التحويل إلى اللغة العربية 🇾🇪" else "Language switched to English 🌐"
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 1. عن التطبيق (معلومات)
+                val isAbout = currentScreen == AppScreens.ABOUT_APP
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Luxury3DNavIcon(
+                        emojiIcon = "ℹ️",
+                        vectorIcon = Icons.Default.Info,
+                        label = if (isEn) "About" else "عن التطبيق",
+                        isSelected = isAbout,
+                        iconSizeDp = 28,
+                        iconStyle = settingsState.topNavIconStyle,
+                        forceWhiteText = false,
+                        onClick = { onInfoClick() }
                     )
                 }
-            )
 
-            // حجز مساحة متوازنة لزر ASH الأوسط العائم
-            Spacer(modifier = Modifier.width(64.dp))
+                // 2. الحجوزات (تقويم)
+                val isBookings = currentScreen == AppScreens.BOOKINGS_VIEW
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Luxury3DNavIcon(
+                        emojiIcon = "📅",
+                        vectorIcon = Icons.Default.DateRange,
+                        label = if (isEn) "Bookings" else "الحجوزات",
+                        isSelected = isBookings,
+                        iconSizeDp = 28,
+                        iconStyle = settingsState.topNavIconStyle,
+                        forceWhiteText = false,
+                        onClick = { viewModel.navigateTo("BOOKINGS_VIEW") }
+                    )
+                }
 
-            // 3. الحجوزات (تقويم)
-            val isBookings = currentScreen == AppScreens.BOOKINGS_VIEW
-            Luxury3DNavIcon(
-                emojiIcon = "📅",
-                vectorIcon = Icons.Default.DateRange,
-                label = if (isEn) "Bookings" else "الحجوزات",
-                isSelected = isBookings,
-                iconSizeDp = 30,
-                iconStyle = settingsState.topNavIconStyle,
-                forceWhiteText = false,
-                onClick = { viewModel.navigateTo("BOOKINGS_VIEW") }
-            )
+                // 3. مساحة متوازنة مخصصة لزر ASH / الرئيسية في المنتصف
+                Spacer(modifier = Modifier.weight(1f))
 
-            // 4. عن التطبيق (معلومات)
-            val isAbout = currentScreen == AppScreens.ABOUT_APP
-            Luxury3DNavIcon(
-                emojiIcon = "ℹ️",
-                vectorIcon = Icons.Default.Info,
-                label = if (isEn) "About" else "عن التطبيق",
-                isSelected = isAbout,
-                iconSizeDp = 30,
-                iconStyle = settingsState.topNavIconStyle,
-                forceWhiteText = false,
-                onClick = { onInfoClick() }
-            )
+                // 4. English / العربية
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Luxury3DNavIcon(
+                        emojiIcon = "🌐",
+                        vectorIcon = null,
+                        label = if (isEn) "العربية" else "English",
+                        isSelected = false,
+                        iconSizeDp = 28,
+                        iconStyle = settingsState.topNavIconStyle,
+                        forceWhiteText = false,
+                        onClick = {
+                            viewModel.switchLanguage()
+                            viewModel.triggerNotification(
+                                if (isEn) "تم التحويل إلى اللغة العربية 🇾🇪" else "Language switched to English 🌐"
+                            )
+                        }
+                    )
+                }
+
+                // 5. الإدارة (قفل)
+                val isAdmin = currentScreen == AppScreens.ADMIN_PANEL
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Luxury3DNavIcon(
+                        emojiIcon = "🔒",
+                        vectorIcon = Icons.Default.Lock,
+                        label = if (isEn) "Admin" else "الإدارة",
+                        isSelected = isAdmin,
+                        iconSizeDp = 28,
+                        iconStyle = settingsState.topNavIconStyle,
+                        forceWhiteText = false,
+                        onClick = { viewModel.navigateTo("ADMIN_PANEL") }
+                    )
+                }
+            }
         }
 
-        // زر ASH الأوسط داخل Box بمحاذاة TopCenter وإزاحة رأسية سالبة 14dp
-        Box(
+        // 🌟 زر ASH الأوسط العائم (الرئيسية)
+        val isHome = currentScreen == AppScreens.USER_BROWSE || currentScreen == AppScreens.HOME
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = (-14).dp)
+                .offset(y = (-12).dp)
         ) {
-            androidx.compose.material3.FloatingActionButton(
+            FloatingActionButton(
                 onClick = { viewModel.navigateToScreen(AppScreens.USER_BROWSE) },
                 shape = CircleShape,
                 containerColor = Color(0xFFFFB300),
                 contentColor = Color.Black,
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp, pressedElevation = 10.dp),
                 modifier = Modifier
-                    .size(56.dp)
-                    .border(2.dp, com.serviseyem.ui.theme.DarkLuxuryBackground, CircleShape)
+                    .size(52.dp)
+                    .border(2.5.dp, Color(0xFF121A26), CircleShape)
                     .testTag("footer_ash_button")
             ) {
                 Column(
@@ -141,20 +173,28 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                 ) {
                     Icon(
                         imageVector = Icons.Default.Home,
-                        contentDescription = "ASH",
+                        contentDescription = if (isEn) "Home" else "الرئيسية",
                         tint = Color.Black,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(19.dp)
                     )
                     Text(
                         text = "ASH",
-                        fontSize = 10.sp,
-                        lineHeight = 14.sp,
+                        fontSize = 9.sp,
+                        lineHeight = 11.sp,
                         fontWeight = FontWeight.Black,
                         color = Color.Black
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = if (isEn) "Home" else "الرئيسية",
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isHome) Color(0xFFFFB300) else Color(0xFFC9D2E0),
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
-

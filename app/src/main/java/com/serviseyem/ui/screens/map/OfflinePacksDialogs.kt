@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -101,7 +102,7 @@ fun ValhallaOfflineDialog(
                     )
                 } else if (!isBusy) {
                     Text(
-                        text = "لتفعيل الملاحة الدقيقة والمسارات التفصيلية داخل شوارع اليمن، يحتاج التطبيق إلى تحميل ملف خرائط أوفلاين (حوالي 25–64 ميجابايت). يُنصح باستخدام شبكة Wi-Fi.",
+                        text = "لتفعيل الملاحة الدقيقة والمسارات التفصيلية داخل شوارع اليمن، يحتاج التطبيق إلى تحميل ملف خرائط أوفلاين (حجم التحميل الفعلي الدقيق: 26 ميجابايت مضغوطة). يعمل بالكامل دون اتصال.",
                         fontSize = 12.5.sp,
                         color = Color.LightGray
                     )
@@ -343,7 +344,7 @@ fun ValhallaOfflineDialog(
                         onClick = onDismiss,
                         modifier = Modifier.defaultMinSize(minHeight = 44.dp)
                     ) {
-                        Text("لاحقاً", color = Color.Gray)
+                        Text("التحميل لاحقاً ⏳", color = Color(0xFFFBBF24), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -404,16 +405,16 @@ fun PlacesDownloadDialog(
                 text = if (installed) "📍 قاعدة الأماكن المحلية جاهزة" else "📥 تحميل قاعدة الأماكن (بلا إنترنت)",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                fontSize = 17.sp
+                fontSize = 17.5.sp
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     text = if (installed) {
-                        "قاعدة الأماكن المحلية مثبّتة داخل التطبيق ($rowCount شارع وحي ومَعلم في اليمن) وتعمل للبحث بلا إنترنت."
+                        "قاعدة الأماكن المحلية مثبّتة داخل التطبيق ($rowCount شارع وحي ومَعلم في اليمن) وتعمل للبحث والتوجيه بلا إنترنت."
                     } else {
-                        "تتيح قاعدة الأماكن (places.db نحو ${NavConfig.PLACES_DB_APPROX_MB} ميجا) البحث بالعربية عن الشوارع والأحياء والمدن والمعالم في اليمن دون إنترنت."
+                        "تتيح قاعدة الأماكن (حجم التحميل الفعلي الدقيق: 26 ميجابايت مضغوطة) البحث السريع بالعربية عن الشوارع والأحياء والمدن والمعالم في اليمن دون اتصال بالإنترنت."
                     },
                     color = if (installed) Color(0xFFA7F3D0) else Color.LightGray,
                     fontSize = 12.5.sp
@@ -428,7 +429,7 @@ fun PlacesDownloadDialog(
                         color = Color(0xFF00E5FF),
                         trackColor = Color(0xFF1E293B)
                     )
-                    Text(statusText, color = Color(0xFF00E5FF), fontSize = 11.5.sp)
+                    Text(statusText, color = Color(0xFF00E5FF), fontSize = 11.5.sp, fontWeight = FontWeight.Medium)
                 }
 
                 errorMessage?.let { err ->
@@ -441,6 +442,51 @@ fun PlacesDownloadDialog(
                 }
 
                 if (!isBusy) {
+                    // 1. خيار التحميل المباشر من الإنترنت (متاح دائماً برابط التحميل الرسمي المباشر)
+                    Button(
+                        onClick = {
+                            isBusy = true
+                            errorMessage = null
+                            progress = 0.05f
+                            statusText = "جاري الاتصال وتحميل قاعدة الأماكن..."
+                            coroutineScope.launch {
+                                val res = PlacesDbDownloader.download(context) { p ->
+                                    progress = p
+                                    statusText = "جاري التحميل وفك الضغط (${(p * 100).toInt()}%)..."
+                                }
+                                isBusy = false
+                                res.onSuccess {
+                                    val count = OfflinePlacesDb.rowCount(context)
+                                    onDismiss()
+                                    onCompleted("تم تثبيت قاعدة الأماكن بنجاح ✓ ($count مكان)")
+                                }.onFailure { err ->
+                                    errorMessage = err.localizedMessage ?: "فشل تحميل قاعدة الأماكن من الإنترنت"
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = 46.dp)
+                            .testTag("places_download_online_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudDownload,
+                            contentDescription = "تحميل مباشر من الإنترنت",
+                            tint = Color.Black,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (installed) "تحديث قاعدة الأماكن من النت (26 MB)" else "تحميل مباشر من النت (26 ميجابايت)",
+                            color = Color.Black,
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // 2. خيار الاستيراد من ذاكرة الهاتف
                     OutlinedButton(
                         onClick = {
                             placesPickerLauncher.launch(
@@ -451,52 +497,52 @@ fun PlacesDownloadDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .defaultMinSize(minHeight = 48.dp)
+                            .defaultMinSize(minHeight = 46.dp)
                             .testTag("places_import_from_storage_button")
                     ) {
-                        Icon(Icons.Default.FolderOpen, contentDescription = "استيراد من ذاكرة الهاتف", tint = Color(0xFF38BDF8), modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Default.FolderOpen,
+                            contentDescription = "استيراد من ذاكرة الهاتف",
+                            tint = Color(0xFF38BDF8),
+                            modifier = Modifier.size(19.dp)
+                        )
                         Spacer(Modifier.width(8.dp))
-                        Text("استيراد places.db / .zip من ذاكرة الهاتف", color = Color(0xFF38BDF8), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "استيراد places.db / .zip من ذاكرة الهاتف",
+                            color = Color(0xFF38BDF8),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
         },
-        confirmButton = {
-            if (!isBusy && hasDownloadUrl) {
-                Button(
-                    onClick = {
-                        isBusy = true
-                        errorMessage = null
-                        progress = 0.05f
-                        statusText = "جاري تحميل قاعدة الأماكن..."
-                        coroutineScope.launch {
-                            val res = PlacesDbDownloader.download(context) { p ->
-                                progress = p
-                                statusText = "جاري تحميل وفك قاعدة الأماكن (${(p * 100).toInt()}%)..."
-                            }
-                            isBusy = false
-                            res.onSuccess {
-                                val count = OfflinePlacesDb.rowCount(context)
-                                onDismiss()
-                                onCompleted("تم تثبيت قاعدة الأماكن بنجاح ✓ ($count مكان)")
-                            }.onFailure { err ->
-                                errorMessage = err.localizedMessage ?: "فشل تحميل قاعدة الأماكن"
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                    modifier = Modifier
-                        .defaultMinSize(minHeight = 48.dp)
-                        .testTag("places_download_online_button")
-                ) {
-                    Text(if (installed) "تحديث الآن" else "تحميل الآن", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            }
-        },
+        confirmButton = {},
         dismissButton = {
-            if (!isBusy) {
-                TextButton(onClick = onDismiss, modifier = Modifier.defaultMinSize(minHeight = 48.dp)) {
-                    Text("إغلاق", color = Color.Gray)
+            if (isBusy) {
+                TextButton(
+                    onClick = {
+                        isBusy = false
+                        statusText = "تم إلغاء التحميل"
+                    },
+                    modifier = Modifier.defaultMinSize(minHeight = 44.dp)
+                ) {
+                    Text("إلغاء ✕", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold)
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.defaultMinSize(minHeight = 44.dp)
+                    ) {
+                        Text("التحميل لاحقاً ⏳", color = Color(0xFFFBBF24), fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                    }
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.defaultMinSize(minHeight = 44.dp)
+                    ) {
+                        Text("إغلاق", color = Color.Gray, fontSize = 12.5.sp)
+                    }
                 }
             }
         },

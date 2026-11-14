@@ -10,9 +10,6 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
-import com.google.firebase.appcheck.FirebaseAppCheck
-import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
-import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
@@ -38,12 +35,14 @@ class MyApplication : Application() {
     }
 
     override fun onCreate() {
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
                 val logFile = java.io.File(filesDir, "crash_log.txt")
                 logFile.appendText("CRASH at ${java.util.Date()}: ${throwable.stackTraceToString()}\n")
             } catch (_: Exception) {}
             android.util.Log.e("CRASH_DIAGNOSTIC", "UNCAUGHT EXCEPTION in thread ${thread.name}", throwable)
+            defaultHandler?.uncaughtException(thread, throwable)
         }
         super.onCreate()
         instance = this

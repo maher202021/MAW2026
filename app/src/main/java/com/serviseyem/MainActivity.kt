@@ -250,6 +250,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
+        var keepSplashOnScreen = true
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            keepSplashOnScreen = false
+        }, 1100)
+        splashScreen.setKeepOnScreenCondition { keepSplashOnScreen }
         super.onCreate(savedInstanceState)
         pendingNavigationIntent.value = intent
 
