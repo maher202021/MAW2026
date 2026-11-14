@@ -2,7 +2,9 @@ package com.serviseyem.ui.screens.map.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,6 +63,7 @@ fun MapControls(
     onToggleNightMode: () -> Unit = {},
     isNasaGibsActive: Boolean = false,
     onToggleNasaGibs: () -> Unit = {},
+    onLongPressNasaGibs: () -> Unit = {},
     isEoxCloudlessActive: Boolean = false,
     onToggleEoxCloudless: () -> Unit = {},
     isEsriImageryActive: Boolean = false,
@@ -304,14 +307,18 @@ fun MapControls(
                 onClick = onToggleNightMode
             )
 
-            // 🛰️ NASA GIBS Live Satellites Layer (شبه فوري)
+            // 🛰️ NASA GIBS Live Satellites Layer (شبه فوري — نقر مطول لتبديل القمر)
             MapControlItem(
                 icon = Icons.Default.Public,
                 label = "ناسا",
                 isActive = isNasaGibsActive,
                 activeColor = Color(0xFF38BDF8),
                 inactiveColor = Color(0xFF38BDF8).copy(alpha = 0.8f),
-                onClick = onToggleNasaGibs
+                onClick = onToggleNasaGibs,
+                onLongClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    onLongPressNasaGibs()
+                }
             )
 
             // 🛰️ EOX Cloudless 2016 (Sentinel-2 10m عالية الدقة)
@@ -377,6 +384,7 @@ fun MapControls(
 /**
  * عنصر تحكم مصغر وأنيق مع أيقونة واسم توضيحي أسفلها
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MapControlItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -384,27 +392,51 @@ private fun MapControlItem(
     isActive: Boolean,
     activeColor: Color = Color(0xFF10B981),
     inactiveColor: Color = Color.White.copy(alpha = 0.75f),
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(vertical = 1.dp)
     ) {
-        IconButton(
-            onClick = onClick,
-            modifier = Modifier
-                .size(34.dp)
-                .background(
-                    if (isActive) activeColor.copy(alpha = 0.3f) else Color.Transparent,
-                    CircleShape
+        if (onLongClick != null) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(34.dp)
+                    .background(
+                        if (isActive) activeColor.copy(alpha = 0.3f) else Color.Transparent,
+                        CircleShape
+                    )
+                    .combinedClickable(
+                        onClick = onClick,
+                        onLongClick = onLongClick
+                    )
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = if (isActive) activeColor else inactiveColor,
+                    modifier = Modifier.size(19.dp)
                 )
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = if (isActive) activeColor else inactiveColor,
-                modifier = Modifier.size(19.dp)
-            )
+            }
+        } else {
+            IconButton(
+                onClick = onClick,
+                modifier = Modifier
+                    .size(34.dp)
+                    .background(
+                        if (isActive) activeColor.copy(alpha = 0.3f) else Color.Transparent,
+                        CircleShape
+                    )
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = if (isActive) activeColor else inactiveColor,
+                    modifier = Modifier.size(19.dp)
+                )
+            }
         }
         Text(
             text = label,

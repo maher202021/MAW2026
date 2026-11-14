@@ -184,8 +184,10 @@ class RealValhallaNavigator(private val context: Context) {
             put("mjolnir", JSONObject().apply {
                 put("tile_dir", valhallaDir.absolutePath)
                 put("tile_extract", archiveFile.absolutePath)
-                put("admin", File(valhallaDir, "admin.sqlite").absolutePath)
-                put("timezone", File(valhallaDir, "tz.sqlite").absolutePath)
+                val adminDb = File(valhallaDir, "admin.sqlite")
+                if (adminDb.exists()) put("admin", adminDb.absolutePath)
+                val tzDb = File(valhallaDir, "tz.sqlite")
+                if (tzDb.exists()) put("timezone", tzDb.absolutePath)
             })
             put("loki", JSONObject().apply {
                 put("actions", org.json.JSONArray(listOf("route", "locate", "sources_to_targets")))
@@ -392,17 +394,17 @@ class RealValhallaNavigator(private val context: Context) {
 
     private fun mapValhallaManeuverType(type: Int): ManeuverType {
         return when (type) {
-            0, 1 -> ManeuverType.START
-            2, 3 -> ManeuverType.STRAIGHT
-            4, 7 -> ManeuverType.SLIGHT_RIGHT
-            5, 8 -> ManeuverType.TURN_RIGHT
-            6, 9 -> ManeuverType.SHARP_RIGHT
-            10, 13 -> ManeuverType.U_TURN
-            14, 17 -> ManeuverType.SHARP_LEFT
-            15, 18 -> ManeuverType.TURN_LEFT
-            16, 19 -> ManeuverType.SLIGHT_LEFT
-            26, 27 -> ManeuverType.ROUNDABOUT
+            0, 1, 2, 3 -> ManeuverType.START
             4, 5, 6 -> ManeuverType.DESTINATION
+            7, 8 -> ManeuverType.STRAIGHT
+            9 -> ManeuverType.SLIGHT_RIGHT
+            10 -> ManeuverType.TURN_RIGHT
+            11 -> ManeuverType.SHARP_RIGHT
+            12, 13 -> ManeuverType.U_TURN
+            14 -> ManeuverType.SHARP_LEFT
+            15 -> ManeuverType.TURN_LEFT
+            16 -> ManeuverType.SLIGHT_LEFT
+            26, 27 -> ManeuverType.ROUNDABOUT
             else -> ManeuverType.STRAIGHT
         }
     }

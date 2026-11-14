@@ -392,6 +392,21 @@ fun MapScreenContent(
                         onEarthquakeDataError = { _ ->
                             state.isEarthquakeLoading = false
                         },
+                        isNasaGibsActive = state.isNasaGibsActive,
+                        gibsProduct = state.gibsProduct,
+                        onGibsInfo = { product, date ->
+                            val title = when (product) {
+                                "viirs_noaa20" -> "VIIRS NOAA-20"
+                                "viirs_snpp" -> "VIIRS Suomi NPP"
+                                "truecolor" -> "MODIS Terra"
+                                "landtemp" -> "حرارة السطح MODIS"
+                                else -> "NASA GIBS"
+                            }
+                            val resLabel = if (product == "landtemp") "دقة 1 كم" else "دقة 250 م"
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("ناسا ($title): صورة $date • تأخير نحو 3 ساعات • $resLabel")
+                            }
+                        },
                         pickMode = pickingDestination,
                         onMapPicked = { la, lo ->
                             if (pickingDestination) pickedPoint = la to lo
@@ -697,13 +712,32 @@ fun MapScreenContent(
                         state.isEoxCloudlessActive = false
                         state.isEsriImageryActive = false
                     }
-                    val script = "if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer($active); } if (window.toggleEoxCloudlessLayer) { window.toggleEoxCloudlessLayer(false); } if (window.toggleEsriWorldImageryLayer) { window.toggleEsriWorldImageryLayer(false); }"
+                    val script = "if (window.setGibs && ${active}) { window.setGibs('${state.gibsProduct}'); } if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer($active); } if (window.toggleEoxCloudlessLayer) { window.toggleEoxCloudlessLayer(false); } if (window.toggleEsriWorldImageryLayer) { window.toggleEsriWorldImageryLayer(false); }"
                     webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar(
-                            if (active) "تم تفعيل طبقة أقمار NASA GIBS الحية (شبه فورية) 🛰️"
-                            else "تم إيقاف طبقة NASA GIBS والعودة للطبقة الافتراضية"
-                        )
+                    if (!active) {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("تم إيقاف طبقة NASA GIBS والعودة للطبقة الافتراضية")
+                        }
+                    }
+                },
+                onLongPressNasaGibs = {
+                    val order = listOf("viirs_noaa20", "viirs_snpp", "truecolor", "landtemp")
+                    val idx = order.indexOf(state.gibsProduct)
+                    state.gibsProduct = order[(idx + 1) % order.size]
+                    state.isEoxCloudlessActive = false
+                    state.isEsriImageryActive = false
+                    if (!state.isNasaGibsActive) {
+                        state.isNasaGibsActive = true
+                        webViewRef?.post {
+                            webViewRef?.evaluateJavascript(
+                                "if (window.toggleEoxCloudlessLayer) { window.toggleEoxCloudlessLayer(false); } if (window.toggleEsriWorldImageryLayer) { window.toggleEsriWorldImageryLayer(false); } if (window.setGibs) { window.setGibs('${state.gibsProduct}'); } if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer(true); }",
+                                null
+                            )
+                        }
+                    } else {
+                        webViewRef?.post {
+                            webViewRef?.evaluateJavascript("if (window.setGibs) { window.setGibs('${state.gibsProduct}'); }", null)
+                        }
                     }
                 },
                 isEoxCloudlessActive = state.isEoxCloudlessActive,

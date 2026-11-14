@@ -63,6 +63,9 @@ fun RealLeafletMapView(
     earthquakeUpdateTrigger: Int = 0,
     onEarthquakeDataLoaded: ((Long, Int) -> Unit)? = null,
     onEarthquakeDataError: ((String) -> Unit)? = null,
+    isNasaGibsActive: Boolean = false,
+    gibsProduct: String = "viirs_noaa20",
+    onGibsInfo: ((String, String) -> Unit)? = null,
     pickMode: Boolean = false,
     onMapPicked: ((Double, Double) -> Unit)? = null,
     waypointMarkers: List<Triple<String, Double, Double>> = emptyList(),
@@ -74,6 +77,7 @@ fun RealLeafletMapView(
     var isMapReady by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val latestOnMapPicked by rememberUpdatedState(onMapPicked)
+    val latestOnGibsInfo by rememberUpdatedState(onGibsInfo)
     
     // التحقق المسبق من وجود ملف map.html لتجنب الشاشات السوداء تماماً
     val isAssetAvailable = remember {
@@ -165,6 +169,14 @@ fun RealLeafletMapView(
             } else {
                 webViewRef?.evaluateJavascript("if (window.clearEarthquakes) { window.clearEarthquakes(); }", null)
             }
+        }
+    }
+
+    // 🛰️ مزامنة منتج ناسا GIBS المحدد عند تفعيل الطبقة
+    LaunchedEffect(isMapReady, isNasaGibsActive, gibsProduct) {
+        val allowed = setOf("viirs_noaa20", "viirs_snpp", "truecolor", "landtemp")
+        if (isMapReady && webViewRef != null && isNasaGibsActive && gibsProduct in allowed) {
+            webViewRef?.evaluateJavascript("if (window.setGibs) { window.setGibs('$gibsProduct'); }", null)
         }
     }
 
@@ -300,6 +312,13 @@ fun RealLeafletMapView(
                             fun onTilesFailedOffline(layerKey: String) {
                                 webViewRef?.post {
                                     onTilesFailedOffline?.invoke(layerKey)
+                                }
+                            }
+
+                            @JavascriptInterface
+                            fun onGibsInfo(product: String, date: String) {
+                                webViewRef?.post {
+                                    latestOnGibsInfo?.invoke(product, date)
                                 }
                             }
                         }, "AndroidBridge")

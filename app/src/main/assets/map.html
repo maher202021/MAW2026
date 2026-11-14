@@ -363,11 +363,11 @@
                 </div>
             </div>
 
-            <div class="sat-menu-item" data-key="nasa" onclick="selectSatLayer('nasa', 'ناسا اليومية (أمس)')">
+            <div class="sat-menu-item" data-key="nasa" onclick="selectSatLayer('nasa', 'ناسا اليومية (VIIRS/MODIS)')">
                 <span class="sat-item-icon">🛰️</span>
                 <div class="sat-item-info">
-                    <div class="sat-item-title">أقمار ناسا اليومية (NASA GIBS)</div>
-                    <div class="sat-item-desc">صور فضائية يومية محدّثة تلقائياً (أمس UTC)</div>
+                    <div class="sat-item-title">أقمار ناسا (NASA GIBS) <span class="badge-live" style="background:#38BDF8; color:#000">~3 ساعات</span></div>
+                    <div class="sat-item-desc">VIIRS NOAA-20 / SNPP و MODIS — تغطية شبه فورية بلا مفاتيح</div>
                 </div>
             </div>
 
@@ -422,21 +422,54 @@
         var measurePolyline = null;
 
         // Expanded maxZoom to 22 for deep satellite and street zoom
-        // Dynamic "Yesterday" UTC date calculation using JavaScript new Date() for NASA GIBS near-real-time satellite tiles
-        function getNasaGibsYesterdayDateString() {
+        // NASA GIBS Multi-Product configuration (VIIRS NOAA-20, VIIRS SNPP, MODIS Terra TrueColor & LandTemp)
+        var GIBS_PRODUCTS = {
+            viirs_noaa20: { layer: 'VIIRS_NOAA20_CorrectedReflectance_TrueColor', tms: 'GoogleMapsCompatible_Level9', maxNativeZoom: 9, ext: 'jpg', title: 'VIIRS NOAA-20' },
+            viirs_snpp: { layer: 'VIIRS_SNPP_CorrectedReflectance_TrueColor', tms: 'GoogleMapsCompatible_Level9', maxNativeZoom: 9, ext: 'jpg', title: 'VIIRS Suomi NPP' },
+            truecolor: { layer: 'MODIS_Terra_CorrectedReflectance_TrueColor', tms: 'GoogleMapsCompatible_Level9', maxNativeZoom: 9, ext: 'jpg', title: 'MODIS Terra' },
+            landtemp: { layer: 'MODIS_Terra_Land_Surface_Temp_Day', tms: 'GoogleMapsCompatible_Level7', maxNativeZoom: 7, ext: 'png', title: 'حرارة السطح MODIS' }
+        };
+        var gibsKey = 'viirs_noaa20';
+        var gibsOffset = -1;
+
+        function getGibsDate(offsetDays) {
             var d = new Date();
-            // Subtract 1 day to compute yesterday's date programmatically
-            d.setUTCDate(d.getUTCDate() - 1);
+            d.setUTCDate(d.getUTCDate() + (typeof offsetDays === 'number' ? offsetDays : -1));
             var yyyy = d.getUTCFullYear();
             var mm = String(d.getUTCMonth() + 1).padStart(2, '0');
             var dd = String(d.getUTCDate()).padStart(2, '0');
             return yyyy + '-' + mm + '-' + dd;
         }
 
-        function getNasaGibsTileUrl(layerName) {
-            var name = layerName || 'VIIRS_SNPP_CorrectedReflectance_TrueColor';
-            var dateStr = getNasaGibsYesterdayDateString();
-            return 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/' + name + '/default/' + dateStr + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg';
+        function getNasaGibsYesterdayDateString() {
+            return getGibsDate(gibsOffset);
+        }
+
+        function getNasaGibsTileUrl(productKeyOrLayer, offsetDays) {
+            var spec = GIBS_PRODUCTS[productKeyOrLayer] || GIBS_PRODUCTS[gibsKey] || GIBS_PRODUCTS.viirs_noaa20;
+            var layerName = (productKeyOrLayer && !GIBS_PRODUCTS[productKeyOrLayer]) ? productKeyOrLayer : spec.layer;
+            var tms = spec.tms || 'GoogleMapsCompatible_Level9';
+            var ext = spec.ext || 'jpg';
+            var dateStr = getGibsDate(typeof offsetDays === 'number' ? offsetDays : gibsOffset);
+            return 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/' + layerName + '/default/' + dateStr + '/' + tms + '/{z}/{y}/{x}.' + ext;
+        }
+
+        function notifyGibsInfo() {
+            if (window.AndroidBridge && window.AndroidBridge.onGibsInfo) {
+                try {
+                    window.AndroidBridge.onGibsInfo(gibsKey, getGibsDate(gibsOffset));
+                } catch (e) {}
+            }
+        }
+
+        function setGibs(key) {
+            if (!GIBS_PRODUCTS[key]) return;
+            var alreadyActive = !!(nasaGibsLayer && map && map.hasLayer(nasaGibsLayer));
+            if (gibsKey === key && alreadyActive) return;
+            gibsKey = key;
+            if (alreadyActive) {
+                toggleNasaGibsLayer(true);
+            }
         }
 
         function createResilientTileLayer(url, options, fallbackUrl) {
@@ -647,21 +680,23 @@
             }
         }
 
-        // 🛰️ طبقة الأقمار الصناعية شبه الفورية من NASA GIBS (اختيارية)
+        // 🛰️ طبقة الأقمار الصناعية شبه الفورية من NASA GIBS (VIIRS NOAA-20 / SNPP / MODIS)
         function toggleNasaGibsLayer(enable) {
             if (!map) return;
             if (enable) {
                 if (nasaGibsLayer && map.hasLayer(nasaGibsLayer)) {
                     map.removeLayer(nasaGibsLayer);
                 }
-                var freshTileUrl = getNasaGibsTileUrl();
+                var spec = GIBS_PRODUCTS[gibsKey] || GIBS_PRODUCTS.viirs_noaa20;
+                var freshTileUrl = getNasaGibsTileUrl(gibsKey, gibsOffset);
                 nasaGibsLayer = L.tileLayer(freshTileUrl, {
                     maxZoom: 18,
-                    maxNativeZoom: 9,
+                    maxNativeZoom: spec.maxNativeZoom || 9,
                     opacity: 0.92,
-                    attribution: 'NASA GIBS'
+                    attribution: 'NASA GIBS (' + spec.title + ')'
                 });
                 nasaGibsLayer.addTo(map);
+                notifyGibsInfo();
             } else {
                 if (nasaGibsLayer && map.hasLayer(nasaGibsLayer)) {
                     map.removeLayer(nasaGibsLayer);

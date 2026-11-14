@@ -55,6 +55,7 @@ class MapScreenState(
     var isRoutePlannerOpen by mutableStateOf(false)
     var isNightModeActive by mutableStateOf(false)
     var isNasaGibsActive by mutableStateOf(false)
+    var gibsProduct by mutableStateOf("viirs_noaa20")
     var isEoxCloudlessActive by mutableStateOf(false)
     var isEsriImageryActive by mutableStateOf(false)
     var isEarthquakeLayerActive by mutableStateOf(false)

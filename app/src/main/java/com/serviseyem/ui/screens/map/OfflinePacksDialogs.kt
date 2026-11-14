@@ -185,7 +185,7 @@ fun ValhallaOfflineDialog(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "إضافة ملف الخرائط من ذاكرة الهاتف",
+                                text = "إضافة ملف مضغوط (.zip / .tar) من ذاكرة الهاتف",
                                 color = Color(0xFF38BDF8),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
@@ -264,9 +264,11 @@ fun ValhallaOfflineDialog(
                             downloadJob = coroutineScope.launch {
                                 val prefs = context.getSharedPreferences("valhalla_prefs", Context.MODE_PRIVATE)
                                 val adminUrl = prefs.getString("valhalla_url", "") ?: ""
+                                var lastFailureMsg = ""
                                 val success = ValhallaDownloadManager.downloadAndExtractOfflineTiles(context, adminUrl) { prog, msg ->
                                     progress = prog
                                     statusText = msg
+                                    if (prog == 0f && msg.isNotBlank()) lastFailureMsg = msg
                                 }
                                 isBusy = false
                                 isAlreadyDownloaded = ValhallaDownloadManager.isDownloaded(context)
@@ -276,7 +278,9 @@ fun ValhallaOfflineDialog(
                                     onStartNavigation()
                                     onStatusMessage("تم تحميل وحفظ خرائط الملاحة بنجاح ✓")
                                 } else {
-                                    errorMessage = "فشل التحميل من الإنترنت. تأكد من الاتصال أو أضف الملف من ذاكرة الهاتف."
+                                    errorMessage = lastFailureMsg.ifBlank {
+                                        "فشل التحميل من الإنترنت. تأكد من الاتصال أو أضف الملف المضغوط من ذاكرة الهاتف."
+                                    }
                                 }
                             }
                         },
@@ -285,7 +289,7 @@ fun ValhallaOfflineDialog(
                             .defaultMinSize(minHeight = 44.dp)
                             .testTag("valhalla_download_online_button")
                     ) {
-                        Text("تحميل الآن", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text("تحميل الآن من الموقع", color = Color.Black, fontWeight = FontWeight.Bold)
                     }
                 }
             }

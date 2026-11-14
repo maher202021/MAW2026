@@ -110,8 +110,14 @@ object ValhallaDownloadManager {
             }
 
             val conn = connection ?: throw IllegalStateException("تعذر إنشاء اتصال بسيرفر الخرائط")
-            if (conn.responseCode !in 200..299) {
-                throw IllegalStateException("فشل الاتصال: رمز الاستجابة ${conn.responseCode}")
+            val code = conn.responseCode
+            if (code == 404) {
+                conn.disconnect()
+                throw IllegalStateException("لم يتم العثور على الملف في الرابط (HTTP 404) — تأكد أن مستودع GitHub وإصدار Release عام (Public) أو أضف الملف من ذاكرة الهاتف.")
+            }
+            if (code !in 200..299) {
+                conn.disconnect()
+                throw IllegalStateException("فشل الاتصال بسيرفر الخرائط: رمز الاستجابة HTTP $code")
             }
 
             val length = conn.contentLengthLong
@@ -136,13 +142,35 @@ object ValhallaDownloadManager {
             }
             conn.disconnect()
 
+            if (!tempZipFile.exists() || tempZipFile.length() < 512L) {
+                throw IllegalStateException("الملف المحمل فارغ أو لم يكتمل التنزيل")
+            }
+
+            val magic = ByteArray(512.coerceAtMost(tempZipFile.length().toInt()))
+            FileInputStream(tempZipFile).use { it.read(magic) }
+            val isZipMagic = magic.size >= 2 && magic[0] == 'P'.code.toByte() && magic[1] == 'K'.code.toByte()
+            val isTarMagic = magic.size >= 262 && String(magic.copyOfRange(257, 262), Charsets.US_ASCII) == "ustar"
+
+            if (!isZipMagic && !isTarMagic) {
+                tempZipFile.delete()
+                throw IllegalStateException("الرابط لم يُرجع ملف ZIP أو TAR صالحاً (قد يكون صفحة ويب أو رابطاً خاصاً)")
+            }
+
             onProgress(0.72f, "جاري فك ضغط خرائط الملاحة الدقيقة والتحقق من سلامتها...")
-            extractArchiveFile(tempZipFile, valhallaDir, stagingArchive)
-            if (tempZipFile.exists()) tempZipFile.delete()
+            if (isTarMagic) {
+                if (!tempZipFile.renameTo(stagingArchive)) {
+                    tempZipFile.copyTo(stagingArchive, overwrite = true)
+                    tempZipFile.delete()
+                }
+            } else {
+                extractArchiveFile(tempZipFile, stagingArchive)
+                if (tempZipFile.exists()) tempZipFile.delete()
+            }
 
             if (!stagingArchive.exists() || stagingArchive.length() < MIN_VALID_SIZE_BYTES) {
+                val actualBytes = if (stagingArchive.exists()) stagingArchive.length() else 0L
                 stagingArchive.delete()
-                throw IllegalStateException("حجم ملف خرائط Valhalla غير مكتمل (${stagingArchive.length()} بايت) - يجب أن يكون أكبر من 10 ميجابايت.")
+                throw IllegalStateException("حجم ملف خرائط Valhalla غير مكتمل ($actualBytes بايت) — يجب أن يحتوي ZIP على valhalla_tiles.tar بحجم أكبر من 10 ميجابايت.")
             }
 
             promoteInstalledArchive(context, stagingArchive, targetArchive, marker)
@@ -228,7 +256,7 @@ object ValhallaDownloadManager {
 
             if (isZip) {
                 onProgress(0.55f, "جاري فحص وفك ضغط الحزمة داخل التطبيق...")
-                val contents = inspectAndExtractZip(copiedSource, valhallaDir, stagingArchive, workDir, onProgress)
+                val contents = inspectAndExtractZip(copiedSource, stagingArchive, workDir, onProgress)
                 when (contents) {
                     ZipKind.VALHALLA_TAR -> {
                         if (!stagingArchive.exists() || stagingArchive.length() < MIN_VALID_SIZE_BYTES) {
@@ -286,32 +314,34 @@ object ValhallaDownloadManager {
 
     private enum class ZipKind { VALHALLA_TAR, PLACES_DB, UNSUPPORTED }
 
-    private fun extractArchiveFile(zipFile: File, valhallaDir: File, stagingArchive: File) {
-        val buf = ByteArray(16384)
+    private fun extractArchiveFile(zipFile: File, stagingArchive: File) {
+        val buf = ByteArray(32 * 1024)
+        var extractedLargestTarSize = 0L
         ZipInputStream(zipFile.inputStream().buffered()).use { zis ->
             var entry = zis.nextEntry
             while (entry != null) {
                 val entryName = entry.name
                 val baseName = entryName.substringAfterLast('/')
-                val isTar = entryName.endsWith(".tar", ignoreCase = true) || baseName == TILES_ARCHIVE_NAME
-                val destinationFile = if (isTar) stagingArchive else File(valhallaDir, entryName)
-
-                val canonicalDest = destinationFile.canonicalPath
-                val canonicalDir = valhallaDir.canonicalPath + File.separator
-                if (!isTar && !canonicalDest.startsWith(canonicalDir)) {
-                    zis.closeEntry()
-                    entry = zis.nextEntry
-                    continue
-                }
-
-                if (!entry.isDirectory) {
-                    destinationFile.parentFile?.mkdirs()
-                    FileOutputStream(destinationFile).use { fos ->
+                val isTar = !entry.isDirectory && (entryName.endsWith(".tar", ignoreCase = true) || baseName == TILES_ARCHIVE_NAME)
+                if (isTar) {
+                    val candidate = File(stagingArchive.parentFile, "candidate_valhalla_tiles.tar")
+                    candidate.parentFile?.mkdirs()
+                    FileOutputStream(candidate).use { fos ->
                         var len: Int
                         while (zis.read(buf).also { len = it } > 0) {
                             fos.write(buf, 0, len)
                         }
                         fos.fd.sync()
+                    }
+                    if (candidate.length() > extractedLargestTarSize) {
+                        extractedLargestTarSize = candidate.length()
+                        if (stagingArchive.exists()) stagingArchive.delete()
+                        if (!candidate.renameTo(stagingArchive)) {
+                            candidate.copyTo(stagingArchive, overwrite = true)
+                            candidate.delete()
+                        }
+                    } else {
+                        candidate.delete()
                     }
                 }
                 zis.closeEntry()
@@ -322,7 +352,6 @@ object ValhallaDownloadManager {
 
     private fun inspectAndExtractZip(
         zipFile: File,
-        valhallaDir: File,
         stagingArchive: File,
         workDir: File,
         onProgress: (Float, String) -> Unit
@@ -338,33 +367,31 @@ object ValhallaDownloadManager {
                 val isTar = !entry.isDirectory && (entryName.endsWith(".tar", ignoreCase = true) || baseName == TILES_ARCHIVE_NAME)
                 val isPlacesDb = !entry.isDirectory && baseName == "places.db"
 
-                val destinationFile = when {
-                    isTar -> stagingArchive
-                    isPlacesDb -> File(workDir, "places.db")
-                    else -> File(valhallaDir, entryName)
-                }
-
-                val canonicalDest = destinationFile.canonicalPath
-                val allowedBase = if (isTar || isPlacesDb) workDir.canonicalPath else valhallaDir.canonicalPath
-                if (!canonicalDest.startsWith(allowedBase + File.separator)) {
+                if (!isTar && !isPlacesDb) {
                     zis.closeEntry()
                     entry = zis.nextEntry
                     continue
                 }
 
-                if (!entry.isDirectory) {
-                    if (isTar) onProgress(0.75f, "جاري استخراج حزمة الطرق (valhalla_tiles.tar)...")
-                    destinationFile.parentFile?.mkdirs()
-                    FileOutputStream(destinationFile).use { fos ->
-                        var len: Int
-                        while (zis.read(buf).also { len = it } > 0) {
-                            fos.write(buf, 0, len)
-                        }
-                        fos.fd.sync()
-                    }
-                    if (isTar) foundTar = true
-                    if (isPlacesDb) foundPlacesDb = true
+                val destinationFile = if (isTar) stagingArchive else File(workDir, "places.db")
+                val canonicalDest = destinationFile.canonicalPath
+                if (!canonicalDest.startsWith(workDir.canonicalPath + File.separator)) {
+                    zis.closeEntry()
+                    entry = zis.nextEntry
+                    continue
                 }
+
+                if (isTar) onProgress(0.75f, "جاري استخراج حزمة الطرق (valhalla_tiles.tar)...")
+                destinationFile.parentFile?.mkdirs()
+                FileOutputStream(destinationFile).use { fos ->
+                    var len: Int
+                    while (zis.read(buf).also { len = it } > 0) {
+                        fos.write(buf, 0, len)
+                    }
+                    fos.fd.sync()
+                }
+                if (isTar) foundTar = true
+                if (isPlacesDb) foundPlacesDb = true
                 zis.closeEntry()
                 entry = zis.nextEntry
             }
