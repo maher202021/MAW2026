@@ -37,7 +37,11 @@ import com.serviseyem.ui.screens.map.components.*
 import com.serviseyem.ui.screens.map.utils.OfflineMapManager
 import com.serviseyem.utils.GnssDiagnosticsManager
 import com.serviseyem.utils.GpxManager
+import com.serviseyem.utils.OfflineTileInterceptor
 import com.serviseyem.utils.VisualThemePalette
+import com.serviseyem.utils.VoiceSearchHelper
+import com.serviseyem.utils.VoiceState
+import com.serviseyem.utils.VoiceStatus
 import com.serviseyem.utils.resolveThemePalette
 import kotlinx.coroutines.launch
 
@@ -79,12 +83,46 @@ fun MapScreenContent(
     var webViewRef by remember { mutableStateOf<android.webkit.WebView?>(null) }
     var showValhallaDialog by remember { mutableStateOf(false) }
     var showPlacesDownload by remember { mutableStateOf(false) }
+    var showRegionsDialog by remember { mutableStateOf(false) }
     var showDestChooser by remember { mutableStateOf(false) }
     var pickingDestination by remember { mutableStateOf(false) }
     var pickedPoint by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var offlinePackVersion by remember { mutableIntStateOf(0) }
     val addressStore = remember { com.serviseyem.utils.LandmarkAddressStore(context) }
     var savedAddresses by remember { mutableStateOf(addressStore.all()) }
+
+    var voiceState by remember { mutableStateOf(VoiceState()) }
+    var searchFocusTick by remember { mutableIntStateOf(0) }
+    val voiceHelper = remember {
+        VoiceSearchHelper(
+            context = context,
+            onFinal = { text ->
+                state.searchQuery = text
+            },
+            onState = { newState ->
+                voiceState = newState
+            }
+        )
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            voiceHelper.destroy()
+        }
+    }
+    val micPermLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            voiceHelper.start()
+        } else {
+            voiceState = VoiceState(
+                status = VoiceStatus.ERROR,
+                message = "صلاحية الميكروفون مطلوبة للبحث الصوتي.",
+                canOpenSettings = true,
+                canUseKeyboard = true
+            )
+        }
+    }
 
     androidx.activity.compose.BackHandler(enabled = true) {
         when {
@@ -333,6 +371,17 @@ fun MapScreenContent(
                             state.isRadarMode = true
                         },
                         onWebViewCreated = { webViewRef = it },
+                        onTilesFailedOffline = { layerKey ->
+                            if (layerKey != "osm_ar" && layerKey != "osm" && OfflineTileInterceptor.hasAnyInstalledRegions(context)) {
+                                state.currentMapLayer = "osm"
+                                webViewRef?.post {
+                                    webViewRef?.evaluateJavascript("if (window.switchLayer) { window.switchLayer('osm'); }", null)
+                                }
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("تم التبديل للخريطة المحفوظة بلا إنترنت © مساهمو OpenStreetMap")
+                                }
+                            }
+                        },
                         isEarthquakeLayerActive = state.isEarthquakeLayerActive,
                         earthquakeUpdateTrigger = state.earthquakeUpdateTrigger,
                         onEarthquakeDataLoaded = { timestamp, count ->
@@ -399,6 +448,14 @@ fun MapScreenContent(
                 userLat = safeUserLat,
                 userLng = safeUserLng,
                 onBackClick = onBackClick,
+                focusTick = searchFocusTick,
+                onVoiceSearchClick = {
+                    if (voiceHelper.hasMicPermission()) {
+                        voiceHelper.start()
+                    } else {
+                        micPermLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
                 themeColors = themeColors,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -516,6 +573,9 @@ fun MapScreenContent(
                 isGpsActive = viewModel.isGpsTrackingActive.collectAsState().value,
                 onDownloadValhallaClick = {
                     showValhallaDialog = true
+                },
+                onOpenRegionsDialog = {
+                    showRegionsDialog = true
                 },
                 // Vela Modes
                 currentMode = state.currentMapMode,
@@ -1011,6 +1071,9 @@ fun MapScreenContent(
             onOpenPlacesDownload = {
                 showPlacesDownload = true
             },
+            onOpenRegionsDownload = {
+                showRegionsDialog = true
+            },
             onStatusMessage = { msg ->
                 offlinePackVersion++
                 coroutineScope.launch {
@@ -1029,6 +1092,43 @@ fun MapScreenContent(
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(msg)
                 }
+            }
+        )
+    }
+
+    // 🗺️ حوار خرائط المناطق بلا إنترنت (MBTiles)
+    if (showRegionsDialog) {
+        RegionsDialog(
+            onDismiss = { showRegionsDialog = false },
+            onRegionsChanged = {
+                offlinePackVersion++
+                webViewRef?.post { webViewRef?.reload() }
+            }
+        )
+    }
+
+    // 🎙️ حوار البحث الصوتي داخل التطبيق
+    if (voiceState.status != VoiceStatus.IDLE) {
+        VoiceSearchDialog(
+            state = voiceState,
+            onRetry = {
+                if (voiceHelper.hasMicPermission()) {
+                    voiceHelper.start()
+                } else {
+                    micPermLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
+            },
+            onDismiss = {
+                voiceHelper.cancel()
+                voiceState = VoiceState(status = VoiceStatus.IDLE)
+            },
+            onUseKeyboardMic = {
+                voiceHelper.cancel()
+                voiceState = VoiceState(status = VoiceStatus.IDLE)
+                searchFocusTick++
+            },
+            onOpenSettings = {
+                VoiceSearchHelper.openVoiceSettings(context)
             }
         )
     }

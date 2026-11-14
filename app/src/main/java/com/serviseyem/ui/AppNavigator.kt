@@ -67,22 +67,30 @@ fun AppNavigator(
     Scaffold(
         topBar = {
             if (ScreenRoutes.showTopBar(currentScreen, adminRole)) {
-                AppHeaderBar(
-                    viewModel = viewModel,
-                    themeColors = themeColors,
-                    onNotificationsClick = { viewModel.navigateToScreen(AppScreens.NOTIFICATIONS_VIEW) },
-                    onChatsClick = { viewModel.navigateToScreen(AppScreens.CHAT_LIST) },
-                    onMenuClick = { viewModel.toggleRestoreAccountDialog(true) }
-                )
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.fillMaxWidth().widthIn(max = 840.dp)) {
+                        AppHeaderBar(
+                            viewModel = viewModel,
+                            themeColors = themeColors,
+                            onNotificationsClick = { viewModel.navigateToScreen(AppScreens.NOTIFICATIONS_VIEW) },
+                            onChatsClick = { viewModel.navigateToScreen(AppScreens.CHAT_LIST) },
+                            onMenuClick = { viewModel.toggleRestoreAccountDialog(true) }
+                        )
+                    }
+                }
             }
         },
         bottomBar = {
             if (ScreenRoutes.showBottomBar(currentScreen, adminRole)) {
-                AppFooterBar(
-                    viewModel = viewModel,
-                    themeColors = themeColors,
-                    onInfoClick = { viewModel.navigateToScreen(AppScreens.ABOUT_APP) }
-                )
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.fillMaxWidth().widthIn(max = 840.dp)) {
+                        AppFooterBar(
+                            viewModel = viewModel,
+                            themeColors = themeColors,
+                            onInfoClick = { viewModel.navigateToScreen(AppScreens.ABOUT_APP) }
+                        )
+                    }
+                }
             }
         },
         contentWindowInsets = WindowInsets.systemBars,
@@ -91,9 +99,15 @@ fun AppNavigator(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(if (currentScreen == AppScreens.CHAT_DIRECT || currentScreen == AppScreens.MAP_VIEW || currentScreen == AppScreens.SMART_ASSISTANT || currentScreen == AppScreens.NAVIGATION) PaddingValues(0.dp) else innerPadding)
+                .padding(if (currentScreen == AppScreens.CHAT_DIRECT || currentScreen == AppScreens.MAP_VIEW || currentScreen == AppScreens.SMART_ASSISTANT || currentScreen == AppScreens.NAVIGATION) PaddingValues(0.dp) else innerPadding),
+            contentAlignment = Alignment.TopCenter
         ) {
-            when (currentScreen) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 840.dp)
+            ) {
+                when (currentScreen) {
                 AppScreens.USER_BROWSE, AppScreens.HOME -> {
                     var activeSectionIdForCreation by remember { mutableStateOf("") }
                     var preselectedRegistrationType by remember { mutableStateOf("") }
@@ -551,6 +565,7 @@ fun AppNavigator(
             if (showNotificationsDialog) {
                 UserNotificationsDialogView(viewModel = viewModel, themeColors = themeColors, onDismiss = { viewModel.toggleNotificationsDialog(false) })
             }
+        }
         }
     }
 }

@@ -119,218 +119,263 @@ fun AppHeaderBar(
     val screenBackStack by viewModel.screenBackStack.collectAsState()
     val showBackButton = screenBackStack.size > 1 || currentScreen != "USER_BROWSE"
 
-    Column(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .background(com.serviseyem.ui.theme.AppBackground)
-            .statusBarsPadding()
-            .testTag("app_header_bar")
+            .testTag("app_header_bar"),
+        color = com.serviseyem.ui.theme.AppBackground
     ) {
-        // Row 1: Unified Header Bar with App Logo / Title & Action Button
-        if (!settingsState.hideTopHeaderBar) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (showBackButton) {
-                    IconButton(
-                        onClick = { viewModel.goBack() },
-                        modifier = Modifier
-                            .background(com.serviseyem.ui.theme.CardSurface, CircleShape)
-                            .border(1.dp, com.serviseyem.ui.theme.CardBorder, CircleShape)
-                            .size(28.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = if (isEn) "Back" else "رجوع",
-                            tint = com.serviseyem.ui.theme.TextLightMint,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-
-                val defaultTitle = if (isEn) "Yemen Services Directory" else "دليل خدمات اليمن"
-                val customTitle = settingsState.customAppName.ifEmpty { settingsState.appName.ifEmpty { defaultTitle } }
-
-                val titleText = when (currentScreen) {
-                    "REGISTER_FORM" -> if (isEn) "Join & Register" else "الانضمام والتسجيل"
-                    "JOIN_REQUEST_STATUS" -> if (isEn) "Request Status" else "حالة طلب الانضمام"
-                    "ADMIN_PANEL" -> if (isEn) "Admin Panel" else "لوحة التحكم والإدارة"
-                    "OWNER_PANEL" -> if (isEn) "Owner Backdoor" else "البوابة الخلفية"
-                    "ABOUT_APP" -> if (isEn) "About App" else "عن التطبيق"
-                    "BOOKINGS_VIEW" -> if (isEn) "Bookings & Orders" else "الحجوزات والطلبات"
-                    "MAP_VIEW" -> if (isEn) "Services Map" else "خريطة الخدمات"
-                    else -> customTitle
-                }
-
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Row 1: Unified Header Bar with App Logo / Title & Action Buttons
+            if (!settingsState.hideTopHeaderBar) {
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = com.serviseyem.ui.theme.CardSurface,
-                        border = BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder)
+                    val defaultTitle = if (isEn) "Yemen Services Directory" else "دليل خدمات اليمن"
+                    val customTitle = settingsState.customAppName.ifEmpty { settingsState.appName.ifEmpty { defaultTitle } }
+
+                    val titleText = when (currentScreen) {
+                        "REGISTER_FORM" -> if (isEn) "Join & Register" else "الانضمام والتسجيل"
+                        "JOIN_REQUEST_STATUS" -> if (isEn) "Request Status" else "حالة طلب الانضمام"
+                        "ADMIN_PANEL" -> if (isEn) "Admin Panel" else "لوحة التحكم والإدارة"
+                        "OWNER_PANEL" -> if (isEn) "Owner Backdoor" else "البوابة الخلفية"
+                        "ABOUT_APP" -> if (isEn) "About App" else "عن التطبيق"
+                        "BOOKINGS_VIEW" -> if (isEn) "Bookings & Orders" else "الحجوزات والطلبات"
+                        "MAP_VIEW" -> if (isEn) "Services Map" else "خريطة الخدمات"
+                        else -> customTitle
+                    }
+
+                    // 1. الجهة اليمنى في RTL (البداية): زر الرجوع عند التفرع + زر الإشعارات
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (showBackButton) {
+                            IconButton(
+                                onClick = { viewModel.goBack() },
+                                modifier = Modifier.testTag("header_back_button")
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .background(com.serviseyem.ui.theme.CardSurface, CircleShape)
+                                        .border(1.dp, com.serviseyem.ui.theme.CardBorder, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = if (isEn) "Back" else "رجوع",
+                                        tint = com.serviseyem.ui.theme.TextLightMint,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        IconButton(
+                            onClick = onNotificationsClick,
+                            modifier = Modifier.testTag("header_notifications_button")
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = if (isEn) "Notifications" else "الإشعارات",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                if (unreadNotifCount > 0) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .offset(x = 3.dp, y = (-2).dp)
+                                            .size(8.dp)
+                                            .background(Color(0xFFEF4444), CircleShape)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // 2. المنتصف: اسم التطبيق والعلم في Row وسطية بوزن 1f مع Ellipsis
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 6.dp)
                     ) {
                         Text(
-                            text = "🇾🇪",
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                            text = titleText,
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = com.serviseyem.ui.theme.CardSurface,
+                            border = BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder)
+                        ) {
+                            Text(
+                                text = "🇾🇪",
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
                     }
 
-                    Text(
-                        text = titleText,
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = com.serviseyem.ui.theme.TextLightMint,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = com.serviseyem.ui.theme.CardSurface,
-                        border = BorderStroke(0.8.dp, com.serviseyem.ui.theme.CardBorder)
+                    // 3. الجهة اليسرى في RTL (النهاية): زر البحث + طلباتي + تحديث
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        val isOrdersActive = currentScreen == "ORDERS_VIEW"
+                        Surface(
+                            onClick = { viewModel.navigateTo("ORDERS_VIEW") },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isOrdersActive) com.serviseyem.ui.theme.DarkCyanPrimary else Color(0xFFFF7A00),
+                            border = BorderStroke(1.dp, Color(0xFFEA580C)),
+                            shadowElevation = 2.dp,
+                            modifier = Modifier
+                                .heightIn(min = 34.dp)
+                                .wrapContentWidth()
+                                .testTag("header_my_orders_button")
                         ) {
-                            Text("📍", fontSize = 9.sp)
-                            Text(
-                                text = "صنعاء ▾",
-                                fontSize = 9.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFFFC93C)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                            ) {
+                                Text("📋", fontSize = 11.sp)
+                                Text(
+                                    text = if (isEn) "Orders" else "طلباتي",
+                                    fontSize = 11.5.sp,
+                                    lineHeight = 18.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White,
+                                    softWrap = false,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+
+                        val isRefreshingHeader by viewModel.isRefreshing.collectAsState()
+                        IconButton(
+                            onClick = { viewModel.refreshData(showNotification = true) },
+                            modifier = Modifier.testTag("header_refresh_button")
+                        ) {
+                            if (isRefreshingHeader) {
+                                CircularProgressIndicator(
+                                    color = com.serviseyem.ui.theme.DarkCyanPrimary,
+                                    strokeWidth = 1.5.dp,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = if (isEn) "Refresh" else "تحديث البيانات",
+                                    tint = Color.White.copy(alpha = 0.85f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { viewModel.navigateToScreen(AppScreens.UNIFIED_SEARCH) },
+                            modifier = Modifier.testTag("header_search_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = if (isEn) "Search" else "بحث",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                // Move 'My Orders' (طلباتي) directly beside the refresh/sync arrow icon
-                val isOrdersActive = currentScreen == "ORDERS_VIEW"
-                Surface(
-                    onClick = { viewModel.navigateTo("ORDERS_VIEW") },
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (isOrdersActive) com.serviseyem.ui.theme.DarkCyanPrimary else Color(0xFFFF7A00),
-                    border = BorderStroke(1.dp, Color(0xFFEA580C)),
-                    shadowElevation = 2.dp,
-                    modifier = Modifier.height(28.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text("📋", fontSize = 11.sp)
-                        Text(
-                            text = if (isEn) "My Orders" else "طلباتي",
-                            fontSize = 11.5.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                val isRefreshingHeader by viewModel.isRefreshing.collectAsState()
-                IconButton(
-                    onClick = { viewModel.refreshData(showNotification = true) },
-                    modifier = Modifier
-                        .background(com.serviseyem.ui.theme.CardSurface, CircleShape)
-                        .border(1.dp, com.serviseyem.ui.theme.CardBorder, CircleShape)
-                        .size(28.dp)
-                ) {
-                    if (isRefreshingHeader) {
-                        CircularProgressIndicator(
-                            color = com.serviseyem.ui.theme.DarkCyanPrimary,
-                            strokeWidth = 1.5.dp,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = if (isEn) "Refresh" else "تحديث البيانات",
-                            tint = com.serviseyem.ui.theme.TextLightMint,
-                            modifier = Modifier.size(15.dp)
-                        )
-                    }
-                }
             }
-        }
 
-        // Row 2: Clean 4-Element Navigation Bar (Home removed, Orders moved to top bar):
+        // Row 2: Clean 4-Element Navigation Bar (weight 1f each, 32dp icons, full Arabic text):
         // 1. الخرائط | 2. الانضمام | 3. الإشعارات (جرس + عداد) | 4. المحادثات (مغلف + عداد)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (settingsState.hideTopHeaderBar) Modifier.statusBarsPadding() else Modifier)
                 .padding(horizontal = 6.dp, vertical = 3.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(com.serviseyem.ui.theme.CardSurface)
                 .border(BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder), RoundedCornerShape(14.dp))
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly
+                .padding(vertical = 4.dp)
+                .wrapContentHeight(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             // 1. الخرائط (خريطة)
             val isMap = currentScreen == AppScreens.MAP_VIEW
-            Luxury3DNavIcon(
-                emojiIcon = settingsState.topMapsIcon.ifEmpty { "🗺️" },
-                vectorIcon = Icons.Default.Place,
-                label = if (isEn) "Maps" else "الخرائط",
-                isSelected = isMap,
-                iconSizeDp = settingsState.navIconSizeDp,
-                iconStyle = settingsState.topNavIconStyle,
-                onClick = { viewModel.navigateToScreen(AppScreens.MAP_VIEW) }
-            )
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Luxury3DNavIcon(
+                    emojiIcon = settingsState.topMapsIcon.ifEmpty { "🗺️" },
+                    vectorIcon = Icons.Default.Place,
+                    label = if (isEn) "Maps" else "الخرائط",
+                    isSelected = isMap,
+                    iconSizeDp = 32,
+                    iconStyle = settingsState.topNavIconStyle,
+                    onClick = { viewModel.navigateToScreen(AppScreens.MAP_VIEW) }
+                )
+            }
 
             // 2. الانضمام (شخص)
             val isJoin = currentScreen == AppScreens.REGISTER_FORM || currentScreen == AppScreens.JOIN_REQUEST_STATUS
-            Luxury3DNavIcon(
-                emojiIcon = settingsState.topJoinIcon.ifEmpty { "👤" },
-                vectorIcon = Icons.Default.Person,
-                label = if (isEn) "Join" else "الانضمام",
-                isSelected = isJoin,
-                iconSizeDp = settingsState.navIconSizeDp,
-                iconStyle = settingsState.topNavIconStyle,
-                onClick = { viewModel.navigateToScreen(AppScreens.REGISTER_FORM) }
-            )
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Luxury3DNavIcon(
+                    emojiIcon = settingsState.topJoinIcon.ifEmpty { "👤" },
+                    vectorIcon = Icons.Default.Person,
+                    label = if (isEn) "Join" else "الانضمام",
+                    isSelected = isJoin,
+                    iconSizeDp = 32,
+                    iconStyle = settingsState.topNavIconStyle,
+                    onClick = { viewModel.navigateToScreen(AppScreens.REGISTER_FORM) }
+                )
+            }
 
             // 3. الإشعارات (جرس + نقطة حمراء نابضة)
             val isNotifScreen = currentScreen == AppScreens.NOTIFICATIONS_VIEW
-            Luxury3DNavIcon(
-                emojiIcon = settingsState.topNotifIcon.ifEmpty { "🔔" },
-                vectorIcon = Icons.Default.Notifications,
-                label = if (isEn) "Alerts" else "الإشعارات",
-                isSelected = isNotifScreen,
-                badgeCount = unreadNotifCount,
-                iconSizeDp = settingsState.navIconSizeDp,
-                iconStyle = settingsState.topNavIconStyle,
-                onClick = {
-                    onNotificationsClick()
-                }
-            )
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Luxury3DNavIcon(
+                    emojiIcon = settingsState.topNotifIcon.ifEmpty { "🔔" },
+                    vectorIcon = Icons.Default.Notifications,
+                    label = if (isEn) "Alerts" else "الإشعارات",
+                    isSelected = isNotifScreen,
+                    badgeCount = unreadNotifCount,
+                    iconSizeDp = 32,
+                    iconStyle = settingsState.topNavIconStyle,
+                    onClick = {
+                        onNotificationsClick()
+                    }
+                )
+            }
 
             // 4. المحادثات (مغلف + شارة عداد)
             val isChatsScreen = currentScreen == AppScreens.CHAT_LIST || currentScreen == AppScreens.CHAT_DIRECT
-            Luxury3DNavIcon(
-                emojiIcon = settingsState.topChatsIcon.ifEmpty { "✉️" },
-                vectorIcon = Icons.Default.Email,
-                label = if (isEn) "Chats" else "المحادثات",
-                isSelected = isChatsScreen,
-                badgeCount = unreadChatsCount,
-                iconSizeDp = settingsState.navIconSizeDp,
-                iconStyle = settingsState.topNavIconStyle,
-                onClick = { onChatsClick() }
-            )
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Luxury3DNavIcon(
+                    emojiIcon = settingsState.topChatsIcon.ifEmpty { "✉️" },
+                    vectorIcon = Icons.Default.Email,
+                    label = if (isEn) "Chats" else "المحادثات",
+                    isSelected = isChatsScreen,
+                    badgeCount = unreadChatsCount,
+                    iconSizeDp = 32,
+                    iconStyle = settingsState.topNavIconStyle,
+                    onClick = { onChatsClick() }
+                )
+            }
+        }
         }
     }
 }

@@ -52,13 +52,14 @@ fun ServicesSearchBar(
         border = BorderStroke(1.dp, if (isFilterActive) com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent else com.serviseyem.ui.components.BespokePremiumSystem.GlassBorder),
         modifier = Modifier
             .fillMaxWidth()
-            .height(58.dp)
+            .heightIn(min = 52.dp)
+            .wrapContentHeight()
             .padding(horizontal = 4.dp)
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 14.dp),
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -81,7 +82,7 @@ fun ServicesSearchBar(
                     maxLines = 1,
                     textStyle = androidx.compose.ui.text.TextStyle(
                         color = Color.White,
-                        fontSize = 14.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.Start
                     ),
@@ -92,9 +93,10 @@ fun ServicesSearchBar(
                     decorationBox = { innerTextField ->
                         if (searchQuery.isEmpty()) {
                             Text(
-                                text = "ابحث عن فني، متجر، خدمة، عقار...",
-                                fontSize = 13.sp,
-                                color = Color.White.copy(alpha = 0.4f),
+                                text = "ابحث عن خدمة، متجر، فني...",
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp,
+                                color = Color.White.copy(alpha = 0.45f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )

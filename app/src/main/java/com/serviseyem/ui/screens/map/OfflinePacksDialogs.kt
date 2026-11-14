@@ -28,6 +28,7 @@ fun ValhallaOfflineDialog(
     onDismiss: () -> Unit,
     onStartNavigation: () -> Unit,
     onOpenPlacesDownload: (() -> Unit)? = null,
+    onOpenRegionsDownload: (() -> Unit)? = null,
     onStatusMessage: (String) -> Unit
 ) {
     val context = LocalContext.current
@@ -41,16 +42,19 @@ fun ValhallaOfflineDialog(
     var installedMb by remember { mutableLongStateOf(ValhallaDownloadManager.getInstalledSizeMb(context)) }
     var placesInstalled by remember { mutableStateOf(OfflinePlacesDb.isInstalled(context)) }
 
+    var downloadJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
     // اختيار ملف خرائط من ذاكرة الهاتف بدون الحاجة لصلاحيات تخزين (Android SAF OpenDocument)
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
+        downloadJob?.cancel()
         isBusy = true
         errorMessage = null
         progress = 0.05f
-        statusText = "جاري فتح ملف الخرائط من ذاكرة الهاتف..."
-        coroutineScope.launch {
+        statusText = "جاري فتح وقراءة ملف الخرائط من ذاكرة الهاتف..."
+        downloadJob = coroutineScope.launch {
             val result = ValhallaDownloadManager.importFromUri(context, uri) { prog, msg ->
                 progress = prog
                 statusText = msg
@@ -72,33 +76,39 @@ fun ValhallaOfflineDialog(
     }
 
     AlertDialog(
-        onDismissRequest = { if (!isBusy) onDismiss() },
+        onDismissRequest = {
+            if (isBusy) {
+                downloadJob?.cancel()
+                isBusy = false
+            }
+            onDismiss()
+        },
         title = {
             Text(
                 text = if (isAlreadyDownloaded) "🧭 الملاحة الدقيقة (أوفلاين) جاهزة" else "📥 تحميل الملاحة الدقيقة الكاملة (أوفلاين)",
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
-                fontSize = 18.sp
+                fontSize = 17.5.sp
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (isAlreadyDownloaded && !isBusy) {
                     Text(
-                        text = "ملف خرائط ومسارات الملاحة الدقيقة (${installedMb} ميجابايت) محفوظ داخل التطبيق وجاهز للاستخدام أوفلاين دون إنترنت.\n\nيمكنك بدء الملاحة فوراً أو استبداله بملف أحدث من الإنترنت أو ذاكرة الهاتف.",
+                        text = "ملف خرائط ومسارات الملاحة الدقيقة (${installedMb} ميجابايت) محفوظ داخل التطبيق وجاهز للاستخدام أوفلاين دون إنترنت.\n\nيمكنك بدء الملاحة فوراً أو استبداله بملف أحدث من ذاكرة الهاتف أو الإنترنت.",
                         fontSize = 12.5.sp,
                         color = Color(0xFFA7F3D0)
                     )
                 } else if (!isBusy) {
                     Text(
-                        text = "لتفعيل الملاحة الدقيقة والمسارات التفصيلية داخل شوارع اليمن، يحتاج التطبيق إلى تحميل ملف خرائط أوفلاين (حوالي 25–64 ميجابايت). يُنصح باستخدام Wi-Fi، أو اختيار الملف مباشرة من ذاكرة الهاتف.",
+                        text = "لتفعيل الملاحة الدقيقة والمسارات التفصيلية داخل شوارع اليمن، يحتاج التطبيق إلى تحميل ملف خرائط أوفلاين (حوالي 25–64 ميجابايت). يُنصح باستخدام شبكة Wi-Fi.",
                         fontSize = 12.5.sp,
                         color = Color.LightGray
                     )
                 }
 
                 if (isBusy) {
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     LinearProgressIndicator(
                         progress = { progress.coerceIn(0f, 1f) },
                         modifier = Modifier
@@ -107,7 +117,7 @@ fun ValhallaOfflineDialog(
                         color = Color(0xFF00E5FF),
                         trackColor = Color(0xFF1E293B)
                     )
-                    Text(statusText, fontSize = 11.5.sp, color = Color(0xFF00E5FF))
+                    Text(statusText, fontSize = 12.sp, color = Color(0xFF00E5FF), fontWeight = FontWeight.Medium)
                 }
 
                 errorMessage?.let { err ->
@@ -125,61 +135,106 @@ fun ValhallaOfflineDialog(
                     }
                 }
 
-                if (!isBusy) {
+                // زر إضافة ملف الخرائط من ذاكرة الهاتف (متاح دائماً ويحفظ الملف داخل التطبيق مباشرة)
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFF1E293B).copy(alpha = 0.6f),
+                    border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "📁 هل لديك ملف الخرائط على هاتفك؟",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF7DD3FC)
+                        )
+                        Text(
+                            text = "يمكنك اختيار ملف (zip أو tar أو places.db) مباشرة من ذاكرة هاتفك وسيقوم التطبيق بحفظه وتفعيله فوراً دون استهلاك باقة الإنترنت.",
+                            fontSize = 10.5.sp,
+                            color = Color.White.copy(alpha = 0.75f)
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                filePickerLauncher.launch(
+                                    arrayOf(
+                                        "application/zip",
+                                        "application/x-tar",
+                                        "application/octet-stream",
+                                        "application/vnd.sqlite3",
+                                        "*/*"
+                                    )
+                                )
+                            },
+                            border = BorderStroke(1.dp, Color(0xFF38BDF8)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .defaultMinSize(minHeight = 44.dp)
+                                .testTag("valhalla_import_from_storage_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FolderOpen,
+                                contentDescription = "إضافة ملف الخرائط من ذاكرة الهاتف",
+                                tint = Color(0xFF38BDF8),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "إضافة ملف الخرائط من ذاكرة الهاتف",
+                                color = Color(0xFF38BDF8),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                if (!isBusy && onOpenPlacesDownload != null) {
                     OutlinedButton(
                         onClick = {
-                            filePickerLauncher.launch(
-                                arrayOf(
-                                    "application/zip",
-                                    "application/x-tar",
-                                    "application/octet-stream",
-                                    "application/vnd.sqlite3",
-                                    "*/*"
-                                )
-                            )
+                            onDismiss()
+                            onOpenPlacesDownload()
                         },
-                        border = BorderStroke(1.dp, Color(0xFF38BDF8)),
+                        border = BorderStroke(1.dp, if (placesInstalled) Color(0xFF10B981) else Color(0xFFF59E0B)),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .defaultMinSize(minHeight = 48.dp)
-                            .testTag("valhalla_import_from_storage_button")
+                            .defaultMinSize(minHeight = 44.dp)
+                            .testTag("valhalla_open_places_db_button")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.FolderOpen,
-                            contentDescription = "إضافة ملف الخرائط من ذاكرة الهاتف",
-                            tint = Color(0xFF38BDF8),
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "إضافة ملف الخرائط من ذاكرة الهاتف",
-                            color = Color(0xFF38BDF8),
-                            fontSize = 12.5.sp,
-                            fontWeight = FontWeight.Bold
+                            text = if (placesInstalled) "✓ قاعدة الأماكن للبحث بلا إنترنت مثبّتة" else "📥 إعداد قاعدة الأماكن للبحث بلا إنترنت",
+                            color = if (placesInstalled) Color(0xFFA7F3D0) else Color(0xFFFCD34D),
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
+                }
 
-                    if (onOpenPlacesDownload != null) {
-                        OutlinedButton(
-                            onClick = {
-                                onDismiss()
-                                onOpenPlacesDownload()
-                            },
-                            border = BorderStroke(1.dp, if (placesInstalled) Color(0xFF10B981) else Color(0xFFF59E0B)),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .defaultMinSize(minHeight = 48.dp)
-                                .testTag("valhalla_open_places_db_button")
-                        ) {
-                            Text(
-                                text = if (placesInstalled) "✓ قاعدة الأماكن للبحث بلا إنترنت مثبّتة" else "📥 إعداد قاعدة الأماكن للبحث بلا إنترنت",
-                                color = if (placesInstalled) Color(0xFFA7F3D0) else Color(0xFFFCD34D),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                if (!isBusy && onOpenRegionsDownload != null) {
+                    OutlinedButton(
+                        onClick = {
+                            onDismiss()
+                            onOpenRegionsDownload()
+                        },
+                        border = BorderStroke(1.dp, Color(0xFF10B981)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = 44.dp)
+                            .testTag("valhalla_open_regions_button")
+                    ) {
+                        Text(
+                            text = "🗺️ خرائط المناطق بلا إنترنت (MBTiles)",
+                            color = Color(0xFFA7F3D0),
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }
@@ -194,7 +249,7 @@ fun ValhallaOfflineDialog(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                         modifier = Modifier
-                            .defaultMinSize(minHeight = 48.dp)
+                            .defaultMinSize(minHeight = 44.dp)
                             .testTag("valhalla_start_nav_button")
                     ) {
                         Text("بدء الملاحة الآن 🧭", color = Color.Black, fontWeight = FontWeight.Bold)
@@ -206,7 +261,7 @@ fun ValhallaOfflineDialog(
                             errorMessage = null
                             progress = 0.05f
                             statusText = "جاري بدء التحميل..."
-                            coroutineScope.launch {
+                            downloadJob = coroutineScope.launch {
                                 val prefs = context.getSharedPreferences("valhalla_prefs", Context.MODE_PRIVATE)
                                 val adminUrl = prefs.getString("valhalla_url", "") ?: ""
                                 val success = ValhallaDownloadManager.downloadAndExtractOfflineTiles(context, adminUrl) { prog, msg ->
@@ -227,7 +282,7 @@ fun ValhallaOfflineDialog(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                         modifier = Modifier
-                            .defaultMinSize(minHeight = 48.dp)
+                            .defaultMinSize(minHeight = 44.dp)
                             .testTag("valhalla_download_online_button")
                     ) {
                         Text("تحميل الآن", color = Color.Black, fontWeight = FontWeight.Bold)
@@ -236,7 +291,18 @@ fun ValhallaOfflineDialog(
             }
         },
         dismissButton = {
-            if (!isBusy) {
+            if (isBusy) {
+                TextButton(
+                    onClick = {
+                        downloadJob?.cancel()
+                        isBusy = false
+                        statusText = "تم إلغاء التحميل"
+                    },
+                    modifier = Modifier.defaultMinSize(minHeight = 44.dp)
+                ) {
+                    Text("إلغاء التحميل ✕", color = Color(0xFFEF4444), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (isAlreadyDownloaded) {
                         TextButton(
@@ -245,7 +311,7 @@ fun ValhallaOfflineDialog(
                                 errorMessage = null
                                 progress = 0.05f
                                 statusText = "جاري إعادة التحميل..."
-                                coroutineScope.launch {
+                                downloadJob = coroutineScope.launch {
                                     val prefs = context.getSharedPreferences("valhalla_prefs", Context.MODE_PRIVATE)
                                     val adminUrl = prefs.getString("valhalla_url", "") ?: ""
                                     val success = ValhallaDownloadManager.downloadAndExtractOfflineTiles(context, adminUrl) { prog, msg ->
@@ -264,14 +330,14 @@ fun ValhallaOfflineDialog(
                                     }
                                 }
                             },
-                            modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                            modifier = Modifier.defaultMinSize(minHeight = 44.dp)
                         ) {
                             Text("إعادة التنزيل 🔄", color = Color(0xFF00E5FF), fontSize = 12.sp)
                         }
                     }
                     TextButton(
                         onClick = onDismiss,
-                        modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                        modifier = Modifier.defaultMinSize(minHeight = 44.dp)
                     ) {
                         Text("لاحقاً", color = Color.Gray)
                     }

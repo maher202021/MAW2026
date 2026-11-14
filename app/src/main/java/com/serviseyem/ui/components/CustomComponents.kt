@@ -75,22 +75,21 @@ fun Luxury3DNavIcon(
     forceWhiteText: Boolean = false,
     onClick: () -> Unit
 ) {
-    // 0.7f: معامل تصغير نسبي (30% scale reduction) للحفاظ على مساحات أشرطة التنقل
-    // 16f (حد أدنى): يمنع انكماش الأيقونة عن الحجم المرئي الأدنى
-    // 24f (حد أقصى): يمنع تضخم الأيقونة وخروجها عن شريط التنقل السفلي والعلوي
-    val actualSize = (iconSizeDp * 0.7f).coerceIn(16f, 24f)
+    val actualSize = 32f
     val sizeDp = actualSize.dp
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(horizontal = 2.dp, vertical = 1.dp)
+            .padding(horizontal = 2.dp, vertical = 2.dp)
+            .wrapContentHeight()
     ) {
         Box(contentAlignment = Alignment.Center) {
             if (isSelected) {
                 Box(
                     modifier = Modifier
-                        .size(sizeDp + 8.dp)
+                        .size(sizeDp + 6.dp)
                         .background(
                             brush = Brush.radialGradient(
                                 colors = listOf(
@@ -111,7 +110,7 @@ fun Luxury3DNavIcon(
                     color = if (isSelected) Color(0xFFFFC93C) else Color(0xFF334155)
                 ),
                 shadowElevation = if (isSelected) 4.dp else 2.dp,
-                modifier = Modifier.size(sizeDp + 8.dp)
+                modifier = Modifier.size(sizeDp + 4.dp)
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                     if (vectorIcon != null && (iconStyle == "MINIMAL" || forceWhiteText)) {
@@ -119,12 +118,12 @@ fun Luxury3DNavIcon(
                             imageVector = vectorIcon,
                             contentDescription = label,
                             tint = if (isSelected) Color(0xFFFFC93C) else Color.White,
-                            modifier = Modifier.size(sizeDp)
+                            modifier = Modifier.size(20.dp)
                         )
                     } else {
                         Text(
                             text = emojiIcon,
-                            fontSize = (sizeDp.value * 0.70f).sp,
+                            fontSize = 17.sp,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -134,19 +133,19 @@ fun Luxury3DNavIcon(
             if (badgeCount > 0) {
                 Surface(
                     shape = CircleShape,
-                    color = Color(0xFFEF4444), // Vibrant Red Badge
-                    border = BorderStroke(1.dp, Color(0xFFFFFFFF)), // White border
+                    color = Color(0xFFEF4444),
+                    border = BorderStroke(1.dp, Color(0xFFFFFFFF)),
                     shadowElevation = 3.dp,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .offset(x = 4.dp, y = (-2).dp)
-                        .size(15.dp)
+                        .size(16.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Text(
                             text = if (badgeCount > 99) "99+" else badgeCount.toString(),
                             color = Color.White,
-                            fontSize = 8.sp,
+                            fontSize = 8.5.sp,
                             fontWeight = FontWeight.Black,
                             textAlign = TextAlign.Center
                         )
@@ -154,16 +153,17 @@ fun Luxury3DNavIcon(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(3.dp))
         Text(
             text = label,
-            fontSize = 10.5.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            softWrap = false,
+            fontSize = 11.sp,
+            lineHeight = 17.sp,
+            maxLines = 2,
+            softWrap = true,
             color = if (isSelected) Color(0xFFFFC93C) else Color(0xFFC9D2E0),
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

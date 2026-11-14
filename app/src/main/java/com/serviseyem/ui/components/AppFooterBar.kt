@@ -47,119 +47,112 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .testTag("app_footer_bar"),
-        contentAlignment = Alignment.BottomCenter
+            .testTag("app_footer_bar")
     ) {
-        // Main Footer Container Surface (Glassmorphism with rounded top corners 20dp)
-        Surface(
-            color = com.serviseyem.ui.theme.CardSurface,
-            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-            shadowElevation = 10.dp,
-            border = BorderStroke(1.dp, com.serviseyem.ui.theme.CardBorder),
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 60.dp)
+                .heightIn(min = 70.dp)
+                .background(Color(0xFF121A26))
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceAround
-            ) {
-                // 1. الإدارة (قفل)
-                val isAdmin = currentScreen == AppScreens.ADMIN_PANEL
-                Luxury3DNavIcon(
-                    emojiIcon = "🔒",
-                    vectorIcon = Icons.Default.Lock,
-                    label = if (isEn) "Admin" else "الإدارة",
-                    isSelected = isAdmin,
-                    iconSizeDp = settingsState.navIconSizeDp,
-                    iconStyle = settingsState.topNavIconStyle,
-                    forceWhiteText = false,
-                    onClick = { viewModel.navigateTo("ADMIN_PANEL") }
-                )
+            // 1. الإدارة (قفل)
+            val isAdmin = currentScreen == AppScreens.ADMIN_PANEL
+            Luxury3DNavIcon(
+                emojiIcon = "🔒",
+                vectorIcon = Icons.Default.Lock,
+                label = if (isEn) "Admin" else "الإدارة",
+                isSelected = isAdmin,
+                iconSizeDp = 30,
+                iconStyle = settingsState.topNavIconStyle,
+                forceWhiteText = false,
+                onClick = { viewModel.navigateTo("ADMIN_PANEL") }
+            )
 
-                // 2. English (كرة أرضية)
-                Luxury3DNavIcon(
-                    emojiIcon = "🌐",
-                    vectorIcon = null,
-                    label = if (isEn) "العربية" else "English",
-                    isSelected = false,
-                    iconSizeDp = settingsState.navIconSizeDp,
-                    iconStyle = settingsState.topNavIconStyle,
-                    forceWhiteText = false,
-                    onClick = {
-                        viewModel.switchLanguage()
-                        viewModel.triggerNotification(
-                            if (isEn) "تم التحويل إلى اللغة العربية 🇾🇪" else "Language switched to English 🌐"
-                        )
-                    }
-                )
+            // 2. English / العربية
+            Luxury3DNavIcon(
+                emojiIcon = "🌐",
+                vectorIcon = null,
+                label = if (isEn) "العربية" else "English",
+                isSelected = false,
+                iconSizeDp = 30,
+                iconStyle = settingsState.topNavIconStyle,
+                forceWhiteText = false,
+                onClick = {
+                    viewModel.switchLanguage()
+                    viewModel.triggerNotification(
+                        if (isEn) "تم التحويل إلى اللغة العربية 🇾🇪" else "Language switched to English 🌐"
+                    )
+                }
+            )
 
-                // Spacer for the Center Floating Button (ASH)
-                Spacer(modifier = Modifier.width(54.dp))
+            // حجز مساحة متوازنة لزر ASH الأوسط العائم
+            Spacer(modifier = Modifier.width(64.dp))
 
-                // 4. الحجوزات (تقويم)
-                val isBookings = currentScreen == AppScreens.BOOKINGS_VIEW
-                Luxury3DNavIcon(
-                    emojiIcon = "📅",
-                    vectorIcon = Icons.Default.DateRange,
-                    label = if (isEn) "Bookings" else "الحجوزات",
-                    isSelected = isBookings,
-                    iconSizeDp = settingsState.navIconSizeDp,
-                    iconStyle = settingsState.topNavIconStyle,
-                    forceWhiteText = false,
-                    onClick = { viewModel.navigateTo("BOOKINGS_VIEW") }
-                )
+            // 3. الحجوزات (تقويم)
+            val isBookings = currentScreen == AppScreens.BOOKINGS_VIEW
+            Luxury3DNavIcon(
+                emojiIcon = "📅",
+                vectorIcon = Icons.Default.DateRange,
+                label = if (isEn) "Bookings" else "الحجوزات",
+                isSelected = isBookings,
+                iconSizeDp = 30,
+                iconStyle = settingsState.topNavIconStyle,
+                forceWhiteText = false,
+                onClick = { viewModel.navigateTo("BOOKINGS_VIEW") }
+            )
 
-                // 5. عن التطبيق (معلومات)
-                val isAbout = currentScreen == AppScreens.ABOUT_APP
-                Luxury3DNavIcon(
-                    emojiIcon = "ℹ️",
-                    vectorIcon = Icons.Default.Info,
-                    label = if (isEn) "About" else "عن التطبيق",
-                    isSelected = isAbout,
-                    iconSizeDp = settingsState.navIconSizeDp,
-                    iconStyle = settingsState.topNavIconStyle,
-                    forceWhiteText = false,
-                    onClick = { onInfoClick() }
-                )
-            }
+            // 4. عن التطبيق (معلومات)
+            val isAbout = currentScreen == AppScreens.ABOUT_APP
+            Luxury3DNavIcon(
+                emojiIcon = "ℹ️",
+                vectorIcon = Icons.Default.Info,
+                label = if (isEn) "About" else "عن التطبيق",
+                isSelected = isAbout,
+                iconSizeDp = 30,
+                iconStyle = settingsState.topNavIconStyle,
+                forceWhiteText = false,
+                onClick = { onInfoClick() }
+            )
         }
 
-        // 3. ASH (الزر المركزي: دائري 54dp بارز يرتفع 26dp فوق الشريط بتدرج ذهبي #FFC93C→#FF9F1C وحلقة بلون الخلفية وتوهج ذهبي ناعم)
+        // زر ASH الأوسط داخل Box بمحاذاة TopCenter وإزاحة رأسية سالبة 14dp
         Box(
             modifier = Modifier
-                .offset(y = (-26).dp)
-                .size(54.dp)
-                .shadow(16.dp, CircleShape, ambientColor = Color(0xFFFFC93C), spotColor = Color(0xFFFF9F1C))
-                .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color(0xFFFFC93C), Color(0xFFFF9F1C))
-                    )
-                )
-                .border(3.dp, com.serviseyem.ui.theme.DarkLuxuryBackground, CircleShape)
-                .clickable { viewModel.navigateToScreen(AppScreens.USER_BROWSE) },
-            contentAlignment = Alignment.Center
+                .align(Alignment.TopCenter)
+                .offset(y = (-14).dp)
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+            androidx.compose.material3.FloatingActionButton(
+                onClick = { viewModel.navigateToScreen(AppScreens.USER_BROWSE) },
+                shape = CircleShape,
+                containerColor = Color(0xFFFFB300),
+                contentColor = Color.Black,
+                modifier = Modifier
+                    .size(56.dp)
+                    .border(2.dp, com.serviseyem.ui.theme.DarkLuxuryBackground, CircleShape)
+                    .testTag("footer_ash_button")
             ) {
-                Icon(
-                    imageVector = Icons.Default.Home,
-                    contentDescription = "ASH",
-                    tint = Color(0xFF1A1000),
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = "ASH",
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color(0xFF1A1000)
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = "ASH",
+                        tint = Color.Black,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "ASH",
+                        fontSize = 10.sp,
+                        lineHeight = 14.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.Black
+                    )
+                }
             }
         }
     }

@@ -366,6 +366,14 @@ fun NavigationScreen(
                         "NavBridge"
                     )
                     webViewClient = object : WebViewClient() {
+                        override fun shouldInterceptRequest(
+                            view: WebView?,
+                            request: android.webkit.WebResourceRequest?
+                        ): android.webkit.WebResourceResponse? {
+                            return com.serviseyem.utils.OfflineTileInterceptor.intercept(ctx, request)
+                                ?: super.shouldInterceptRequest(view, request)
+                        }
+
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
                             view?.evaluateJavascript("if (window.setPickMode) { window.setPickMode($pickingOnNavMap); }", null)
@@ -377,7 +385,8 @@ fun NavigationScreen(
                         locationFix.longitude,
                         targetLat,
                         targetLng,
-                        targetName
+                        targetName,
+                        preferOsmOffline = com.serviseyem.utils.OfflineTileInterceptor.hasAnyInstalledRegions(ctx)
                     )
                     loadDataWithBaseURL("https://openstreetmap.org", htmlContent, "text/html", "UTF-8", null)
                 }
@@ -914,8 +923,14 @@ private fun buildNavigationLeafletHtml(
     startLon: Double,
     endLat: Double,
     endLon: Double,
-    destName: String
+    destName: String,
+    preferOsmOffline: Boolean = false
 ): String {
+    val primaryTileUrl = if (preferOsmOffline) {
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    } else {
+        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+    }
     return """
     <!DOCTYPE html>
     <html lang="ar" dir="rtl">
@@ -949,6 +964,19 @@ private fun buildNavigationLeafletHtml(
                 font-family: sans-serif;
                 white-space: nowrap;
             }
+            #osm-attribution {
+                position: fixed;
+                bottom: 8px;
+                right: 8px;
+                z-index: 900;
+                background: rgba(15, 23, 42, 0.78);
+                color: #CBD5E1;
+                border-radius: 8px;
+                padding: 2px 7px;
+                font-size: 9.5px;
+                font-family: sans-serif;
+                pointer-events: none;
+            }
             .user-pulse {
                 width: 22px; height: 22px;
                 background: #00E5FF;
@@ -969,6 +997,7 @@ private fun buildNavigationLeafletHtml(
     <body>
         <div id="map"></div>
         <div id="offline-tiles-banner">الخريطة تحتاج إنترنت أو حزمة عرض</div>
+        <div id="osm-attribution">© مساهمو OpenStreetMap</div>
         <script>
             var map = L.map('map', {
                 center: [$startLat, $startLon],
@@ -976,7 +1005,7 @@ private fun buildNavigationLeafletHtml(
                 zoomControl: false
             });
 
-            var baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            var baseLayer = L.tileLayer('$primaryTileUrl', {
                 maxZoom: 19,
                 subdomains: 'abcd'
             }).addTo(map);
@@ -988,7 +1017,15 @@ private fun buildNavigationLeafletHtml(
                 if (el) el.classList.toggle('no-tiles', failing);
                 if (b) b.style.display = failing ? 'block' : 'none';
             }
-            baseLayer.on('tileerror', function() { tileErrCount++; if (tileErrCount >= 4) notifyNavTiles(true); });
+            baseLayer.on('tileerror', function(error, tile) {
+                if (tile && !tile._hasOsmFallback && '$primaryTileUrl'.indexOf('openstreetmap.org') === -1) {
+                    tile._hasOsmFallback = true;
+                    tile.src = 'https://tile.openstreetmap.org/' + error.coords.z + '/' + error.coords.x + '/' + error.coords.y + '.png';
+                    return;
+                }
+                tileErrCount++;
+                if (tileErrCount >= 4) notifyNavTiles(true);
+            });
             baseLayer.on('tileload', function() { tileErrCount = 0; notifyNavTiles(false); });
 
             var userIcon = L.divIcon({ className: 'user-pulse', iconSize: [22, 22] });

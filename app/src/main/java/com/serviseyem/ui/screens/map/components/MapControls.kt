@@ -39,6 +39,7 @@ fun MapControls(
     onZoomOut: () -> Unit,
     onRecenterLocation: () -> Unit,
     onDownloadValhallaClick: () -> Unit = {},
+    onOpenRegionsDialog: () -> Unit = {},
     isGpsActive: Boolean,
     // Vela Modes
     currentMode: com.serviseyem.ui.screens.map.MapMode,
@@ -174,6 +175,17 @@ fun MapControls(
                         else -> "google_satellite"
                     }
                     onSwitchLayer(nextLayer)
+                }
+            )
+
+            MapControlItem(
+                icon = Icons.Default.DownloadForOffline,
+                label = "بلا نت",
+                isActive = false,
+                inactiveColor = Color(0xFF10B981),
+                onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    onOpenRegionsDialog()
                 }
             )
 

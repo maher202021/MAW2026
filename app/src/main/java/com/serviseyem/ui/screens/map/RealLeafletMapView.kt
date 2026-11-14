@@ -58,6 +58,7 @@ fun RealLeafletMapView(
     onSwitchToRadar: (() -> Unit)? = null,
     onMapLoadFailed: (() -> Unit)? = null,
     onWebViewCreated: (WebView) -> Unit = {},
+    onTilesFailedOffline: ((String) -> Unit)? = null,
     isEarthquakeLayerActive: Boolean = false,
     earthquakeUpdateTrigger: Int = 0,
     onEarthquakeDataLoaded: ((Long, Int) -> Unit)? = null,
@@ -294,9 +295,24 @@ fun RealLeafletMapView(
                             fun onEarthquakeDataError(error: String) {
                                 onEarthquakeDataError?.invoke(error)
                             }
+
+                            @JavascriptInterface
+                            fun onTilesFailedOffline(layerKey: String) {
+                                webViewRef?.post {
+                                    onTilesFailedOffline?.invoke(layerKey)
+                                }
+                            }
                         }, "AndroidBridge")
 
                         webViewClient = object : WebViewClient() {
+                            override fun shouldInterceptRequest(
+                                view: WebView?,
+                                request: android.webkit.WebResourceRequest?
+                            ): android.webkit.WebResourceResponse? {
+                                return com.serviseyem.utils.OfflineTileInterceptor.intercept(ctx, request)
+                                    ?: super.shouldInterceptRequest(view, request)
+                            }
+
                             override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                                 return true // منع فتح أي روابط خارجية أو مواقع إنترنت داخل WebView الخريطة
                             }

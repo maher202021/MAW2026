@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/yemen_services_3d_icon_1790985337347"
+        android:drawable="@drawable/wam_services_icon_1794595692595"
         android:gravity="center" />
 </layer-list>

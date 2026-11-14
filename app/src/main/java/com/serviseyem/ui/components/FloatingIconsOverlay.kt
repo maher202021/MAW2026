@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,6 +46,9 @@ fun BoxScope.FloatingIconsOverlay(
     onRequestServiceClick: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isCompactScreen = configuration.screenWidthDp < 360
+
     val infiniteTransition = rememberInfiniteTransition(label = "floating_anim")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -58,93 +62,95 @@ fun BoxScope.FloatingIconsOverlay(
 
     // 1. «المساعد الذكي» - on the Start side (BottomStart)
     if (!settings.assistantHidden) {
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 16.dp, bottom = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Box(
+        val onAssistantTap = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onAssistantClick()
+        }
+        if (isCompactScreen) {
+            androidx.compose.material3.FloatingActionButton(
+                onClick = onAssistantTap,
+                shape = CircleShape,
+                containerColor = Color(0xFF0284C7),
+                contentColor = Color.White,
                 modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 14.dp, bottom = 14.dp)
                     .scale(pulseScale)
-                    .size(48.dp)
-                    .shadow(10.dp, CircleShape, ambientColor = Color(0xFF0284C7), spotColor = Color(0xFF0E7490))
-                    .clip(CircleShape)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color(0xFF0284C7), Color(0xFF0E7490))
-                        )
-                    )
-                    .border(BorderStroke(1.2.dp, Color(0xFF7DD3FC)), CircleShape)
-                    .clickable {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onAssistantClick()
-                    },
-                contentAlignment = Alignment.Center
+                    .size(50.dp)
+                    .testTag("fab_smart_assistant")
             ) {
                 Text("🤖", fontSize = 20.sp)
             }
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = com.serviseyem.ui.theme.CardSurface,
-                border = BorderStroke(0.8.dp, com.serviseyem.ui.theme.CardBorder),
-                shadowElevation = 2.dp
-            ) {
-                Text(
-                    text = "المساعد الذكي",
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = com.serviseyem.ui.theme.TextLightMint,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
-            }
+        } else {
+            androidx.compose.material3.ExtendedFloatingActionButton(
+                onClick = onAssistantTap,
+                shape = RoundedCornerShape(24.dp),
+                containerColor = Color(0xFF0284C7),
+                contentColor = Color.White,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 12.dp, bottom = 14.dp)
+                    .scale(pulseScale)
+                    .heightIn(min = 48.dp)
+                    .testTag("fab_smart_assistant"),
+                icon = { Text("🤖", fontSize = 18.sp) },
+                text = {
+                    Text(
+                        text = "المساعد الذكي",
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                }
+            )
         }
     }
 
-    // 2. «اطلب خدمتك الآن» - on the Opposite side (BottomEnd)
+    // 2. «اطلب خدمتك» - on the Opposite side (BottomEnd)
     if (!settings.footerMessage.contains("hide_urgent_fab")) {
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Box(
+        val onUrgentTap = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onRequestServiceClick()
+        }
+        if (isCompactScreen) {
+            androidx.compose.material3.FloatingActionButton(
+                onClick = onUrgentTap,
+                shape = CircleShape,
+                containerColor = Color(0xFFE11D48),
+                contentColor = Color.White,
                 modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 14.dp, bottom = 14.dp)
                     .scale(pulseScale)
-                    .size(48.dp)
-                    .shadow(10.dp, CircleShape, ambientColor = Color(0xFFE11D48), spotColor = Color(0xFF0D5C3A))
-                    .clip(CircleShape)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color(0xFFE11D48), Color(0xFF0D5C3A))
-                        )
-                    )
-                    .border(BorderStroke(1.2.dp, Color(0xFFFDA4AF)), CircleShape)
-                    .clickable {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onRequestServiceClick()
-                    },
-                contentAlignment = Alignment.Center
+                    .size(50.dp)
+                    .testTag("fab_urgent_request")
             ) {
                 Text("⚡", fontSize = 20.sp)
             }
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = com.serviseyem.ui.theme.CardSurface,
-                border = BorderStroke(0.8.dp, com.serviseyem.ui.theme.CardBorder),
-                shadowElevation = 2.dp
-            ) {
-                Text(
-                    text = "اطلب خدمتك",
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = com.serviseyem.ui.theme.TextLightMint,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
-            }
+        } else {
+            androidx.compose.material3.ExtendedFloatingActionButton(
+                onClick = onUrgentTap,
+                shape = RoundedCornerShape(24.dp),
+                containerColor = Color(0xFFE11D48),
+                contentColor = Color.White,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 12.dp, bottom = 14.dp)
+                    .scale(pulseScale)
+                    .heightIn(min = 48.dp)
+                    .testTag("fab_urgent_request"),
+                icon = { Text("⚡", fontSize = 18.sp) },
+                text = {
+                    Text(
+                        text = "اطلب خدمتك",
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                }
+            )
         }
     }
 }

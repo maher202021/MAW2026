@@ -102,7 +102,7 @@ fun ServicesBrowserLayout(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(activeTabBg),
-        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+        contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (activeTabName == "الرئيسية") {
@@ -312,16 +312,17 @@ fun ServicesBrowserLayout(
                             Text(
                                 text = "أحدث العروض والخصومات المتاحة الآن في فئة $currentCategoryTitle - استكشفها الآن!",
                                 color = Color.White,
-                                fontSize = 11.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                fontSize = 11.5.sp,
+                                lineHeight = 17.sp,
+                                maxLines = 2,
+                                softWrap = true
                             )
                         }
                     }
                 }
             }
 
-            // 4. Quick Category Grid (4x2 Bespoke Categories - Dark Luxury Glassmorphic Cards #1E293B)
+            // 4. Quick Category Grid (Adaptive minSize = 80.dp cards - Dark Luxury Glassmorphic Cards)
             item {
                 data class CategoryGridItem(
                     val title: String,
@@ -330,13 +331,8 @@ fun ServicesBrowserLayout(
                     val onClick: () -> Unit
                 )
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    val gridRow1 = listOf(
+                val allCategoryItems = remember {
+                    listOf(
                         CategoryGridItem("المتاجر", "🏪", BespokePremiumSystem.StoresGradient) {
                             viewModel.setActiveBrowserTab("المحلات والمتاجر")
                         },
@@ -348,10 +344,7 @@ fun ServicesBrowserLayout(
                         },
                         CategoryGridItem("العقارات", "🏠", BespokePremiumSystem.EstateGradient) {
                             viewModel.setActiveBrowserTab("العقارات")
-                        }
-                    )
-
-                    val gridRow2 = listOf(
+                        },
                         CategoryGridItem("الوظائف", "💼", BespokePremiumSystem.JobsGradient) {
                             viewModel.setActiveBrowserTab("إعلانات الوظائف")
                         },
@@ -365,96 +358,75 @@ fun ServicesBrowserLayout(
                             viewModel.setActiveBrowserTab("نقل وتوصيل")
                         }
                     )
+                }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        gridRow1.forEach { item ->
-                            Surface(
-                                onClick = item.onClick,
-                                shape = RoundedCornerShape(16.dp),
-                                color = Color(0xFF1E293B),
-                                tonalElevation = 4.dp,
-                                shadowElevation = 3.dp,
-                                border = BorderStroke(1.dp, Color(0xFF334155)),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(82.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(4.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .shadow(3.dp, CircleShape)
-                                            .clip(CircleShape)
-                                            .background(item.gradient),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(item.emoji, fontSize = 20.sp)
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = item.title,
-                                        fontSize = 11.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        maxLines = 1,
-                                        softWrap = false
-                                    )
-                                }
-                            }
-                        }
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    val columns = (maxWidth / 80.dp).toInt().coerceIn(3, 8)
+                    val chunkedRows = remember(columns, allCategoryItems) {
+                        allCategoryItems.chunked(columns)
                     }
 
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        gridRow2.forEach { item ->
-                            Surface(
-                                onClick = item.onClick,
-                                shape = RoundedCornerShape(16.dp),
-                                color = Color(0xFF1E293B),
-                                tonalElevation = 4.dp,
-                                shadowElevation = 3.dp,
-                                border = BorderStroke(1.dp, Color(0xFF334155)),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(82.dp)
+                        chunkedRows.forEach { rowItems ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(4.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Box(
+                                rowItems.forEach { item ->
+                                    Surface(
+                                        onClick = item.onClick,
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = Color(0xFF1E293B),
+                                        tonalElevation = 4.dp,
+                                        shadowElevation = 3.dp,
+                                        border = BorderStroke(1.dp, Color(0xFF334155)),
                                         modifier = Modifier
-                                            .size(42.dp)
-                                            .shadow(3.dp, CircleShape)
-                                            .clip(CircleShape)
-                                            .background(item.gradient),
-                                        contentAlignment = Alignment.Center
+                                            .weight(1f)
+                                            .heightIn(min = 84.dp)
+                                            .wrapContentHeight()
                                     ) {
-                                        Text(item.emoji, fontSize = 20.sp)
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 8.dp, horizontal = 4.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(38.dp)
+                                                    .shadow(3.dp, CircleShape)
+                                                    .clip(CircleShape)
+                                                    .background(item.gradient),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(item.emoji, fontSize = 18.sp)
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = item.title,
+                                                fontSize = 11.sp,
+                                                lineHeight = 16.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White,
+                                                maxLines = 2,
+                                                softWrap = true,
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                            )
+                                        }
                                     }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = item.title,
-                                        fontSize = 11.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        maxLines = 1,
-                                        softWrap = false
-                                    )
+                                }
+                                if (rowItems.size < columns) {
+                                    for (i in 0 until (columns - rowItems.size)) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
                                 }
                             }
                         }

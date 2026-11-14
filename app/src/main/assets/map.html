@@ -35,6 +35,21 @@
             white-space: nowrap;
             pointer-events: none;
         }
+        #osm-attribution {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            z-index: 940;
+            background: rgba(15, 23, 42, 0.78);
+            color: #CBD5E1;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 8px;
+            padding: 2px 7px;
+            font-size: 9.5px;
+            font-weight: 600;
+            pointer-events: none;
+            direction: rtl;
+        }
         .mode-3d-tilted { transform: rotateX(25deg) scale(1.05); transform-origin: 50% 80%; transition: transform 0.5s ease; }
         
         .custom-pin-container { display: flex; flex-direction: column; align-items: center; cursor: pointer; transform: translate(-50%, -100%); }
@@ -213,6 +228,7 @@
 <body>
     <div id="map"></div>
     <div id="offline-tiles-banner">الخريطة تحتاج إنترنت أو حزمة عرض</div>
+    <div id="osm-attribution">© مساهمو OpenStreetMap</div>
 
     <!-- 🛰️ Sleek Collapsible Satellite Layers Dropdown Menu -->
     <div class="sat-dropdown-container" id="satelliteDropdown">
@@ -290,6 +306,7 @@
         var isPickMode = false;
         var failedTileCount = 0;
         var loadedTileCount = 0;
+        var currentLayerKey = 'google_hybrid';
         var userMarker = null;
         var userLat = 15.3694;
         var userLng = 44.1910;
@@ -413,6 +430,9 @@
             var banner = document.getElementById('offline-tiles-banner');
             if (banner) {
                 banner.style.display = failing ? 'block' : 'none';
+            }
+            if (failing && window.AndroidBridge && window.AndroidBridge.onTilesFailedOffline) {
+                try { window.AndroidBridge.onTilesFailedOffline(currentLayerKey || ''); } catch (e) {}
             }
         }
 
@@ -780,10 +800,12 @@
 
             failedTileCount = 0;
             loadedTileCount = 0;
+            currentLayerKey = targetKey;
             if (tileProviders[targetKey]) {
                 bindTileStatusListeners(tileProviders[targetKey]);
                 currentTileLayer = tileProviders[targetKey].addTo(map);
             } else {
+                currentLayerKey = 'google_hybrid';
                 bindTileStatusListeners(tileProviders['google_hybrid']);
                 currentTileLayer = tileProviders['google_hybrid'].addTo(map);
             }

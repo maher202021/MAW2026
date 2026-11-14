@@ -1,11 +1,6 @@
 @file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.serviseyem.ui.screens.map.components
 
-import android.app.Activity
-import android.content.Intent
-import android.speech.RecognizerIntent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -22,8 +17,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardActions
@@ -55,12 +53,23 @@ fun MapFilterBar(
     userLat: Double = 0.0,
     userLng: Double = 0.0,
     onBackClick: () -> Unit = {},
+    focusTick: Int = 0,
+    onVoiceSearchClick: () -> Unit = {},
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var showFiltersSheet by remember { mutableStateOf(false) }
     var isSearchFocused by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(focusTick) {
+        if (focusTick > 0) {
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        }
+    }
 
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
@@ -76,15 +85,6 @@ fun MapFilterBar(
                 context = context
             )
         } else emptyList()
-    }
-
-    val voiceLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val data = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            data?.firstOrNull()?.let { onSearchQueryChange(it) }
-        }
     }
 
     val categories = remember {
@@ -199,20 +199,19 @@ fun MapFilterBar(
                         maxLines = 1,
                         modifier = Modifier
                             .weight(1f)
+                            .focusRequester(focusRequester)
                             .testTag("map_search_input")
                             .onFocusChanged { isSearchFocused = it.isFocused }
                     )
 
-                    // Microphone Icon (Arabic Voice Search)
-                    IconButton(onClick = {
-                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
-                            putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث الآن للبحث في اليمن...")
-                        }
-                        try { voiceLauncher.launch(intent) } catch (e: Exception) {}
-                    }) {
+                    // Microphone Icon (In-App Arabic Voice Search)
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onVoiceSearchClick()
+                        },
+                        modifier = Modifier.testTag("map_voice_search_button")
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Mic,
                             contentDescription = "بحث صوتي",

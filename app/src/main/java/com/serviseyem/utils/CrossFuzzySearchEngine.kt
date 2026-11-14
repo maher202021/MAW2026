@@ -115,6 +115,7 @@ object CrossFuzzySearchEngine {
         if (rawQuery.isEmpty()) return emptyList()
 
         val cleanQuery = normalizeText(rawQuery)
+        val dialectVariants = DialectSynonyms.expand(rawQuery).map { normalizeText(it) }.filter { it.isNotBlank() }
         val results = mutableListOf<SearchResult>()
         val hasGps = userLat != 0.0 && userLng != 0.0
 
@@ -172,7 +173,8 @@ object CrossFuzzySearchEngine {
         val queryTokens = cleanQuery.split(" ", "-", "•", "/").map { it.trim() }.filter { it.length >= 2 }
         allLandmarks.forEach { landmark ->
             val combinedTarget = normalizeText("${landmark.name} ${landmark.area} ${landmark.city} ${landmark.type}")
-            val isDialectMatch = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(rawQuery, combinedTarget)
+            val isDialectMatch = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(rawQuery, combinedTarget) ||
+                dialectVariants.any { variant -> variant.length >= 2 && combinedTarget.contains(variant) }
             val scoreName = calculateMatchScore(cleanQuery, normalizeText(landmark.name))
             val scoreCombined = calculateMatchScore(cleanQuery, combinedTarget)
 
@@ -217,9 +219,10 @@ object CrossFuzzySearchEngine {
 
         // 4. البحث عن الفنيين ومزودي الخدمات (الأشخاص)
         providers.forEach { p ->
+            val providerTarget = normalizeText("${p.name} ${p.profession} ${p.specialization}")
             val isDialectMatch = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(
                 rawQuery, "${p.name} ${p.profession} ${p.specialization}"
-            )
+            ) || dialectVariants.any { variant -> variant.length >= 2 && providerTarget.contains(variant) }
             val scoreName = calculateMatchScore(cleanQuery, normalizeText(p.name))
             val scoreProf = calculateMatchScore(cleanQuery, normalizeText(p.profession))
             val scoreSpec = calculateMatchScore(cleanQuery, normalizeText(p.specialization))
@@ -246,9 +249,10 @@ object CrossFuzzySearchEngine {
 
         // 5. البحث في المتاجر والمراكز الطبية والمطاعم
         stores.forEach { s ->
+            val storeTarget = normalizeText("${s.name} ${s.categoryId} ${s.description}")
             val isDialectMatch = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(
                 rawQuery, "${s.name} ${s.categoryId} ${s.description}"
-            )
+            ) || dialectVariants.any { variant -> variant.length >= 2 && storeTarget.contains(variant) }
             val scoreName = calculateMatchScore(cleanQuery, normalizeText(s.name))
             val scoreCat = calculateMatchScore(cleanQuery, normalizeText(s.categoryId))
             val maxScore = maxOf(scoreName, scoreCat, if (isDialectMatch) 70 else 0)
@@ -279,9 +283,10 @@ object CrossFuzzySearchEngine {
 
         // 6. البحث في العقارات
         properties.forEach { pr ->
+            val propTarget = normalizeText("${pr.title} ${pr.localNeighborhood} ${pr.propertyType}")
             val isDialectMatch = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(
                 rawQuery, "${pr.title} ${pr.localNeighborhood} ${pr.propertyType}"
-            )
+            ) || dialectVariants.any { variant -> variant.length >= 2 && propTarget.contains(variant) }
             val scoreTitle = calculateMatchScore(cleanQuery, normalizeText(pr.title))
             val scoreLoc = calculateMatchScore(cleanQuery, normalizeText(pr.localNeighborhood))
             val maxScore = maxOf(scoreTitle, scoreLoc, if (isDialectMatch) 70 else 0)

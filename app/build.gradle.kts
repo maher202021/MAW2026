@@ -35,7 +35,7 @@ android {
     buildConfigField("String", "AGORA_APP_ID", "\"$agoraId\"")
 
     ndk {
-      abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
+      abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86"))
     }
   }
 
