@@ -151,10 +151,14 @@ object PlacesDbDownloader {
                 }
             }
 
-            onProgress(0.55f, "جاري فحص وتجهيز قاعدة الأماكن...")
             val rowCount = importFromLocalFile(context, copied, tmpDir)
             tmpDir.deleteRecursively()
-            onProgress(1f, "تم استيراد قاعدة الأماكن بنجاح ✓ ($rowCount مكان)")
+            val msg = if (rowCount == 1L && ValhallaDownloadManager.isDownloaded(context)) {
+                "تم استيراد وحفظ خرائط ومسارات الملاحة (valhalla_tiles.tar) بنجاح ✓ وتفعيل الملاحة أوفلاين!"
+            } else {
+                "تم استيراد قاعدة الأماكن بنجاح ✓ ($rowCount مكان)"
+            }
+            onProgress(1f, msg)
             Result.success(rowCount)
         } catch (e: CancellationException) {
             tmpDir.deleteRecursively()
@@ -170,10 +174,22 @@ object PlacesDbDownloader {
             throw IOException("الملف المختار صغير جداً أو غير مكتمل")
         }
 
-        val header = ByteArray(16)
+        val header = ByteArray(512.coerceAtMost(sourceFile.length().toInt()))
         FileInputStream(sourceFile).use { it.read(header) }
-        val isZip = header[0] == 'P'.code.toByte() && header[1] == 'K'.code.toByte()
-        val isSqlite = String(header.copyOfRange(0, 15), Charsets.US_ASCII) == "SQLite format 3"
+        val isZip = header.size >= 2 && header[0] == 'P'.code.toByte() && header[1] == 'K'.code.toByte()
+        val isSqlite = header.size >= 15 && String(header.copyOfRange(0, 15), Charsets.US_ASCII) == "SQLite format 3"
+        val hasUstar = header.size >= 262 && String(header.copyOfRange(257, 262), Charsets.US_ASCII) == "ustar"
+        val isTar = hasUstar || sourceFile.name.endsWith(".tar", ignoreCase = true)
+
+        if (isTar) {
+            val target = ValhallaDownloadManager.getTilesArchive(context)
+            val marker = ValhallaDownloadManager.getMarkerFile(context)
+            sourceFile.copyTo(target, overwrite = true)
+            marker.writeText("downloaded_${System.currentTimeMillis()}")
+            context.getSharedPreferences("valhalla_prefs", Context.MODE_PRIVATE)
+                .edit().putBoolean("is_valhalla_downloaded", true).apply()
+            return 1L // دلالة نجاح استيراد ملف مسارات الملاحة TAR
+        }
 
         val candidateDb = File(workDir, "places.db")
         when {
@@ -200,16 +216,33 @@ object PlacesDbDownloader {
                             }
                             extracted = true
                             break
+                        } else if (!e.isDirectory && (entryBase == "valhalla_tiles.tar" || entryBase.endsWith(".tar", ignoreCase = true))) {
+                            val target = ValhallaDownloadManager.getTilesArchive(context)
+                            val marker = ValhallaDownloadManager.getMarkerFile(context)
+                            FileOutputStream(target).use { out ->
+                                val buf = ByteArray(32 * 1024)
+                                while (true) {
+                                    val n = zip.read(buf)
+                                    if (n < 0) break
+                                    out.write(buf, 0, n)
+                                }
+                                out.fd.sync()
+                            }
+                            marker.writeText("downloaded_${System.currentTimeMillis()}")
+                            context.getSharedPreferences("valhalla_prefs", Context.MODE_PRIVATE)
+                                .edit().putBoolean("is_valhalla_downloaded", true).apply()
+                            extracted = true
+                            return 1L
                         }
                         zip.closeEntry()
                         e = zip.nextEntry
                     }
                 }
                 if (!extracted) {
-                    throw IOException("ملف ZIP المختار لا يحتوي على قاعدة places.db")
+                    throw IOException("ملف ZIP المختار لا يحتوي على valhalla_tiles.tar أو places.db")
                 }
             }
-            else -> throw IOException("صيغة الملف غير مدعومة (اختر ملف places.db أو places.db.zip)")
+            else -> throw IOException("صيغة الملف غير مدعومة (اختر ملف valhalla_tiles.tar أو places.db أو .zip)")
         }
 
         return validateAndInstallPlacesDb(context, candidateDb)

@@ -508,12 +508,17 @@ fun PlacesDownloadDialog(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "استيراد places.db / .zip من ذاكرة الهاتف",
+                            "استيراد ملف الخرائط (valhalla_tiles.tar أو zip أو db)",
                             color = Color(0xFF38BDF8),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
+                    Text(
+                        text = "💡 يمكنك اختيار ملف valhalla_tiles.tar مباشرة من مجلد ADM في هاتفك لتفعيل الملاحة فوراً دون نت.",
+                        color = Color(0xFFA7F3D0),
+                        fontSize = 11.sp
+                    )
                 }
             }
         },
