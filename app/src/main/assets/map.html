@@ -137,7 +137,9 @@
             position: absolute;
             bottom: 44px;
             left: 0;
-            width: 240px;
+            width: 248px;
+            max-height: 62vh;
+            overflow-y: auto;
             background: rgba(15, 23, 42, 0.96);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
@@ -151,6 +153,60 @@
         }
         .sat-dropdown-container.open .sat-dropdown-menu {
             display: flex;
+        }
+        .sat-controls-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .measure-pill-btn {
+            background: rgba(15, 23, 42, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 20px;
+            padding: 8px 11px;
+            color: #E2E8F0;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+        }
+        .measure-pill-btn.active {
+            border-color: #10B981;
+            color: #10B981;
+            background: rgba(6, 78, 59, 0.92);
+        }
+        #measure-hud {
+            display: none;
+            position: absolute;
+            bottom: 72px;
+            left: 12px;
+            z-index: 1001;
+            background: rgba(15, 23, 42, 0.96);
+            border: 1px solid rgba(16, 185, 129, 0.65);
+            border-radius: 14px;
+            padding: 8px 12px;
+            color: #F8FAFC;
+            font-size: 11.5px;
+            direction: rtl;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65);
+            max-width: 270px;
+        }
+        #measure-hud.visible { display: flex; flex-direction: column; gap: 6px; }
+        .measure-actions { display: flex; gap: 6px; }
+        .measure-act-btn {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(30, 41, 59, 0.9);
+            color: #E2E8F0;
+            border-radius: 8px;
+            padding: 4px 8px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
         }
 
         @keyframes fadeInSat {
@@ -230,16 +286,32 @@
     <div id="offline-tiles-banner">الخريطة تحتاج إنترنت أو حزمة عرض</div>
     <div id="osm-attribution">© مساهمو OpenStreetMap</div>
 
-    <!-- 🛰️ Sleek Collapsible Satellite Layers Dropdown Menu -->
+    <!-- 🛰️ Sleek Collapsible Satellite Layers & Pro Ruler Controls -->
+    <div id="measure-hud">
+        <div style="font-weight:800; color:#10B981;">📏 مسطرة قياس المسافة الحية</div>
+        <div id="measure-readout" style="color:#CBD5E1; font-size:11px;">انقر على الخريطة لإضافة نقاط القياس</div>
+        <div class="measure-actions">
+            <button class="measure-act-btn" onclick="undoMeasurePoint(event)">↩ تراجع</button>
+            <button class="measure-act-btn" style="color:#FCA5A5; border-color:rgba(239,68,68,0.45);" onclick="clearMeasure(event)">🗑 مسح</button>
+            <button class="measure-act-btn" style="color:#10B981; border-color:rgba(16,185,129,0.5);" onclick="toggleMeasureMode(event)">إنهاء ✓</button>
+        </div>
+    </div>
+
     <div class="sat-dropdown-container" id="satelliteDropdown">
-        <button class="sat-dropdown-btn" onclick="toggleSatelliteMenu(event)">
-            <span class="sat-icon">🛰️</span>
-            <span class="sat-text" id="satCurrentLabel">خريطة فضائية</span>
-            <span class="sat-arrow">▾</span>
-        </button>
+        <div class="sat-controls-row">
+            <button class="sat-dropdown-btn" onclick="toggleSatelliteMenu(event)">
+                <span class="sat-icon">🛰️</span>
+                <span class="sat-text" id="satCurrentLabel">خريطة فضائية</span>
+                <span class="sat-arrow">▾</span>
+            </button>
+            <button class="measure-pill-btn" id="measureBtn" onclick="toggleMeasureMode(event)">
+                <span>📏</span>
+                <span>قياس</span>
+            </button>
+        </div>
         <div class="sat-dropdown-menu" id="satMenu">
             <div class="sat-menu-header">
-                <span>🛰️ الطبقات الفضائية الحية</span>
+                <span>🛰️ الطبقات الفضائية والطبوغرافية</span>
                 <span style="font-size: 9px; color: #00E5FF; font-weight: normal;">مجاني 100%</span>
             </div>
 
@@ -248,6 +320,38 @@
                 <div class="sat-item-info">
                     <div class="sat-item-title">خريطة هجينة (مع أسماء المدن)</div>
                     <div class="sat-item-desc">افتراضي عالِ الدقة مع أسماء وتفاصيل عربية</div>
+                </div>
+            </div>
+
+            <div class="sat-menu-item" data-key="esri" onclick="selectSatLayer('esri', 'Esri فائقة الدقة')">
+                <span class="sat-item-icon">📸</span>
+                <div class="sat-item-info">
+                    <div class="sat-item-title">Esri فضائية فائقة الوضوح</div>
+                    <div class="sat-item-desc">صور جوية عالية التباين (Z19) بدون مفاتيح</div>
+                </div>
+            </div>
+
+            <div class="sat-menu-item" data-key="eox" onclick="selectSatLayer('eox', 'EOX 2023 بلا غيوم')">
+                <span class="sat-item-icon">🗺️</span>
+                <div class="sat-item-info">
+                    <div class="sat-item-title">EOX Sentinel-2 2023 <span class="badge-live" style="background:#0EA5E9">محدّثة</span></div>
+                    <div class="sat-item-desc">تغطية فضائية صافية 2023 بدقة 10 أمتار</div>
+                </div>
+            </div>
+
+            <div class="sat-menu-item" data-key="esri_wayback" onclick="selectSatLayer('esri_wayback', 'أرشيف Esri الفضائي')">
+                <span class="sat-item-icon">🕰️</span>
+                <div class="sat-item-info">
+                    <div class="sat-item-title">Esri Wayback الفضائية</div>
+                    <div class="sat-item-desc">صور فضائية عالية الدقة للمقارنة والتحقق</div>
+                </div>
+            </div>
+
+            <div class="sat-menu-item" data-key="opentopomap" onclick="selectSatLayer('opentopomap', 'جبال وتضاريس اليمن')">
+                <span class="sat-item-icon">⛰️</span>
+                <div class="sat-item-info">
+                    <div class="sat-item-title">خريطة التضاريس والارتفاعات <span class="badge-live" style="background:#F59E0B; color:#000">SRTM</span></div>
+                    <div class="sat-item-desc">خطوط الكنتور والارتفاعات الجبلية والأودية</div>
                 </div>
             </div>
 
@@ -263,31 +367,23 @@
                 <span class="sat-item-icon">🛰️</span>
                 <div class="sat-item-info">
                     <div class="sat-item-title">أقمار ناسا اليومية (NASA GIBS)</div>
-                    <div class="sat-item-desc">تاريخ "أمس" برمجياً (new Date) لضمان روابط حديثة ومستقرة</div>
+                    <div class="sat-item-desc">صور فضائية يومية محدّثة تلقائياً (أمس UTC)</div>
                 </div>
             </div>
 
             <div class="sat-menu-item" data-key="sentinel2" onclick="selectSatLayer('sentinel2', 'Sentinel-2 OGC حية')">
                 <span class="sat-item-icon">🛰️</span>
                 <div class="sat-item-info">
-                    <div class="sat-item-title">Sentinel-2 يومية (Sentinel Hub OGC) <span class="badge-live" style="background:#10B981">طبقة 4 جديدة</span></div>
+                    <div class="sat-item-title">Sentinel-2 (Sentinel Hub + EOX)</div>
                     <div class="sat-item-desc">أحدث صور Sentinel-2 المباشرة بدون مفاتيح</div>
                 </div>
             </div>
 
-            <div class="sat-menu-item" data-key="esri" onclick="selectSatLayer('esri', 'Esri عالية الوضوح')">
-                <span class="sat-item-icon">📸</span>
+            <div class="sat-menu-item" id="labelsToggleItem" onclick="toggleArabicLabelsOverlay(event)">
+                <span class="sat-item-icon">🏷️</span>
                 <div class="sat-item-info">
-                    <div class="sat-item-title">Esri فضائية دقيقة</div>
-                    <div class="sat-item-desc">صور أقمار صناعية عالية التباين والوضوح</div>
-                </div>
-            </div>
-
-            <div class="sat-menu-item" data-key="eox" onclick="selectSatLayer('eox', 'EOX Sentinel-2 (10م)')">
-                <span class="sat-item-icon">🗺️</span>
-                <div class="sat-item-info">
-                    <div class="sat-item-title">EOX Sentinel-2 (10م)</div>
-                    <div class="sat-item-desc">تغطية فضائية بدون غيوم بدقة 10 أمتار</div>
+                    <div class="sat-item-title" id="labelsToggleTitle">تسميات الشوارع بالعربية: إيقاف</div>
+                    <div class="sat-item-desc">إظهار أسماء المدن والشوارع فوق صور الأقمار</div>
                 </div>
             </div>
         </div>
@@ -315,6 +411,15 @@
         var sentinel2HubLayer = null;
         var eoxCloudlessLayer = null;
         var esriWorldImageryLayer = null;
+        var esriWaybackLayer = null;
+        var openTopoLayer = null;
+        var arabicLabelsOverlayLayer = null;
+        var isLabelsOverlayActive = false;
+
+        var isMeasureMode = false;
+        var measurePoints = [];
+        var measureMarkers = [];
+        var measurePolyline = null;
 
         // Expanded maxZoom to 22 for deep satellite and street zoom
         // Dynamic "Yesterday" UTC date calculation using JavaScript new Date() for NASA GIBS near-real-time satellite tiles
@@ -378,15 +483,25 @@
                 opacity: 0.90,
                 attribution: 'NASA GIBS'
             }),
-            'eox_cloudless': L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2016_3857/default/g/{z}/{y}/{x}.jpg', {
-                maxZoom: 18,
-                maxNativeZoom: 14,
-                attribution: 'Sentinel-2 cloudless by EOX IT Services GmbH'
-            }),
+            'eox_cloudless': createResilientTileLayer(
+                'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg',
+                { maxZoom: 22, maxNativeZoom: 13, attribution: 'Sentinel-2 cloudless 2023 by EOX IT Services GmbH' },
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+            ),
             'esri_world_imagery': createResilientTileLayer(
                 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                 { maxZoom: 22, maxNativeZoom: 19, attribution: 'Esri World Imagery (High-Res 100% Free)' },
                 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
+            ),
+            'esri_wayback': createResilientTileLayer(
+                'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                { maxZoom: 22, maxNativeZoom: 19, attribution: 'Esri Wayback Imagery' },
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+            ),
+            'opentopomap': createResilientTileLayer(
+                'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+                { maxZoom: 20, maxNativeZoom: 17, attribution: 'OpenTopoMap / SRTM' },
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
             )
         };
 
@@ -412,7 +527,9 @@
                 waypointLayerGroup = L.layerGroup().addTo(map);
 
                 map.on('click', function(e) {
-                    if (isPickMode && e && e.latlng && window.AndroidBridge && window.AndroidBridge.onMapPicked) {
+                    if (isMeasureMode && e && e.latlng) {
+                        addMeasurePoint(e.latlng);
+                    } else if (isPickMode && e && e.latlng && window.AndroidBridge && window.AndroidBridge.onMapPicked) {
                         window.AndroidBridge.onMapPicked(e.latlng.lat, e.latlng.lng);
                     } else if (window.AndroidBridge) {
                         window.AndroidBridge.onMapClicked();
@@ -552,7 +669,7 @@
             }
         }
 
-        // 🛰️ طبقة الأقمار الصناعية عالية الدقة (10 أمتار) EOX Cloudless 2016 (اختيارية)
+        // 🛰️ طبقة الأقمار الصناعية عالية الدقة (10 أمتار) EOX Sentinel-2 2023 (اختيارية)
         function toggleEoxCloudlessLayer(enable) {
             if (!map) return;
             if (enable) {
@@ -586,6 +703,156 @@
             }
         }
 
+        // 🕰️ طبقة Esri Wayback الفضائية البديلة
+        function toggleEsriWaybackLayer(enable) {
+            if (!map) return;
+            if (enable) {
+                if (!esriWaybackLayer) {
+                    esriWaybackLayer = tileProviders['esri_wayback'];
+                }
+                if (!map.hasLayer(esriWaybackLayer)) {
+                    esriWaybackLayer.addTo(map);
+                }
+            } else {
+                if (esriWaybackLayer && map.hasLayer(esriWaybackLayer)) {
+                    map.removeLayer(esriWaybackLayer);
+                }
+            }
+        }
+
+        // ⛰️ طبقة التضاريس الجبلية والكنتور OpenTopoMap
+        function toggleOpenTopoLayer(enable) {
+            if (!map) return;
+            if (enable) {
+                if (!openTopoLayer) {
+                    openTopoLayer = tileProviders['opentopomap'];
+                }
+                if (!map.hasLayer(openTopoLayer)) {
+                    openTopoLayer.addTo(map);
+                }
+            } else {
+                if (openTopoLayer && map.hasLayer(openTopoLayer)) {
+                    map.removeLayer(openTopoLayer);
+                }
+            }
+        }
+
+        // 🏷️ طبقة تسميات المدن والشوارع بالعربية فوق أي طبقة فضائية
+        function toggleArabicLabelsOverlay(event) {
+            if (event) event.stopPropagation();
+            if (!map) return;
+            isLabelsOverlayActive = !isLabelsOverlayActive;
+            if (!arabicLabelsOverlayLayer) {
+                arabicLabelsOverlayLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=h&hl=ar&x={x}&y={y}&z={z}', {
+                    maxZoom: 22,
+                    opacity: 0.95,
+                    zIndex: 450,
+                    attribution: 'Arabic Labels Overlay'
+                });
+            }
+            if (isLabelsOverlayActive) {
+                if (!map.hasLayer(arabicLabelsOverlayLayer)) arabicLabelsOverlayLayer.addTo(map);
+            } else {
+                if (map.hasLayer(arabicLabelsOverlayLayer)) map.removeLayer(arabicLabelsOverlayLayer);
+            }
+            var titleEl = document.getElementById('labelsToggleTitle');
+            var itemEl = document.getElementById('labelsToggleItem');
+            if (titleEl) {
+                titleEl.textContent = isLabelsOverlayActive
+                    ? 'تسميات الشوارع بالعربية: مفعّل ✓'
+                    : 'تسميات الشوارع بالعربية: إيقاف';
+            }
+            if (itemEl) {
+                itemEl.classList.toggle('active', isLabelsOverlayActive);
+            }
+        }
+
+        // 📏 أداة قياس المسافة التفاعلية على الخريطة
+        function toggleMeasureMode(event) {
+            if (event) event.stopPropagation();
+            isMeasureMode = !isMeasureMode;
+            var btn = document.getElementById('measureBtn');
+            var hud = document.getElementById('measure-hud');
+            var el = document.getElementById('map');
+            if (btn) btn.classList.toggle('active', isMeasureMode);
+            if (hud) hud.classList.toggle('visible', isMeasureMode);
+            if (el && !isPickMode) el.style.cursor = isMeasureMode ? 'crosshair' : '';
+            updateMeasureReadout();
+        }
+
+        function addMeasurePoint(latlng) {
+            measurePoints.push(latlng);
+            var marker = L.circleMarker(latlng, {
+                radius: 5,
+                color: '#FFFFFF',
+                weight: 2,
+                fillColor: '#10B981',
+                fillOpacity: 1
+            }).addTo(map);
+            measureMarkers.push(marker);
+            redrawMeasurePolyline();
+        }
+
+        function redrawMeasurePolyline() {
+            if (measurePolyline) {
+                map.removeLayer(measurePolyline);
+                measurePolyline = null;
+            }
+            if (measurePoints.length >= 2) {
+                measurePolyline = L.polyline(measurePoints, {
+                    color: '#10B981',
+                    weight: 4,
+                    dashArray: '8, 6',
+                    opacity: 0.95
+                }).addTo(map);
+            }
+            updateMeasureReadout();
+        }
+
+        function undoMeasurePoint(event) {
+            if (event) event.stopPropagation();
+            if (measurePoints.length === 0) return;
+            measurePoints.pop();
+            var m = measureMarkers.pop();
+            if (m && map.hasLayer(m)) map.removeLayer(m);
+            redrawMeasurePolyline();
+        }
+
+        function clearMeasure(event) {
+            if (event) event.stopPropagation();
+            measurePoints = [];
+            measureMarkers.forEach(function(m) {
+                if (map.hasLayer(m)) map.removeLayer(m);
+            });
+            measureMarkers = [];
+            if (measurePolyline) {
+                map.removeLayer(measurePolyline);
+                measurePolyline = null;
+            }
+            updateMeasureReadout();
+        }
+
+        function updateMeasureReadout() {
+            var el = document.getElementById('measure-readout');
+            if (!el) return;
+            if (measurePoints.length === 0) {
+                el.textContent = 'انقر على الخريطة لإضافة نقاط القياس';
+                return;
+            }
+            if (measurePoints.length === 1) {
+                el.textContent = 'تم تحديد نقطة البداية (1) — انقر نقطة ثانية';
+                return;
+            }
+            var totalMeters = 0;
+            for (var i = 1; i < measurePoints.length; i++) {
+                totalMeters += map.distance(measurePoints[i - 1], measurePoints[i]);
+            }
+            var formatted = totalMeters >= 1000
+                ? (totalMeters / 1000).toFixed(2) + ' كم'
+                : Math.round(totalMeters) + ' متر';
+            el.innerHTML = 'المسافة الكلية: <b style="color:#00E5FF;">' + formatted + '</b> (' + measurePoints.length + ' نقاط)';
+        }
+
         // 🛰️ طبقة Sentinel-2 اليومية المباشرة عبر Sentinel Hub OGC API
         function toggleSentinel2HubLayer(enable) {
             if (!map) return;
@@ -593,8 +860,8 @@
                 if (!sentinel2HubLayer) {
                     sentinel2HubLayer = createResilientTileLayer(
                         'https://services.sentinel-hub.com/ogc/wmts/426742d7-5264-4424-9b2d-f952c4819d45?LAYER=TRUE-COLOR&REQUEST=GetTile&TILEMATRIXSET=PopularWebMercator&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
-                        { maxZoom: 18, maxNativeZoom: 14, attribution: 'Sentinel-2 Hub OGC API' },
-                        'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg'
+                        { maxZoom: 20, maxNativeZoom: 14, attribution: 'Sentinel-2 Hub OGC API' },
+                        'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg'
                     );
                 }
                 if (!map.hasLayer(sentinel2HubLayer)) {
@@ -624,7 +891,7 @@
             var container = document.getElementById('satelliteDropdown');
             if (container) container.classList.remove('open');
 
-            var items = document.querySelectorAll('.sat-menu-item');
+            var items = document.querySelectorAll('.sat-menu-item[data-key]');
             items.forEach(function(item) {
                 if (item.getAttribute('data-key') === key) {
                     item.classList.add('active');
@@ -638,6 +905,8 @@
             toggleSentinel2HubLayer(false);
             toggleEoxCloudlessLayer(false);
             toggleEsriWorldImageryLayer(false);
+            toggleEsriWaybackLayer(false);
+            toggleOpenTopoLayer(false);
             toggleRainViewerLayer(false);
 
             if (key === 'sentinel2') {
@@ -650,6 +919,10 @@
                 toggleNasaGibsLayer(true);
             } else if (key === 'esri') {
                 toggleEsriWorldImageryLayer(true);
+            } else if (key === 'esri_wayback') {
+                toggleEsriWaybackLayer(true);
+            } else if (key === 'opentopomap') {
+                toggleOpenTopoLayer(true);
             } else if (key === 'eox') {
                 toggleEoxCloudlessLayer(true);
             } else {

@@ -34,6 +34,10 @@ import com.serviseyem.data.ProviderEntity
 import com.serviseyem.ui.components.ProviderListSkeleton
 import com.serviseyem.utils.VisualThemePalette
 
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+
 @Composable
 fun ServicesSearchBar(
     searchQuery: String,
@@ -42,9 +46,22 @@ fun ServicesSearchBar(
     onFilterClick: () -> Unit,
     isSpeechSearchEnabled: Boolean,
     onVoiceClick: () -> Unit,
-    themeColors: VisualThemePalette
+    themeColors: VisualThemePalette,
+    focusRequestTick: Int = 0
 ) {
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(focusRequestTick) {
+        if (focusRequestTick > 0) {
+            try {
+                focusRequester.requestFocus()
+                keyboardController?.show()
+            } catch (_: Exception) {
+            }
+        }
+    }
 
     Surface(
         shape = RoundedCornerShape(18.dp),
@@ -59,7 +76,7 @@ fun ServicesSearchBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 8.dp),
+                .padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -68,7 +85,7 @@ fun ServicesSearchBar(
                 tint = com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent,
                 modifier = Modifier.size(22.dp)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
             Box(
                 modifier = Modifier
@@ -88,6 +105,7 @@ fun ServicesSearchBar(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .focusRequester(focusRequester)
                         .testTag("search_text_input"),
                     cursorBrush = androidx.compose.ui.graphics.SolidColor(com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent),
                     decorationBox = { innerTextField ->
@@ -112,9 +130,9 @@ fun ServicesSearchBar(
                         haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                         onSearchQueryChange("") 
                     },
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
-                    Icon(Icons.Default.Clear, contentDescription = "مسح", tint = Color.LightGray, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Clear, contentDescription = "مسح", tint = Color.LightGray, modifier = Modifier.size(18.dp))
                 }
             }
 
@@ -124,7 +142,9 @@ fun ServicesSearchBar(
                         haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                         onVoiceClick()
                     },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier
+                        .size(48.dp)
+                        .testTag("home_voice_search_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.Mic,
@@ -136,7 +156,7 @@ fun ServicesSearchBar(
             }
 
             VerticalDivider(
-                modifier = Modifier.height(24.dp).padding(horizontal = 6.dp),
+                modifier = Modifier.height(24.dp).padding(horizontal = 4.dp),
                 color = Color.White.copy(alpha = 0.15f)
             )
 
@@ -145,7 +165,9 @@ fun ServicesSearchBar(
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                     onFilterClick()
                 },
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier
+                    .size(48.dp)
+                    .testTag("home_filter_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.FilterList,

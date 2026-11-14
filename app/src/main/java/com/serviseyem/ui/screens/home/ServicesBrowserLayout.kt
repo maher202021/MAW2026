@@ -37,7 +37,15 @@ import com.serviseyem.data.repositories.*
 import com.serviseyem.ui.screens.home.sections.*
 import com.serviseyem.*
 import com.serviseyem.ui.dialogs.JobApplicationDialog
-import com.serviseyem.VoiceManager
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import com.serviseyem.ui.screens.map.VoiceSearchDialog
+import com.serviseyem.utils.VoiceSearchHelper
+import com.serviseyem.utils.VoiceState
+import com.serviseyem.utils.VoiceStatus
 
 /**
  * 🏠 ServicesBrowserLayout - الشاشة الرئيسية لتصفح الخدمات والمتاجر باليمن
@@ -86,6 +94,38 @@ fun ServicesBrowserLayout(
     var showJobApplicationForJob by remember { mutableStateOf<JobEntity?>(null) }
     var providersLimit by remember { mutableStateOf(10) }
     val activeTabName by viewModel.activeBrowserTab.collectAsState()
+
+    var voiceState by remember { mutableStateOf(VoiceState()) }
+    var searchFocusTick by remember { mutableIntStateOf(0) }
+    val voiceHelper = remember(context) {
+        VoiceSearchHelper(
+            context = context,
+            onFinal = { spoken ->
+                viewModel.updateSearchQuery(spoken)
+                voiceState = VoiceState(status = VoiceStatus.IDLE)
+            },
+            onState = { newState ->
+                voiceState = newState
+            }
+        )
+    }
+    DisposableEffect(voiceHelper) {
+        onDispose { voiceHelper.destroy() }
+    }
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            voiceHelper.start()
+        } else {
+            voiceState = VoiceState(
+                status = VoiceStatus.ERROR,
+                message = "صلاحية الميكروفون مطلوبة للبحث الصوتي. يمكنك السماح بها أو استعمال ميكروفون لوحة المفاتيح.",
+                canOpenSettings = true,
+                canUseKeyboard = true
+            )
+        }
+    }
 
     val activeTabs = remember(settingsState) {
         val list = mutableListOf("الرئيسية")
@@ -155,11 +195,18 @@ fun ServicesBrowserLayout(
                         onFilterClick = { showFiltersPanel = true },
                         isSpeechSearchEnabled = settingsState.isSpeechSearchEnabled,
                         onVoiceClick = {
-                            VoiceManager.onHear?.invoke { heardText ->
-                                viewModel.updateSearchQuery(heardText)
+                            val granted = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.RECORD_AUDIO
+                            ) == PackageManager.PERMISSION_GRANTED
+                            if (granted) {
+                                voiceHelper.start()
+                            } else {
+                                micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                             }
                         },
-                        themeColors = themeColors
+                        themeColors = themeColors,
+                        focusRequestTick = searchFocusTick
                     )
 
                     if (searchDropdownResults.isNotEmpty()) {
@@ -695,6 +742,35 @@ fun ServicesBrowserLayout(
             themeColors = themeColors,
             jobTitle = job.title,
             onDismiss = { showJobApplicationForJob = null }
+        )
+    }
+
+    if (voiceState.status != VoiceStatus.IDLE) {
+        VoiceSearchDialog(
+            state = voiceState,
+            onRetry = {
+                val granted = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.RECORD_AUDIO
+                ) == PackageManager.PERMISSION_GRANTED
+                if (granted) {
+                    voiceHelper.start()
+                } else {
+                    micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
+            },
+            onDismiss = {
+                voiceHelper.cancel()
+                voiceState = VoiceState(status = VoiceStatus.IDLE)
+            },
+            onUseKeyboardMic = {
+                voiceHelper.cancel()
+                voiceState = VoiceState(status = VoiceStatus.IDLE)
+                searchFocusTick++
+            },
+            onOpenSettings = {
+                VoiceSearchHelper.openVoiceSettings(context)
+            }
         )
     }
 }

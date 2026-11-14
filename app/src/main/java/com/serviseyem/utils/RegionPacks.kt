@@ -2,6 +2,7 @@ package com.serviseyem.utils
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import android.net.Uri
 import android.os.StatFs
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -41,6 +42,20 @@ data class RegionPack(
     val version: Int = 1
 )
 
+data class InstalledRegionMarker(
+    val id: String,
+    val name: String,
+    val sizeMb: Long,
+    val minZoom: Int,
+    val maxZoom: Int,
+    val minLat: Double,
+    val maxLat: Double,
+    val minLon: Double,
+    val maxLon: Double,
+    val format: String,
+    val version: Int
+)
+
 object RegionPackManager {
     private val ID_REGEX = Regex("^[a-z0-9_-]+$")
     private const val PREFS_NAME = "valhalla_prefs"
@@ -56,6 +71,14 @@ object RegionPackManager {
         val sp = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val saved = sp.getString(PREF_MANIFEST_URL, "").orEmpty().trim()
         return saved.ifBlank { NavConfig.REGIONS_MANIFEST_URL.trim() }
+    }
+
+    fun saveManifestUrl(context: Context, url: String) {
+        context.applicationContext
+            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(PREF_MANIFEST_URL, url.trim())
+            .apply()
     }
 
     fun isValidId(id: String): Boolean = ID_REGEX.matches(id)
@@ -97,6 +120,40 @@ object RegionPackManager {
         return ids
     }
 
+    fun listInstalled(context: Context): List<InstalledRegionMarker> {
+        val baseDir = dir(context)
+        val files = baseDir.listFiles() ?: return emptyList()
+        val result = mutableListOf<InstalledRegionMarker>()
+        for (f in files) {
+            if (!f.isFile || !f.name.endsWith(".json")) continue
+            val id = f.name.removeSuffix(".json")
+            if (!isValidId(id)) continue
+            val dbFile = File(baseDir, "$id.mbtiles")
+            if (!dbFile.exists() || dbFile.length() == 0L) continue
+            try {
+                val obj = JSONObject(f.readText())
+                val actualSizeMb = (dbFile.length() / (1024L * 1024L)).coerceAtLeast(1L)
+                result.add(
+                    InstalledRegionMarker(
+                        id = obj.optString("id", id),
+                        name = obj.optString("name", id).ifBlank { id },
+                        sizeMb = obj.optLong("sizeMb", actualSizeMb).coerceAtLeast(1L),
+                        minZoom = obj.optInt("minZ", 0),
+                        maxZoom = obj.optInt("maxZ", 17),
+                        minLat = obj.optDouble("minLat", 12.0),
+                        maxLat = obj.optDouble("maxLat", 19.5),
+                        minLon = obj.optDouble("minLon", 41.5),
+                        maxLon = obj.optDouble("maxLon", 54.5),
+                        format = obj.optString("format", "png"),
+                        version = obj.optInt("version", 1)
+                    )
+                )
+            } catch (_: Exception) {
+            }
+        }
+        return result.sortedBy { it.name }
+    }
+
     fun delete(context: Context, id: String) {
         if (!isValidId(id)) return
         OfflineTileInterceptor.invalidateRegions()
@@ -104,6 +161,216 @@ object RegionPackManager {
         runCatching { markerFile(context, id).delete() }
         runCatching { partFile(context, id).delete() }
         OfflineTileInterceptor.invalidateRegions()
+    }
+
+    private fun safeIdFromHint(hint: String, fallbackPrefix: String): String {
+        val ascii = hint.lowercase()
+            .replace(Regex("\\.(mbtiles|sqlite|db)$"), "")
+            .replace(Regex("[^a-z0-9_-]+"), "_")
+            .trim('_')
+            .take(28)
+        val hashSuffix = (hint.hashCode().toUInt().toString(36)).take(6)
+        val candidate = if (ascii.isNotBlank()) "${fallbackPrefix}_${ascii}_$hashSuffix" else "${fallbackPrefix}_$hashSuffix"
+        return candidate.take(48).let { if (ID_REGEX.matches(it)) it else "${fallbackPrefix}_$hashSuffix" }
+    }
+
+    fun enqueueDirectMbtilesUrl(
+        context: Context,
+        url: String,
+        customName: String = "",
+        wifiOnly: Boolean
+    ): Result<RegionPack> {
+        val cleanUrl = url.trim()
+        if (!cleanUrl.startsWith("https://")) {
+            return Result.failure(IllegalArgumentException("يجب أن يبدأ رابط ملف الخريطة بـ https://"))
+        }
+        val rawFileName = cleanUrl.substringBefore('?').substringAfterLast('/')
+            .ifBlank { "region.mbtiles" }
+        val displayName = customName.trim().ifBlank {
+            rawFileName.replace(Regex("\\.mbtiles$", RegexOption.IGNORE_CASE), "")
+                .replace('_', ' ')
+                .replace('-', ' ')
+                .ifBlank { "خريطة مخصصة" }
+        }
+        val id = safeIdFromHint(cleanUrl, "site")
+        val pack = RegionPack(
+            id = id,
+            name = displayName,
+            url = cleanUrl,
+            sha256 = "",
+            sizeMb = 25L,
+            minZoom = 0,
+            maxZoom = 18,
+            minLat = -85.0,
+            maxLat = 85.0,
+            minLon = -180.0,
+            maxLon = 180.0,
+            format = "png",
+            version = 1
+        )
+        enqueue(context, pack, wifiOnly)
+        return Result.success(pack)
+    }
+
+    suspend fun importFromUri(
+        context: Context,
+        uri: Uri,
+        onProgress: (Float, String) -> Unit = { _, _ -> }
+    ): Result<InstalledRegionMarker> = withContext(Dispatchers.IO) {
+        val appCtx = context.applicationContext
+        val regionsDir = dir(appCtx)
+        val tempFile = File(regionsDir, "import_${System.currentTimeMillis()}.part")
+        try {
+            onProgress(0.08f, "جاري فتح ملف الخريطة من ذاكرة الهاتف...")
+            val cr = appCtx.contentResolver
+            val fileSize = cr.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
+            val displayName = runCatching {
+                cr.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                    if (c.moveToFirst()) c.getString(0) else null
+                }
+            }.getOrNull().orEmpty()
+
+            val input = cr.openInputStream(uri)
+                ?: return@withContext Result.failure(IOException("تعذر قراءة الملف المختار من ذاكرة الهاتف"))
+
+            var copied = 0L
+            input.use { stream ->
+                FileOutputStream(tempFile).use { out ->
+                    val buf = ByteArray(64 * 1024)
+                    while (true) {
+                        val read = stream.read(buf)
+                        if (read <= 0) break
+                        out.write(buf, 0, read)
+                        copied += read
+                        if (fileSize > 0L) {
+                            val pct = (0.1f + 0.65f * (copied.toFloat() / fileSize.toFloat())).coerceIn(0.1f, 0.75f)
+                            onProgress(pct, "جاري نسخ الخريطة إلى التطبيق (${(copied / (1024L * 1024L)).coerceAtLeast(1L)} م.ب)...")
+                        }
+                    }
+                    out.fd.sync()
+                }
+            }
+
+            onProgress(0.82f, "جاري التحقق من سلامة قاعدة MBTiles واستخراج الإحداثيات...")
+            if (!looksLikeMbtiles(tempFile)) {
+                tempFile.delete()
+                return@withContext Result.failure(
+                    IOException("الملف المختار ليس بصيغة MBTiles صالحة (يجب أن يحتوي على جدول tiles)")
+                )
+            }
+
+            var metaName = ""
+            var minZ = 0
+            var maxZ = 17
+            var minLat = -85.0
+            var maxLat = 85.0
+            var minLon = -180.0
+            var maxLon = 180.0
+            var format = "png"
+            var version = 1
+            var foundMinZ = false
+            var foundMaxZ = false
+
+            var db: SQLiteDatabase? = null
+            try {
+                db = SQLiteDatabase.openDatabase(
+                    tempFile.absolutePath,
+                    null,
+                    SQLiteDatabase.OPEN_READONLY or SQLiteDatabase.NO_LOCALIZED_COLLATORS
+                )
+                runCatching {
+                    db.rawQuery("SELECT name, value FROM metadata", null).use { c ->
+                        while (c.moveToNext()) {
+                            val k = c.getString(0)?.lowercase().orEmpty()
+                            val v = c.getString(1)?.trim().orEmpty()
+                            when (k) {
+                                "name" -> if (v.isNotBlank()) metaName = v
+                                "format" -> if (v.isNotBlank()) format = v
+                                "version" -> v.toIntOrNull()?.let { version = it }
+                                "minzoom" -> v.toIntOrNull()?.let { minZ = it; foundMinZ = true }
+                                "maxzoom" -> v.toIntOrNull()?.let { maxZ = it; foundMaxZ = true }
+                                "bounds" -> {
+                                    val parts = v.split(',').mapNotNull { it.trim().toDoubleOrNull() }
+                                    if (parts.size == 4) {
+                                        minLon = parts[0]
+                                        minLat = parts[1]
+                                        maxLon = parts[2]
+                                        maxLat = parts[3]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!foundMinZ || !foundMaxZ) {
+                    runCatching {
+                        db.rawQuery("SELECT MIN(zoom_level), MAX(zoom_level) FROM tiles", null).use { c ->
+                            if (c.moveToFirst()) {
+                                if (!foundMinZ && !c.isNull(0)) minZ = c.getInt(0)
+                                if (!foundMaxZ && !c.isNull(1)) maxZ = c.getInt(1)
+                            }
+                        }
+                    }
+                }
+            } finally {
+                runCatching { db?.close() }
+            }
+
+            val finalName = metaName.ifBlank {
+                displayName.replace(Regex("\\.(mbtiles|sqlite|db)$", RegexOption.IGNORE_CASE), "")
+                    .ifBlank { "خريطة محلية (${System.currentTimeMillis() % 10000})" }
+            }
+            val id = safeIdFromHint(
+                displayName.ifBlank { finalName } + "_" + System.currentTimeMillis(),
+                "local"
+            )
+            val targetFile = mbtilesFile(appCtx, id)
+
+            onProgress(0.94f, "جاري تفعيل الخريطة للعرض بدون إنترنت...")
+            OfflineTileInterceptor.invalidateRegions()
+            if (targetFile.exists()) targetFile.delete()
+            if (!tempFile.renameTo(targetFile)) {
+                tempFile.copyTo(targetFile, overwrite = true)
+                tempFile.delete()
+            }
+
+            val sizeMb = (targetFile.length() / (1024L * 1024L)).coerceAtLeast(1L)
+            writeMarker(
+                context = appCtx,
+                id = id,
+                name = finalName,
+                minZ = minZ,
+                maxZ = maxZ,
+                minLat = minLat,
+                maxLat = maxLat,
+                minLon = minLon,
+                maxLon = maxLon,
+                format = format,
+                version = version,
+                sizeMb = sizeMb
+            )
+            OfflineTileInterceptor.invalidateRegions()
+            onProgress(1f, "تم تثبيت خريطة \"$finalName\" بنجاح ✓")
+
+            Result.success(
+                InstalledRegionMarker(
+                    id = id,
+                    name = finalName,
+                    sizeMb = sizeMb,
+                    minZoom = minZ,
+                    maxZoom = maxZ,
+                    minLat = minLat,
+                    maxLat = maxLat,
+                    minLon = minLon,
+                    maxLon = maxLon,
+                    format = format,
+                    version = version
+                )
+            )
+        } catch (e: Exception) {
+            runCatching { tempFile.delete() }
+            Result.failure(e)
+        }
     }
 
     fun parseManifest(json: String): List<RegionPack> {
