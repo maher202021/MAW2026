@@ -7,7 +7,7 @@ import androidx.annotation.Keep
 data class AdminSettingsEntity(
     val id: String = "main_settings",
     val appName: String = "دليل خدمات اليمن",
-    val welcomeMessage: String = "مرحباً بكم في منصة الخدمات اليمنية الشاملة",
+    val welcomeMessage: String = AdminSettingsDefaults.WELCOME_MESSAGE,
     val footerMessage: String = "777644",
     val footerBgColorHex: String = "#115E59",
     val footerItemsOrder: String = "INFO,BOOKINGS,TEXT,LANG,ADMIN",
@@ -42,7 +42,7 @@ data class AdminSettingsEntity(
     @Deprecated("Use SecureAdminStorage / ownerPasswordHash instead")
     @get:com.google.firebase.firestore.Exclude
     val ownerPassword: String = "",
-    
+
     // Notifications control
     val isNotificationsEnabled: Boolean = true,
 
@@ -51,7 +51,7 @@ data class AdminSettingsEntity(
     val disableChatProviders: Boolean = false,
     val disableChatUsers: Boolean = false,
     val disableChatSupervisors: Boolean = false,
-    val chatDisabledAnnouncement: String = "خدمة الدردشة متوقفة حالياً للصيانة، نعتذر عن الإزعاج",
+    val chatDisabledAnnouncement: String = AdminSettingsDefaults.CHAT_DISABLED_ANNOUNCEMENT,
     val allowChatUserToProvider: Boolean = true,
     val allowChatProviderToAdmin: Boolean = true,
     val allowChatUserToAdmin: Boolean = true,
@@ -66,18 +66,18 @@ data class AdminSettingsEntity(
     val allowVoiceInputBookingForm: Boolean = true,
     val allowTextToSpeechBookingForm: Boolean = true,
     val approveChatsBeforeProvider: Boolean = false,
-    val bookingRouting: String = "BOTH", // "BOTH", "ADMIN", "PROVIDER"
+    val bookingRouting: String = "BOTH",
 
-    // Section 10 layout and details customization
-    val activeFontFamily: String = "CAIRO", // "CAIRO", "DEFAULT", "TAHOMA", "AMIRI"
-    val registrationRequirements: String = "الاسم الثلاثي للفني|Mandatory,رقم الهاتف|Mandatory,قسم الصيانة|Mandatory,المدينة والمحافظة|Mandatory,الحي أو الشارع|Optional,صورة سيلفي شخصية|Optional,صورة الهوية المهنية|Optional,نماذج من أعمالك السابقة|Optional",
+    // Layout and registration customization
+    val activeFontFamily: String = "CAIRO",
+    val registrationRequirements: String = AdminSettingsDefaults.REGISTRATION_REQUIREMENTS,
     val maxWorkPhotos: Int = 5,
     val showWorkPhotos: Boolean = true,
     val bypassVisitorRegistration: Boolean = true,
     val disableChatFirewall: Boolean = false,
     val disableBookingFirewall: Boolean = true,
-    
-    // X and Y scaling positions (as percentages of screen width/height, 0f..1f)
+
+    // Floating position percentages and offsets
     val assistantPositionX: Float = 0.85f,
     val assistantPositionY: Float = 0.70f,
     val chatPositionX: Float = 0.85f,
@@ -89,19 +89,19 @@ data class AdminSettingsEntity(
 
     // Map feature switches
     val isMapFeatureEnabled: Boolean = true,
-    val mapProvider: String = "MAPLIBRE", // "MAPLIBRE", "GOOGLE", "MAPBOX"
+    val mapProvider: String = "MAPLIBRE",
     val mapDefaultZoom: Float = 14f,
     val mapMaxDistanceKm: Int = 20,
-    val mapPrecisionDigits: Int = 1, // 1 or 2 digits after decimal
+    val mapPrecisionDigits: Int = 1,
 
     // Assistant controls
     val isAssistantEnabled: Boolean = true,
     val isAssistantIconVisible: Boolean = true,
 
-    // Card dimensions styles
+    // Card dimensions & styles
     val coverHeight: Int = 0,
     val avatarSize: Int = 50,
-    val avatarShape: String = "CIRCLE", // "CIRCLE" or "ROUNDED"
+    val avatarShape: String = "CIRCLE",
     val cardBackgroundHex: String = "#1E293B",
     val providerNameColorHex: String = "#FFFFFF",
     val ratingColorHex: String = "#F59E0B",
@@ -152,28 +152,26 @@ data class AdminSettingsEntity(
     val clickScaleRatio: Float = 0.95f,
 
     // Admin customizable booking labels and terms
-    val bookingTerms: String = "الشروط: لضمان جدية الحجز يرجى التواجد بالمنزل واستقبل الفني وتأكيد العنوان بدقة عبر الهاتف. الدليل لا يتحمل مسؤولية الاتفاقات الخاصة.",
+    val bookingTerms: String = AdminSettingsDefaults.BOOKING_TERMS,
     val bookingLabelName: String = "الاسم الثنائي/الثلاثي للعميل كامل",
     val bookingLabelPhone: String = "رقم الهاتف اليمني (أرقام فقط)",
     val bookingLabelArea: String = "منطقة السكن والحي بالتفصيل (مثل: صنعاء-شارع الستين)",
     val bookingLabelService: String = "نوع الخدمة المطلوبة بالتفصيل",
 
     // About App customization fields
-    val aboutCoverType: String = "IMAGE", // IMAGE, VIDEO, TEXT
-    val aboutCoverContent: String = "https://images.unsplash.com/photo-1542435503-956c469947f6?auto=format&fit=crop&w=600&q=80",
-    // TODO: Migrate to FirebaseStorageUploader
+    val aboutCoverType: String = "IMAGE",
+    val aboutCoverContent: String = AdminSettingsDefaults.ABOUT_COVER_URL,
     val aboutCoverBase64: String = "",
-    val aboutCustomInfo: String = "تطبيق دليل خدمات اليمن الذكي هو منصة متكاملة مخصصة لربط المستخدمين والعملاء بأمهر الفنيين، المهندسين، ومقدمي الخدمات في شتى المجالات والصيانة في مختلف محافظات الجمهورية اليمنية بسهولة وسرعة فائقة.",
+    val aboutCustomInfo: String = AdminSettingsDefaults.ABOUT_CUSTOM_INFO,
 
     // Main screen Banner configuration
     val bannerEnabled: Boolean = false,
-    val bannerType: String = "TEXT", // "TEXT", "IMAGE", "VIDEO"
+    val bannerType: String = "TEXT",
     val bannerContent: String = "",
-    // TODO: Migrate to FirebaseStorageUploader
     val bannerBase64: String = "",
-    val bannerLocation: String = "TOP", // "TOP", "BOTTOM"
-    val bannerDurationSeconds: Int = 10, // 0 for persistent, otherwise duration in seconds
-    val bannerDisplayStyle: String = "SLIDE", // "SLIDE", "FADE", "BLINK", "SCROLL"
+    val bannerLocation: String = "TOP",
+    val bannerDurationSeconds: Int = 10,
+    val bannerDisplayStyle: String = "SLIDE",
     val appDownloadUrl: String = "https://example.com/download_app",
     val allowSendImages: Boolean = true,
     val allowSendVideos: Boolean = true,
@@ -186,7 +184,7 @@ data class AdminSettingsEntity(
     val categoriesLayoutType: String = "GRID_VERTICAL",
     val isFavoritesEnabled: Boolean = true,
     val encryptionType: String = "تشفير آمن سحابي",
-    val splashWelcomeMessage: String = "التطبيق الأول في اليمن والوطن العربي الذي يربط مقدمي الخدمات وأصحاب المهن بالمستخدمين فورياً",
+    val splashWelcomeMessage: String = AdminSettingsDefaults.SPLASH_WELCOME_MESSAGE,
     val websiteUrl: String = "https://www.yamandelil.com",
     val telegramUrl: String = "https://t.me/yamandelil",
     val facebookUrl: String = "https://facebook.com/yamandelil",
@@ -200,7 +198,7 @@ data class AdminSettingsEntity(
     val hideFacebook: Boolean = false,
     val hideTelegram: Boolean = false,
     val hideWebsite: Boolean = false,
-    
+
     // Integrated payment configurations
     val isPaymentEnabled: Boolean = false,
     val isBookingPaymentRequired: Boolean = false,
@@ -210,7 +208,7 @@ data class AdminSettingsEntity(
     val maxAdvanceAmount: Double = 50000.0,
     val isCommissionEnabled: Boolean = true,
     val paymentCommissionRate: Float = 0.10f,
-    
+
     // Dynamic controls for Stores & Real Estate sections
     val isStoresEnabled: Boolean = true,
     val isPropertiesEnabled: Boolean = true,
@@ -222,20 +220,20 @@ data class AdminSettingsEntity(
     val recommendationsLayout: String = "GRID_HORIZONTAL",
     val storesTabName: String = "المحلات",
     val propertiesTabName: String = "العقارات",
-    val storesRegistrationTerms: String = "شروط تسجيل المحل: يرجى إدخال بيانات صحيحة ومطابقة للواقع التجاري وصور واضحة.",
-    val propertiesRegistrationTerms: String = "شروط إضافة العقار: يرجى تأكيد ملكية العقار وصحة الصور والأسعار المعروضة.",
+    val storesRegistrationTerms: String = AdminSettingsDefaults.STORES_TERMS,
+    val propertiesRegistrationTerms: String = AdminSettingsDefaults.PROPERTIES_TERMS,
     val showStoresPhotosOption: Boolean = true,
     val showPropertiesPhotosOption: Boolean = true,
     val dynamicSectionsData: String = "",
     val isUserPasswordRequired: Boolean = false,
     val isBookingsIconVisible: Boolean = true,
     val isMapsIconVisible: Boolean = true,
-    val bookingsIconType: String = "DateRange", // "DateRange", "Star", "Favorite", "Home"
-    val bookingsAccessControl: String = "ALL", // "ALL", "REGISTERED_ONLY", "DISABLED"
+    val bookingsIconType: String = "DateRange",
+    val bookingsAccessControl: String = "ALL",
     val blockedUsersForBookings: String = "",
-    
+
     // 3D Golden Icons, Font Scaling, & Icon Customization Settings
-    val topNavIconStyle: String = "GOLDEN_3D", // "GOLDEN_3D", "METALLIC", "MINIMAL"
+    val topNavIconStyle: String = "GOLDEN_3D",
     val navIconSizeDp: Int = 18,
     val globalFontScale: Float = 1.0f,
     val topHomeIcon: String = "🏠",
@@ -249,17 +247,17 @@ data class AdminSettingsEntity(
     val bottomAdminIcon: String = "🔒",
 
     // Advanced Instant Chat System Controls & Routing
-    val chatDisplayIdentityMode: String = "NAME_AND_PHONE", // "NAME_ONLY", "NAME_AND_PHONE", "NAME_AND_ID", "PHONE_ONLY"
+    val chatDisplayIdentityMode: String = "NAME_AND_PHONE",
     val isChatTextEnabled: Boolean = true,
     val isChatAudioEnabled: Boolean = true,
     val isChatImageEnabled: Boolean = true,
     val isChatVideoEnabled: Boolean = true,
     val isChatCallEnabled: Boolean = true,
-    val chatRoutingMode: String = "DEFAULT", // "ADMIN_ONLY", "ADMIN_PROVIDERS", "ADMIN_CATEGORIES", "CATEGORY_ONLY", "ADMIN_SUPERVISORS", "SUPERVISORS_ONLY", "DEFAULT"
-    val chatBlockedIds: String = "", // Comma-separated IDs/phones blocked from chat
-    val chatDisabledCategories: String = "", // Comma-separated category IDs with disabled chat
+    val chatRoutingMode: String = "DEFAULT",
+    val chatBlockedIds: String = "",
+    val chatDisabledCategories: String = "",
 
-    // Registration Forms Controls (Default: Providers ON, all others OFF)
+    // Registration Forms Controls
     val enableProvidersRegistration: Boolean = true,
     val enableStoresRegistration: Boolean = false,
     val enableRestaurantsRegistration: Boolean = false,
@@ -269,14 +267,13 @@ data class AdminSettingsEntity(
 
     // Admin Customizable Booking Settings
     val isBookingEnabled: Boolean = true,
-    val routingMode: String = "auto_nearest",  // auto_nearest, admin_select, supervisor, specialty, admin_dispatch
-    val maxCancellationHours: Int = 8,          // 8 ساعات قبل الموعد
-    val maxCancellationAttempts: Int = 3,       // عدد محاولات الإلغاء المسموح بها
+    val routingMode: String = "auto_nearest",
+    val maxCancellationHours: Int = 8,
+    val maxCancellationAttempts: Int = 3,
     val enableBookingPassword: Boolean = true,
     val bookingPasswordLength: Int = 4,
     val enableUniqueBookingNumber: Boolean = true,
     val bookingNumberPrefix: String = "BK",
-    // ⚠️ مكرر للتوافقية: استخدم advancePaymentPercent للحسابات. advancePaymentPercentage للتوافقية مع الشاشات القديمة.
     val advancePaymentPercentage: Int = 30,
     val enableProgressTracking: Boolean = true,
 
@@ -289,7 +286,6 @@ data class AdminSettingsEntity(
     val allowBookingWithoutDeposit: Boolean = true,
 
     // Voice Call In-App System Controls
-    // ملاحظة أمنية: عند التعارض، disableVoiceCalls يتفوق على voiceCallsEnabled
     val voiceCallsEnabled: Boolean = true,
     val voiceCallsAllowedCategories: String = "",
     val voiceCallsAllowedProviders: String = "",
@@ -301,222 +297,3 @@ data class AdminSettingsEntity(
     val customAppName: String = "",
     val showClientIdentityToProviders: Boolean = true
 )
-
-@Keep
-data class DynamicSection(
-    val id: String = "",
-    val name: String = "",
-    val icon: String = "",
-    val isEnabled: Boolean = true,
-    val type: String = "store", // "store" or "property"
-    val order: Int = 0,
-    val terms: String = "",
-    val maxPhotos: Int = 5,
-    val showPhotos: Boolean = true,
-    val allowPdf: Boolean = true,
-    val requiredFields: String = "الاسم,الوصف,الهاتف,الموقع"
-) {
-    companion object {
-        fun parseDynamicSections(serialized: String): List<DynamicSection> {
-            val trimmed = serialized.trim()
-            if (trimmed.isEmpty()) {
-                return listOf(
-                    DynamicSection("stores", "المحلات والمراكز", "🏪", true, "store", 1, "شروط تسجيل المحل: يرجى إدخال بيانات صحيحة ومطابقة للواقع التجاري وصور واضحة.", 10, true, true, "الاسم,الوصف,الهاتف,الموقع"),
-                    DynamicSection("restaurants", "المطاعم والكافيهات", "🍔", true, "store", 2, "شروط تسجيل المطعم: توضيح نوع الوجبات، الأسعار، وساعات العمل وصور الوجبات.", 10, true, true, "الاسم,الوصف,الهاتف,الموقع,المنيو"),
-                    DynamicSection("medical", "المراكز الطبية والعيادات", "🏥", true, "store", 3, "شروط تسجيل المركز الطبي: إضافة اسم الدكتور/المركز والتخصص وأوقات الدوام.", 10, true, true, "الاسم,التخصص,الهاتف,الموقع"),
-                    DynamicSection("properties", "العقارات والأراضي", "🏠", true, "property", 4, "شروط إضافة العقار: يرجى تأكيد ملكية العقار وصحة الصور والأسعار المعروضة.", 10, true, true, "العنوان,الوصف,السعر,الهاتف"),
-                    DynamicSection("jobs", "إعلانات الوظائف", "💼", true, "store", 5, "شروط إعلان الوظيفة: توضيح المسمى الوظيفي والراتب والشروط المطلوبة ورقم التواصل.", 5, true, true, "المسمى,الجهة,الهاتف,الراتب"),
-                    DynamicSection("services", "المهن والخدمات", "🛠️", false, "store", 6, "شروط تسجيل الفني: تحديد المهنة/التخصص والأسعار التقديرية ونطاق العمل.", 10, true, true, "الاسم,المهنة,الهاتف,المنطقة")
-                )
-            }
-            if (trimmed == "[]") return emptyList()
-            // 1. Try standard JSON parsing
-            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-                try {
-                    val jsonArray = org.json.JSONArray(trimmed)
-                    val list = mutableListOf<DynamicSection>()
-                    for (i in 0 until jsonArray.length()) {
-                        val obj = jsonArray.getJSONObject(i)
-                        list.add(
-                            DynamicSection(
-                                id = obj.optString("id", ""),
-                                name = obj.optString("name", ""),
-                                icon = obj.optString("icon", ""),
-                                isEnabled = obj.optBoolean("isEnabled", true),
-                                type = obj.optString("type", "store"),
-                                order = obj.optInt("order", i),
-                                terms = obj.optString("terms", ""),
-                                maxPhotos = obj.optInt("maxPhotos", 5),
-                                showPhotos = obj.optBoolean("showPhotos", true),
-                                allowPdf = obj.optBoolean("allowPdf", true),
-                                requiredFields = obj.optString("requiredFields", "الاسم,الهاتف,الوصف")
-                            )
-                        )
-                    }
-                    return list.sortedBy { it.order }
-                } catch (_: Exception) {}
-            }
-            // 2. Fallback to legacy delimiter parsing (;; and ||)
-            return try {
-                trimmed.split(";;").filter { it.isNotEmpty() }.map { sectionStr ->
-                    val parts = sectionStr.split("||")
-                    DynamicSection(
-                        id = parts.getOrElse(0) { "" },
-                        name = parts.getOrElse(1) { "" },
-                        icon = parts.getOrElse(2) { "" },
-                        isEnabled = parts.getOrElse(3) { "true" }.toBoolean(),
-                        type = parts.getOrElse(4) { "store" },
-                        order = parts.getOrElse(5) { "0" }.toIntOrNull() ?: 0,
-                        terms = parts.getOrElse(6) { "" },
-                        maxPhotos = parts.getOrElse(7) { "5" }.toIntOrNull() ?: 5,
-                        showPhotos = parts.getOrElse(8) { "true" }.toBoolean(),
-                        allowPdf = parts.getOrElse(9) { "true" }.toBoolean(),
-                        requiredFields = parts.getOrElse(10) { "الاسم,الهاتف,الوصف" }
-                    )
-                }.sortedBy { it.order }
-            } catch (e: Exception) {
-                emptyList()
-            }
-        }
-
-        fun serializeDynamicSections(list: List<DynamicSection>): String {
-            return try {
-                val jsonArray = org.json.JSONArray()
-                for (sec in list) {
-                    val obj = org.json.JSONObject()
-                    obj.put("id", sec.id)
-                    obj.put("name", sec.name)
-                    obj.put("icon", sec.icon)
-                    obj.put("isEnabled", sec.isEnabled)
-                    obj.put("type", sec.type)
-                    obj.put("order", sec.order)
-                    obj.put("terms", sec.terms)
-                    obj.put("maxPhotos", sec.maxPhotos)
-                    obj.put("showPhotos", sec.showPhotos)
-                    obj.put("allowPdf", sec.allowPdf)
-                    obj.put("requiredFields", sec.requiredFields)
-                    jsonArray.put(obj)
-                }
-                jsonArray.toString()
-            } catch (_: Exception) {
-                list.joinToString(";;") { sec ->
-                    listOf(
-                        sec.id,
-                        sec.name,
-                        sec.icon,
-                        sec.isEnabled.toString(),
-                        sec.type,
-                        sec.order.toString(),
-                        sec.terms,
-                        sec.maxPhotos.toString(),
-                        sec.showPhotos.toString(),
-                        sec.allowPdf.toString(),
-                        sec.requiredFields
-                    ).joinToString("||")
-                }
-            }
-        }
-    }
-}
-
-@Keep
-data class SpecialOfferEntity(
-    val id: String = java.util.UUID.randomUUID().toString(),
-    val providerId: String = "",
-    val title: String = "",
-    val description: String = "",
-    val discountPercent: Int = 0,
-    val originalPrice: Double = 0.0,
-    val offerPrice: Double = 0.0,
-    val expiryDate: String = "",
-    val couponCode: String = "",
-    val isEnabled: Boolean = true
-) {
-    companion object {
-        fun parseList(jsonStr: String): List<SpecialOfferEntity> {
-            val trimmed = jsonStr.trim()
-            if (trimmed.isBlank() || trimmed == "[]") return emptyList()
-            // 1. Try standard JSON parsing
-            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-                try {
-                    val jsonArray = org.json.JSONArray(trimmed)
-                    val list = mutableListOf<SpecialOfferEntity>()
-                    for (i in 0 until jsonArray.length()) {
-                        val obj = jsonArray.getJSONObject(i)
-                        list.add(
-                            SpecialOfferEntity(
-                                id = obj.optString("id", java.util.UUID.randomUUID().toString()),
-                                providerId = obj.optString("providerId", ""),
-                                title = obj.optString("title", ""),
-                                description = obj.optString("description", ""),
-                                discountPercent = obj.optInt("discountPercent", 0),
-                                originalPrice = obj.optDouble("originalPrice", 0.0),
-                                offerPrice = obj.optDouble("offerPrice", 0.0),
-                                expiryDate = obj.optString("expiryDate", ""),
-                                couponCode = obj.optString("couponCode", ""),
-                                isEnabled = obj.optBoolean("isEnabled", true)
-                            )
-                        )
-                    }
-                    return list
-                } catch (_: Exception) {}
-            }
-            // 2. Fallback to legacy delimiter parsing (;;; and |||)
-            return try {
-                trimmed.split(";;;").filter { it.isNotBlank() }.map { chunk ->
-                    val p = chunk.split("|||")
-                    SpecialOfferEntity(
-                        id = p.getOrElse(0) { "" },
-                        title = p.getOrElse(1) { "" },
-                        description = p.getOrElse(2) { "" },
-                        discountPercent = p.getOrElse(3) { "0" }.toIntOrNull() ?: 0,
-                        originalPrice = p.getOrElse(4) { "0" }.toDoubleOrNull() ?: 0.0,
-                        offerPrice = p.getOrElse(5) { "0" }.toDoubleOrNull() ?: 0.0,
-                        expiryDate = p.getOrElse(6) { "" },
-                        isEnabled = p.getOrElse(7) { "true" }.toBoolean(),
-                        providerId = p.getOrElse(8) { "" },
-                        couponCode = p.getOrElse(9) { "" }
-                    )
-                }
-            } catch (e: Exception) {
-                emptyList()
-            }
-        }
-
-        fun serializeList(list: List<SpecialOfferEntity>): String {
-            return try {
-                val jsonArray = org.json.JSONArray()
-                for (offer in list) {
-                    val obj = org.json.JSONObject()
-                    obj.put("id", offer.id)
-                    obj.put("providerId", offer.providerId)
-                    obj.put("title", offer.title)
-                    obj.put("description", offer.description)
-                    obj.put("discountPercent", offer.discountPercent)
-                    obj.put("originalPrice", offer.originalPrice)
-                    obj.put("offerPrice", offer.offerPrice)
-                    obj.put("expiryDate", offer.expiryDate)
-                    obj.put("couponCode", offer.couponCode)
-                    obj.put("isEnabled", offer.isEnabled)
-                    jsonArray.put(obj)
-                }
-                jsonArray.toString()
-            } catch (_: Exception) {
-                list.joinToString(";;;") { offer ->
-                    listOf(
-                        offer.id,
-                        offer.title,
-                        offer.description,
-                        offer.discountPercent.toString(),
-                        offer.originalPrice.toString(),
-                        offer.offerPrice.toString(),
-                        offer.expiryDate,
-                        offer.isEnabled.toString(),
-                        offer.providerId,
-                        offer.couponCode
-                    ).joinToString("|||")
-                }
-            }
-        }
-    }
-}
