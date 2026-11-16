@@ -68,6 +68,10 @@ fun MapControls(
     onToggleEoxCloudless: () -> Unit = {},
     isEsriImageryActive: Boolean = false,
     onToggleEsriImagery: () -> Unit = {},
+    isEumetActive: Boolean = false,
+    onToggleEumet: () -> Unit = {},
+    onLongPressEumet: () -> Unit = {},
+    onOpenMoreLayers: () -> Unit = {},
     isEarthquakeActive: Boolean = false,
     onToggleEarthquake: () -> Unit = {},
     isGroupActive: Boolean = false,
@@ -339,6 +343,30 @@ fun MapControls(
                 activeColor = Color(0xFFF59E0B),
                 inactiveColor = Color(0xFFF59E0B).copy(alpha = 0.8f),
                 onClick = onToggleEsriImagery
+            )
+
+            // 🛰️ Meteosat Live Satellite Layer (سحب وغبار مباشر من EUMETSAT كل 15 دقيقة)
+            MapControlItem(
+                icon = Icons.Default.CloudQueue,
+                label = "ميتيوسات",
+                isActive = isEumetActive,
+                activeColor = Color(0xFF00E5FF),
+                inactiveColor = Color(0xFF00E5FF).copy(alpha = 0.8f),
+                onClick = onToggleEumet,
+                onLongClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    onLongPressEumet()
+                }
+            )
+
+            // 🛰️ طبقات إضافية (قائمة الأقمار الصناعية الموسعة)
+            MapControlItem(
+                icon = Icons.Default.Layers,
+                label = "طبقات",
+                isActive = isEumetActive || isNasaGibsActive || isEoxCloudlessActive || isEsriImageryActive,
+                activeColor = Color(0xFF38BDF8),
+                inactiveColor = Color.White.copy(alpha = 0.75f),
+                onClick = onOpenMoreLayers
             )
 
             // 🌋 Earthquake Layer (مرصد الزلازل الحية)

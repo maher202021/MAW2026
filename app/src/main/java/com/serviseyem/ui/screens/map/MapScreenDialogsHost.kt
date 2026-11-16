@@ -275,4 +275,12 @@ internal fun MapScreenDialogsHost(
             onDismiss = { state.isEarthquakeBottomSheetOpen = false }
         )
     }
+
+    if (state.isMoreLayersSheetOpen) {
+        com.serviseyem.ui.screens.map.components.MoreLayersSheet(
+            state = state,
+            onDismiss = { state.isMoreLayersSheetOpen = false },
+            themeColors = themeColors
+        )
+    }
 }

@@ -166,6 +166,16 @@ internal fun MapMainViewport(
                         snackbarHostState.showSnackbar("ناسا ($title): صورة $date • تأخير نحو 3 ساعات • $resLabel")
                     }
                 },
+                eumetEnabled = state.eumetEnabled,
+                eumetLayer = state.eumetLayerName,
+                onOverlayStatus = { overlay, ok ->
+                    if (overlay == "eumet" && !ok) {
+                        state.eumetEnabled = false
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("تعذر تحميل صور Meteosat (تحقق من اتصال الإنترنت)")
+                        }
+                    }
+                },
                 pickMode = pickingDestination,
                 onMapPicked = { la, lo ->
                     if (pickingDestination) onPickedPointChange(la to lo)

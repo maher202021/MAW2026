@@ -377,6 +377,12 @@
                     <div class="sat-item-title">Sentinel-2 (Sentinel Hub + EOX)</div>
                     <div class="sat-item-desc">أحدث صور Sentinel-2 المباشرة بدون مفاتيح</div>
                 </div>
+            <div class="sat-menu-item" data-key="eumet" onclick="selectSatLayer('eumet', 'قمر Meteosat مباشر (EUMETSAT)')">
+                <span class="sat-item-icon">🛰️</span>
+                <div class="sat-item-info">
+                    <div class="sat-item-title">Meteosat مباشر (EUMETSAT) <span class="badge-live" style="background:#06B6D4">كل 15د</span></div>
+                    <div class="sat-item-desc">قمر المحيط الهندي (IODC) 41.5°E — سحب وغبار مباشر فوق اليمن</div>
+                </div>
             </div>
 
             <div class="sat-menu-item" id="labelsToggleItem" onclick="toggleArabicLabelsOverlay(event)">
@@ -537,6 +543,52 @@
                 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
             )
         };
+
+        function ensurePane(paneName, zIndex) {
+            if (!map) return;
+            if (!map.getPane(paneName)) {
+                map.createPane(paneName);
+            }
+            if (zIndex && map.getPane(paneName)) {
+                map.getPane(paneName).style.zIndex = zIndex;
+            }
+        }
+
+        function notifyOverlay(name, ok) {
+            if (window.AndroidBridge && window.AndroidBridge.onOverlayStatus) {
+                try { window.AndroidBridge.onOverlayStatus(name, ok); } catch (e) {}
+            } else if (window.Android && window.Android.onOverlayStatus) {
+                try { window.Android.onOverlayStatus(name, ok); } catch (e) {}
+            }
+        }
+
+        var eumetLayer = null, eumetTimer = null;
+        function setEumet(on, layerName) {
+            if (!map) return;
+            ensurePane('eumetPane', 262);
+            if (eumetTimer) { clearInterval(eumetTimer); eumetTimer = null; }
+            if (eumetLayer && map.hasLayer(eumetLayer)) map.removeLayer(eumetLayer);
+            eumetLayer = null;
+            if (!on || !/^[A-Za-z0-9_:.\-]{3,80}$/.test(layerName || '')) return;
+            eumetLayer = L.tileLayer.wms('https://view.eumetsat.int/geoserver/wms', {
+                layers: layerName,
+                format: 'image/png',
+                transparent: true,
+                version: '1.3.0',
+                pane: 'eumetPane',
+                opacity: 0.7,
+                maxZoom: 24,
+                tileSize: 256,
+                attribution: '© <a href="https://www.eumetsat.int">EUMETSAT</a> (Meteosat)'
+            });
+            var ok = 0, err = 0;
+            eumetLayer.on('tileload', function () { ok++; });
+            eumetLayer.on('tileerror', function () { err++; if (ok === 0 && err === 8) notifyOverlay('eumet', false); });
+            eumetLayer.addTo(map);
+            // تجديد الصورة كل 15 دقيقة (معامل يُكسر الكاش فقط)
+            eumetTimer = setInterval(function () { if (eumetLayer) eumetLayer.setParams({ _t: Date.now() }); }, 15 * 60 * 1000);
+        }
+        window.setEumet = setEumet;
 
         function initMap() {
             try {
@@ -943,12 +995,16 @@
             toggleEsriWaybackLayer(false);
             toggleOpenTopoLayer(false);
             toggleRainViewerLayer(false);
+            setEumet(false, '');
 
             if (key === 'sentinel2') {
                 toggleSentinel2HubLayer(true);
             } else if (key === 'rainviewer') {
                 switchLayer('google_hybrid');
                 toggleRainViewerLayer(true);
+            } else if (key === 'eumet') {
+                switchLayer('google_hybrid');
+                setEumet(true, 'msg_iodc:rgb_dust');
             } else if (key === 'nasa') {
                 switchLayer('google_hybrid');
                 toggleNasaGibsLayer(true);

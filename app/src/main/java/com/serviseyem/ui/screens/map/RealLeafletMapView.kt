@@ -66,6 +66,9 @@ fun RealLeafletMapView(
     isNasaGibsActive: Boolean = false,
     gibsProduct: String = "viirs_noaa20",
     onGibsInfo: ((String, String) -> Unit)? = null,
+    eumetEnabled: Boolean = false,
+    eumetLayer: String = "",
+    onOverlayStatus: ((String, Boolean) -> Unit)? = null,
     pickMode: Boolean = false,
     onMapPicked: ((Double, Double) -> Unit)? = null,
     waypointMarkers: List<Triple<String, Double, Double>> = emptyList(),
@@ -78,6 +81,7 @@ fun RealLeafletMapView(
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val latestOnMapPicked by rememberUpdatedState(onMapPicked)
     val latestOnGibsInfo by rememberUpdatedState(onGibsInfo)
+    val latestOnOverlayStatus by rememberUpdatedState(onOverlayStatus)
     
     // التحقق المسبق من وجود ملف map.html لتجنب الشاشات السوداء تماماً
     val isAssetAvailable = remember {
@@ -178,6 +182,13 @@ fun RealLeafletMapView(
         if (isMapReady && webViewRef != null && isNasaGibsActive && gibsProduct in allowed) {
             webViewRef?.evaluateJavascript("if (window.setGibs) { window.setGibs('$gibsProduct'); }", null)
         }
+    }
+
+    // 🛰️ تفعيل/تحديث طبقة قمر Meteosat المباشر من EUMETSAT (IODC 41.5°E)
+    LaunchedEffect(isMapReady, eumetEnabled, eumetLayer) {
+        if (!isMapReady) return@LaunchedEffect
+        val safe = if (com.serviseyem.utils.EumetViewCatalog.isSafe(eumetLayer)) eumetLayer else ""
+        webViewRef?.evaluateJavascript("if (window.setEumet) { window.setEumet(${eumetEnabled && safe.isNotEmpty()}, '$safe'); }", null)
     }
 
     // [تعديل] التحكم في التكبير والتصغير التفاعلي وربطه مباشرة مع خريطة OpenStreetMap
@@ -319,6 +330,13 @@ fun RealLeafletMapView(
                             fun onGibsInfo(product: String, date: String) {
                                 webViewRef?.post {
                                     latestOnGibsInfo?.invoke(product, date)
+                                }
+                            }
+
+                            @JavascriptInterface
+                            fun onOverlayStatus(name: String, ok: Boolean) {
+                                webViewRef?.post {
+                                    latestOnOverlayStatus?.invoke(name, ok)
                                 }
                             }
                         }, "AndroidBridge")

@@ -266,6 +266,29 @@ internal fun MapControlsDock(
                 )
             }
         },
+        isEumetActive = state.eumetEnabled,
+        onToggleEumet = {
+            state.eumetEnabled = !state.eumetEnabled
+            val active = state.eumetEnabled
+            if (active) {
+                if (state.eumetLayerName.isEmpty()) {
+                    state.eumetLayerName = "msg_iodc:rgb_dust"
+                }
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("تم تفعيل قمر Meteosat مباشر (EUMETSAT) 🛰️")
+                }
+            } else {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("تم إيقاف قمر Meteosat والعودة للطبقة الأساسية")
+                }
+            }
+        },
+        onLongPressEumet = {
+            state.isMoreLayersSheetOpen = true
+        },
+        onOpenMoreLayers = {
+            state.isMoreLayersSheetOpen = true
+        },
         isEarthquakeActive = state.isEarthquakeLayerActive,
         onToggleEarthquake = {
             state.isEarthquakeBottomSheetOpen = true
