@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import coil.compose.AsyncImage
 import com.serviseyem.ui.theme.*
@@ -72,7 +73,7 @@ object BespokePremiumSystem {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Filled.ArrowForward, contentDescription = "رجوع", tint = ElectricBlue, modifier = Modifier.size(20.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "رجوع", tint = ElectricBlue, modifier = Modifier.size(20.dp))
                     Text(text = "العودة للرئيسية", color = CardDarkTitle, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
                 Surface(
@@ -224,7 +225,7 @@ object BespokePremiumSystem {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(44.dp)
+                            .heightIn(min = 44.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(StoresGradient)
                             .clickable { onCartClick() },
@@ -263,7 +264,7 @@ object BespokePremiumSystem {
                 }
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
+                        .size(44.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(FoodGradient)
                         .clickable { onAddClick() },
@@ -314,7 +315,7 @@ object BespokePremiumSystem {
                     Box(
                         modifier = Modifier
                             .weight(1.5f)
-                            .height(40.dp)
+                            .heightIn(min = 44.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(MedicalGradient)
                             .clickable { onBook() },
@@ -322,10 +323,10 @@ object BespokePremiumSystem {
                     ) {
                         Text("حجز موعد الآن", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                     }
-                    Surface(onClick = onCall, shape = RoundedCornerShape(10.dp), color = Color(0xFF0F172A), modifier = Modifier.size(40.dp)) {
+                    Surface(onClick = onCall, shape = RoundedCornerShape(10.dp), color = Color(0xFF0F172A), modifier = Modifier.size(44.dp)) {
                         Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Phone, contentDescription = "اتصال", tint = CyanMedical, modifier = Modifier.size(18.dp)) }
                     }
-                    Surface(onClick = onNav, shape = RoundedCornerShape(10.dp), color = Color(0xFF0F172A), modifier = Modifier.size(40.dp)) {
+                    Surface(onClick = onNav, shape = RoundedCornerShape(10.dp), color = Color(0xFF0F172A), modifier = Modifier.size(44.dp)) {
                         Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Directions, contentDescription = "الموقع", tint = ElectricBlue, modifier = Modifier.size(18.dp)) }
                     }
                 }
@@ -409,11 +410,11 @@ object BespokePremiumSystem {
                             Text("$rooms غرف • $area م²", color = CardDarkTitle, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Surface(onClick = onBookmark, shape = CircleShape, color = Color(0xFF0F172A), modifier = Modifier.size(34.dp)) {
-                                Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.BookmarkBorder, contentDescription = null, tint = CardDarkTitle, modifier = Modifier.size(16.dp)) }
+                            Surface(onClick = onBookmark, shape = CircleShape, color = Color(0xFF0F172A), modifier = Modifier.size(44.dp)) {
+                                Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.BookmarkBorder, contentDescription = "حفظ", tint = CardDarkTitle, modifier = Modifier.size(18.dp)) }
                             }
-                            Surface(onClick = onShare, shape = CircleShape, color = Color(0xFF0F172A), modifier = Modifier.size(34.dp)) {
-                                Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Share, contentDescription = null, tint = CardDarkTitle, modifier = Modifier.size(16.dp)) }
+                            Surface(onClick = onShare, shape = CircleShape, color = Color(0xFF0F172A), modifier = Modifier.size(44.dp)) {
+                                Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Share, contentDescription = "مشاركة", tint = CardDarkTitle, modifier = Modifier.size(18.dp)) }
                             }
                         }
                     }

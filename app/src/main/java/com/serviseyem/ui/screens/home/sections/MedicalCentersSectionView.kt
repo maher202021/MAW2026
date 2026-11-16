@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -60,7 +61,7 @@ fun MedicalCentersSectionView(
         modifier = Modifier
             .fillMaxWidth()
             .background(com.serviseyem.ui.theme.AppBackground)
-            .padding(bottom = 20.dp)
+            .padding(bottom = 100.dp)
     ) {
         // 0. Top Back Header
         BespokePremiumSystem.SectionBackHeader(
@@ -93,7 +94,7 @@ fun MedicalCentersSectionView(
             ) {
                 Surface(shape = CircleShape, color = Color(0xFFDC2626), modifier = Modifier.size(10.dp)) {}
                 Text("صيدليات ومراكز الطوارئ المناوبة (24/7)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color.White)
             }
         }
 

@@ -93,7 +93,7 @@ fun AppNavigator(
                 }
             }
         },
-        contentWindowInsets = WindowInsets.systemBars,
+        contentWindowInsets = WindowInsets.safeDrawing,
         containerColor = themeColors.background
     ) { innerPadding ->
         Box(

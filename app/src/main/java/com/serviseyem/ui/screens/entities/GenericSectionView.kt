@@ -66,13 +66,19 @@ fun <T : Any> GenericSectionView(
         items.take(visibleItemCount)
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(themeColors.background)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .background(themeColors.background),
+        contentAlignment = Alignment.TopCenter
     ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 840.dp)
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
         // 🔍 Search Input
         OutlinedTextField(
             value = searchQuery,
@@ -191,64 +197,68 @@ fun <T : Any> GenericSectionView(
         }
 
         // 📄 Content Area
-        if (isLoading) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                items(6) {
-                    SkeletonCard(height = 140.dp)
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth().weight(1f)) {
+            val columns = com.serviseyem.ui.theme.computeAdaptiveColumns(maxWidth)
+            if (isLoading) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columns),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 110.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(6) {
+                        SkeletonCard(height = 140.dp)
+                    }
                 }
-            }
-        } else if (items.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("📭", fontSize = 48.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(emptyMessage, color = Color.LightGray, fontSize = 14.sp)
+            } else if (items.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("📭", fontSize = 48.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(emptyMessage, color = Color.LightGray, fontSize = 14.sp, textAlign = TextAlign.Center)
+                    }
                 }
-            }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 90.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                items(paginatedItems) { item ->
-                    itemContent(item)
-                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columns),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 110.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(paginatedItems) { item ->
+                        itemContent(item)
+                    }
 
-                if (visibleItemCount < items.size) {
-                    item(span = { GridItemSpan(2) }) {
-                        Button(
-                            onClick = { visibleItemCount += pageSize },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent.copy(alpha = 0.2f)),
-                            border = BorderStroke(1.dp, themeColors.accent),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                "تحميل المزيد (${items.size - visibleItemCount} متبقي) ⬇️",
-                                color = themeColors.accent,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            )
+                    if (visibleItemCount < items.size) {
+                        item(span = { GridItemSpan(columns) }) {
+                            Button(
+                                onClick = { visibleItemCount += pageSize },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 44.dp)
+                                    .padding(vertical = 8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent.copy(alpha = 0.2f)),
+                                border = BorderStroke(1.dp, themeColors.accent),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    "تحميل المزيد (${items.size - visibleItemCount} متبقي) ⬇️",
+                                    color = themeColors.accent,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
     }
 }
 
@@ -293,9 +303,9 @@ fun <T : Any> UnifiedEntitySectionView(
                     onClick = onAddClick,
                     colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth().height(38.dp)
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp)
                 ) {
-                    Text("➕ إضافة جديد", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                    Text("➕ إضافة جديد", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.5.sp, maxLines = 2, softWrap = true, textAlign = TextAlign.Center)
                 }
             }
         },

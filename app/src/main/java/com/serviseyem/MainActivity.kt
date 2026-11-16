@@ -399,7 +399,9 @@ class MainActivity : ComponentActivity() {
             }
 
             MaterialTheme(
-                colorScheme = colors.scheme
+                colorScheme = colors.scheme,
+                typography = com.serviseyem.ui.theme.YemenTypography,
+                shapes = com.serviseyem.ui.theme.YemenShapes
             ) {
                 val appStrings = if (currentLang == "en") com.serviseyem.ui.EnStrings else com.serviseyem.ui.ArStrings
                 CompositionLocalProvider(

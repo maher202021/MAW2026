@@ -46,13 +46,19 @@ fun CategoriesScreen(
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkLuxuryBackground)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .background(DarkLuxuryBackground),
+        contentAlignment = Alignment.TopCenter
     ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 840.dp)
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
         // Search Header Bar
         OutlinedTextField(
             value = searchQuery,
@@ -91,11 +97,12 @@ fun CategoriesScreen(
             )
         }
 
-        // 3-Column Responsive Grid for 21 Categories
+        // Responsive Grid for 21 Categories
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 100.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 110.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -108,6 +115,7 @@ fun CategoriesScreen(
                 )
             }
         }
+    }
     }
 }
 
@@ -122,13 +130,15 @@ fun LuxuryCategoryCard(
         border = BorderStroke(1.dp, category.color.copy(alpha = 0.5f)),
         modifier = Modifier
             .fillMaxWidth()
-            .height(110.dp)
+            .heightIn(min = 110.dp)
+            .wrapContentHeight()
             .clickable { onClick() }
             .testTag("category_card_${category.id}")
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .heightIn(min = 110.dp)
                 .padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -155,7 +165,9 @@ fun LuxuryCategoryCard(
                 fontWeight = FontWeight.Bold,
                 color = TextPrimaryWhite,
                 textAlign = TextAlign.Center,
-                maxLines = 1,
+                lineHeight = 16.sp,
+                maxLines = 2,
+                softWrap = true,
                 overflow = TextOverflow.Ellipsis
             )
 

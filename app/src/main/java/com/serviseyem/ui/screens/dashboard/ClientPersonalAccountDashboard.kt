@@ -46,13 +46,18 @@ fun ClientPersonalAccountDashboard(
     onNavigateToSupportChat: () -> Unit = { viewModel.navigateTo("CHAT_SUPPORT") }
 ) {
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(14.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
     ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 840.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 110.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
         // Welcome Header
         Card(
             colors = CardDefaults.cardColors(containerColor = themeColors.surface),
@@ -177,19 +182,20 @@ fun ClientPersonalAccountDashboard(
                 colors = ButtonDefaults.buttonColors(containerColor = themeColors.surface),
                 border = BorderStroke(1.dp, themeColors.accent.copy(alpha = 0.5f)),
                 shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.weight(1f).height(38.dp)
+                modifier = Modifier.weight(1f).heightIn(min = 44.dp)
             ) {
-                Text("💼 الانضمام كشريك", color = themeColors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("💼 الانضمام كشريك", color = themeColors.accent, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             }
             Button(
                 onClick = { viewModel.logout(context) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7F1D1D).copy(alpha = 0.3f)),
                 border = BorderStroke(1.dp, Color.Red),
                 shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.weight(1f).height(38.dp)
+                modifier = Modifier.weight(1f).heightIn(min = 44.dp)
             ) {
-                Text("🚪 تسجيل الخروج", color = Color.Red, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("🚪 تسجيل الخروج", color = Color.Red, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             }
         }
+    }
     }
 }

@@ -76,16 +76,16 @@ fun ServicesSearchBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 6.dp),
+                .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "بحث",
                 tint = com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(6.dp))
 
             Box(
                 modifier = Modifier
@@ -100,6 +100,7 @@ fun ServicesSearchBar(
                     textStyle = androidx.compose.ui.text.TextStyle(
                         color = Color.White,
                         fontSize = 16.sp,
+                        lineHeight = 24.sp,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.Start
                     ),
@@ -112,11 +113,11 @@ fun ServicesSearchBar(
                         if (searchQuery.isEmpty()) {
                             Text(
                                 text = "ابحث عن خدمة، متجر، فني...",
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 lineHeight = 20.sp,
                                 color = Color.White.copy(alpha = 0.45f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                maxLines = 2,
+                                softWrap = true
                             )
                         }
                         innerTextField()
@@ -130,7 +131,7 @@ fun ServicesSearchBar(
                         haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                         onSearchQueryChange("") 
                     },
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(Icons.Default.Clear, contentDescription = "مسح", tint = Color.LightGray, modifier = Modifier.size(18.dp))
                 }
@@ -143,20 +144,20 @@ fun ServicesSearchBar(
                         onVoiceClick()
                     },
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(44.dp)
                         .testTag("home_voice_search_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.Mic,
                         contentDescription = "بحث صوتي",
                         tint = com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
 
             VerticalDivider(
-                modifier = Modifier.height(24.dp).padding(horizontal = 4.dp),
+                modifier = Modifier.height(24.dp).padding(horizontal = 2.dp),
                 color = Color.White.copy(alpha = 0.15f)
             )
 
@@ -166,14 +167,14 @@ fun ServicesSearchBar(
                     onFilterClick()
                 },
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(44.dp)
                     .testTag("home_filter_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.FilterList,
                     contentDescription = "تصفية وبحث متقدم",
                     tint = if (isFilterActive) com.serviseyem.ui.components.BespokePremiumSystem.EmeraldAccent else Color.White,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -230,8 +231,8 @@ fun ServicesFilterBottomSheet(
                     Icon(Icons.Default.Settings, contentDescription = null, tint = themeColors.accent, modifier = Modifier.size(18.dp))
                     Text("معايير التصفية والبحث المتقدم", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
-                IconButton(onClick = onDismissRequest, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Clear, contentDescription = "إغلاق", tint = Color.White, modifier = Modifier.size(16.dp))
+                IconButton(onClick = onDismissRequest, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.Clear, contentDescription = "إغلاق", tint = Color.White, modifier = Modifier.size(18.dp))
                 }
             }
 
@@ -439,18 +440,18 @@ fun ServicesFilterBottomSheet(
                     onClick = onResetFilters,
                     colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).heightIn(min = 44.dp)
                 ) {
-                    Text("إعادة ضبط 🔄", color = Color.White, fontSize = 11.sp)
+                    Text("إعادة ضبط 🔄", color = Color.White, fontSize = 11.5.sp)
                 }
 
                 Button(
                     onClick = onDismissRequest,
                     colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).heightIn(min = 44.dp)
                 ) {
-                    Text("تطبيق الفلاتر ✅", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Text("تطبيق الفلاتر ✅", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
                 }
             }
         }
@@ -579,96 +580,110 @@ fun ServicesCategoryChips(
         }
 
         if (selectedCategory == null) {
-            val chunkedCats = remember(displayCats) { displayCats.chunked(2) }
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                chunkedCats.forEach { rowItems ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        rowItems.forEach { cat ->
-                            Surface(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable {
-                                        if (cat.id == "stores" || cat.parentId == "stores" || cat.id == "restaurants") {
-                                            onTabChange(storesTabName)
-                                            onCategorySelect(cat.id)
-                                        } else if (cat.id == "realestate" || cat.parentId == "realestate" || cat.id == "jobs") {
-                                            onTabChange(propertiesTabName)
-                                            onCategorySelect(cat.id)
-                                        } else {
-                                            onTabChange("الرئيسية")
-                                            onCategorySelect(cat.id)
-                                        }
-                                    }
-                                    .testTag("category_grid_${cat.id}"),
-                                shape = RoundedCornerShape(16.dp),
-                                color = Color(0xFF112211), // Elegant deep emerald background
-                                border = BorderStroke(
-                                    width = 1.dp,
-                                    brush = Brush.linearGradient(
-                                        colors = listOf(
-                                            Color(0xFFFFD700), // Gold
-                                            Color(0xFF10B981)  // Emerald
-                                        )
-                                    )
-                                ),
-                                shadowElevation = 6.dp
-                            ) {
-                                Row(
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val columns = when {
+                    maxWidth < 340.dp -> 1
+                    maxWidth < 600.dp -> 2
+                    else -> 3
+                }
+                val chunkedCats = remember(displayCats, columns) { displayCats.chunked(columns) }
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    chunkedCats.forEach { rowItems ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            rowItems.forEach { cat ->
+                                Surface(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 14.dp, vertical = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        .weight(1f)
+                                        .heightIn(min = 64.dp)
+                                        .wrapContentHeight()
+                                        .clickable {
+                                            if (cat.id == "stores" || cat.parentId == "stores" || cat.id == "restaurants") {
+                                                onTabChange(storesTabName)
+                                                onCategorySelect(cat.id)
+                                            } else if (cat.id == "realestate" || cat.parentId == "realestate" || cat.id == "jobs") {
+                                                onTabChange(propertiesTabName)
+                                                onCategorySelect(cat.id)
+                                            } else {
+                                                onTabChange("الرئيسية")
+                                                onCategorySelect(cat.id)
+                                            }
+                                        }
+                                        .testTag("category_grid_${cat.id}"),
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = Color(0xFF112211), // Elegant deep emerald background
+                                    border = BorderStroke(
+                                        width = 1.dp,
+                                        brush = Brush.linearGradient(
+                                            colors = listOf(
+                                                Color(0xFFFFD700), // Gold
+                                                Color(0xFF10B981)  // Emerald
+                                            )
+                                        )
+                                    ),
+                                    shadowElevation = 6.dp
                                 ) {
-                                    // 3D-styled Icon Container
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = Color(0xFF1A3322),
-                                        border = BorderStroke(1.5.dp, Color(0xFFFFD700)),
-                                        shadowElevation = 4.dp,
-                                        modifier = Modifier.size(42.dp)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        Box(
-                                            contentAlignment = Alignment.Center,
-                                            modifier = Modifier.fillMaxSize()
+                                        // 3D-styled Icon Container
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = Color(0xFF1A3322),
+                                            border = BorderStroke(1.5.dp, Color(0xFFFFD700)),
+                                            shadowElevation = 4.dp,
+                                            modifier = Modifier.size(42.dp)
+                                        ) {
+                                            Box(
+                                                contentAlignment = Alignment.Center,
+                                                modifier = Modifier.fillMaxSize()
+                                            ) {
+                                                Text(
+                                                    text = cat.icon,
+                                                    fontSize = 20.sp,
+                                                    textAlign = TextAlign.Center
+                                                )
+                                            }
+                                        }
+
+                                        Column(
+                                            verticalArrangement = Arrangement.Center
                                         ) {
                                             Text(
-                                                text = cat.icon,
-                                                fontSize = 20.sp,
-                                                textAlign = TextAlign.Center
+                                                text = cat.name,
+                                                color = Color.White,
+                                                fontSize = 13.sp,
+                                                lineHeight = 19.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 2,
+                                                softWrap = true
+                                            )
+                                            val subCount = categories.count { it.parentId == cat.id }
+                                            Text(
+                                                text = if (subCount > 0) "📌 $subCount أقسام" else "💼 دليل الخدمة",
+                                                color = Color(0xFF10B981), // Emerald Accent
+                                                fontSize = 10.sp,
+                                                lineHeight = 15.sp,
+                                                fontWeight = FontWeight.Medium
                                             )
                                         }
                                     }
-
-                                    Column(
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Text(
-                                            text = cat.name,
-                                            color = Color.White,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        val subCount = categories.count { it.parentId == cat.id }
-                                        Text(
-                                            text = if (subCount > 0) "📌 $subCount أقسام" else "💼 دليل الخدمة",
-                                            color = Color(0xFF10B981), // Emerald Accent
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
                                 }
                             }
-                        }
-                        // Handle odd number of items by adding an empty spacer
-                        if (rowItems.size < 2) {
-                            Spacer(modifier = Modifier.weight(1f))
+                            if (rowItems.size < columns) {
+                                repeat(columns - rowItems.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
                         }
                     }
                 }

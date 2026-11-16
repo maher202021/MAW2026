@@ -56,112 +56,120 @@ fun BoxScope.FloatingIconsOverlay(
         label = "pulse"
     )
 
-    // 1. «المساعد الذكي» - دائري أنيق في الزاوية اليسرى
-    if (!settings.assistantHidden) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 16.dp, bottom = 14.dp)
-        ) {
-            FloatingActionButton(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onAssistantClick()
-                },
-                shape = CircleShape,
-                containerColor = Color(0xFF0284C7),
-                contentColor = Color.White,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp, pressedElevation = 10.dp),
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val showLabels = maxWidth >= 360.dp
+
+        // 1. «المساعد الذكي» - دائري أنيق في الزاوية اليسرى
+        if (!settings.assistantHidden) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .scale(pulseScale)
-                    .size(54.dp)
-                    .border(2.dp, Color(0xFF38BDF8), CircleShape)
-                    .testTag("fab_smart_assistant")
+                    .align(Alignment.BottomStart)
+                    .padding(start = 16.dp, bottom = 14.dp)
             ) {
-                Box(
-                    contentAlignment = Alignment.Center,
+                FloatingActionButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onAssistantClick()
+                    },
+                    shape = CircleShape,
+                    containerColor = Color(0xFF0284C7),
+                    contentColor = Color.White,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp, pressedElevation = 10.dp),
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(Color(0xFF38BDF8).copy(alpha = 0.4f), Color(0xFF0369A1))
-                            )
-                        )
+                        .scale(pulseScale)
+                        .size(54.dp)
+                        .border(2.dp, Color(0xFF38BDF8), CircleShape)
+                        .testTag("fab_smart_assistant")
                 ) {
-                    Text("🤖", fontSize = 24.sp)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(Color(0xFF38BDF8).copy(alpha = 0.4f), Color(0xFF0369A1))
+                                )
+                            )
+                    ) {
+                        Text("🤖", fontSize = 24.sp)
+                    }
                 }
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Surface(
-                shape = CircleShape,
-                color = Color(0xFF0F172A).copy(alpha = 0.85f),
-                border = BorderStroke(0.5.dp, Color(0xFF0284C7).copy(alpha = 0.5f))
-            ) {
-                Text(
-                    text = "المساعد الذكي",
-                    fontSize = 10.sp,
-                    lineHeight = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFBAE6FD),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
+                if (showLabels) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(
+                        shape = CircleShape,
+                        color = Color(0xFF0F172A).copy(alpha = 0.85f),
+                        border = BorderStroke(0.5.dp, Color(0xFF0284C7).copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            text = "المساعد الذكي",
+                            fontSize = 10.sp,
+                            lineHeight = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFBAE6FD),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
             }
         }
-    }
 
-    // 2. «اطلب خدمتك» - دائري أنيق في الزاوية اليمنى
-    if (!settings.footerMessage.contains("hide_urgent_fab")) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 14.dp)
-        ) {
-            FloatingActionButton(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onRequestServiceClick()
-                },
-                shape = CircleShape,
-                containerColor = Color(0xFFE11D48),
-                contentColor = Color.White,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp, pressedElevation = 10.dp),
+        // 2. «اطلب خدمتك» - دائري أنيق في الزاوية اليمنى
+        if (!settings.footerMessage.contains("hide_urgent_fab")) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .scale(pulseScale)
-                    .size(54.dp)
-                    .border(2.dp, Color(0xFFFFD700), CircleShape)
-                    .testTag("fab_urgent_request")
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 14.dp)
             ) {
-                Box(
-                    contentAlignment = Alignment.Center,
+                FloatingActionButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onRequestServiceClick()
+                    },
+                    shape = CircleShape,
+                    containerColor = Color(0xFFE11D48),
+                    contentColor = Color.White,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp, pressedElevation = 10.dp),
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(Color(0xFFFB7185).copy(alpha = 0.4f), Color(0xFFBE123C))
-                            )
-                        )
+                        .scale(pulseScale)
+                        .size(54.dp)
+                        .border(2.dp, Color(0xFFFFD700), CircleShape)
+                        .testTag("fab_urgent_request")
                 ) {
-                    Text("⚡", fontSize = 24.sp)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(Color(0xFFFB7185).copy(alpha = 0.4f), Color(0xFFBE123C))
+                                )
+                            )
+                    ) {
+                        Text("⚡", fontSize = 24.sp)
+                    }
                 }
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Surface(
-                shape = CircleShape,
-                color = Color(0xFF0F172A).copy(alpha = 0.85f),
-                border = BorderStroke(0.5.dp, Color(0xFFFFD700).copy(alpha = 0.5f))
-            ) {
-                Text(
-                    text = "اطلب خدمتك",
-                    fontSize = 10.sp,
-                    lineHeight = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFFE4E6),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
+                if (showLabels) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(
+                        shape = CircleShape,
+                        color = Color(0xFF0F172A).copy(alpha = 0.85f),
+                        border = BorderStroke(0.5.dp, Color(0xFFFFD700).copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            text = "اطلب خدمتك",
+                            fontSize = 10.sp,
+                            lineHeight = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFFE4E6),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
             }
         }
     }

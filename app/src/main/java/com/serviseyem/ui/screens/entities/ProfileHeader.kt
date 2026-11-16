@@ -221,10 +221,10 @@ fun ProfileHeader(
                             onClick = onMapClick,
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF)),
                             shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                            modifier = Modifier.height(28.dp)
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.heightIn(min = 44.dp)
                         ) {
-                            Text("🗺️ الخريطة", fontSize = 9.5.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.Bold)
+                            Text("🗺️ الخريطة", fontSize = 10.5.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.Bold)
                         }
                     }
                 }

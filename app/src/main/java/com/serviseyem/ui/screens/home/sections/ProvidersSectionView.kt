@@ -56,7 +56,11 @@ fun ProvidersSectionView(
             )
         } else {
             val limitedProviders = effectiveProviders.take(providersLimit)
-            limitedProviders.forEach { provider ->
+            com.serviseyem.ui.theme.AdaptiveCardGrid(
+                items = limitedProviders,
+                horizontalSpacing = 10.dp,
+                verticalSpacing = 8.dp
+            ) { provider ->
                 ProviderCard(
                     provider = provider,
                     themeColors = themeColors,
@@ -71,9 +75,9 @@ fun ProvidersSectionView(
                 onClick = onLoadMore,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
                 shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth().height(42.dp)
+                modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp)
             ) {
-                Text("عرض المزيد من الفنيين (${effectiveProviders.size - providersLimit} متبقي) ⬇️", color = themeColors.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("عرض المزيد من الفنيين (${effectiveProviders.size - providersLimit} متبقي) ⬇️", color = themeColors.accent, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

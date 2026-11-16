@@ -100,27 +100,31 @@ fun GalleryManagementScreen(
                     }
                 }
             } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(galleryList, key = { it.id }) { item ->
-                        GalleryGridCard(
-                            item = item,
-                            themeColors = themeColors,
-                            onSetPrimary = {
-                                galleryList = galleryList.map {
-                                    it.copy(isPrimary = it.id == item.id)
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    val cols = com.serviseyem.ui.theme.computeAdaptiveColumns(maxWidth)
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(cols),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(bottom = 110.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(galleryList, key = { it.id }) { item ->
+                            GalleryGridCard(
+                                item = item,
+                                themeColors = themeColors,
+                                onSetPrimary = {
+                                    galleryList = galleryList.map {
+                                        it.copy(isPrimary = it.id == item.id)
+                                    }
+                                    Toast.makeText(context, "تم تعيين الصورة كصورة غلاف رئيسية", Toast.LENGTH_SHORT).show()
+                                },
+                                onDelete = {
+                                    galleryList = galleryList.filter { it.id != item.id }
+                                    Toast.makeText(context, "تم حذف الصورة من المعرض", Toast.LENGTH_SHORT).show()
                                 }
-                                Toast.makeText(context, "تم تعيين الصورة كصورة غلاف رئيسية", Toast.LENGTH_SHORT).show()
-                            },
-                            onDelete = {
-                                galleryList = galleryList.filter { it.id != item.id }
-                                Toast.makeText(context, "تم حذف الصورة من المعرض", Toast.LENGTH_SHORT).show()
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
@@ -236,8 +240,8 @@ fun GalleryGridCard(
                     Spacer(modifier = Modifier.width(1.dp))
                 }
 
-                IconButton(onClick = onDelete, modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Default.Delete, contentDescription = "حذف", tint = Color(0xFFEF4444), modifier = Modifier.size(16.dp))
+                IconButton(onClick = onDelete, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.Delete, contentDescription = "حذف", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
                 }
             }
         }

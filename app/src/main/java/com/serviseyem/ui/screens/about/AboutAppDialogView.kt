@@ -50,6 +50,7 @@ fun AboutAppDialogView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(themeColors.primary)
+                        .statusBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -64,7 +65,7 @@ fun AboutAppDialogView(
                         onClick = onDismiss,
                         modifier = Modifier
                             .background(Color.White.copy(alpha = 0.2f), CircleShape)
-                            .size(36.dp)
+                            .size(44.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
@@ -75,7 +76,7 @@ fun AboutAppDialogView(
                     }
                 }
 
-                Box(modifier = Modifier.weight(1f)) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
                     when (val state = uiState) {
                         is AboutUiState.Loading -> {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -94,9 +95,11 @@ fun AboutAppDialogView(
                         is AboutUiState.Success -> {
                             Column(
                                 modifier = Modifier
+                                    .widthIn(max = 840.dp)
                                     .fillMaxSize()
+                                    .navigationBarsPadding()
                                     .verticalScroll(rememberScrollState())
-                                    .padding(20.dp),
+                                    .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 36.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
@@ -116,9 +119,11 @@ fun AboutAppDialogView(
                         is AboutUiState.Editing -> {
                             Column(
                                 modifier = Modifier
+                                    .widthIn(max = 840.dp)
                                     .fillMaxSize()
+                                    .navigationBarsPadding()
                                     .verticalScroll(rememberScrollState())
-                                    .padding(20.dp),
+                                    .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 36.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
@@ -161,6 +166,7 @@ fun AboutAppScreenContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(themeColors.primary)
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -175,7 +181,7 @@ fun AboutAppScreenContent(
                 onClick = { viewModel.goBack() },
                 modifier = Modifier
                     .background(Color.White.copy(alpha = 0.2f), CircleShape)
-                    .size(36.dp)
+                    .size(44.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
@@ -186,7 +192,7 @@ fun AboutAppScreenContent(
             }
         }
 
-        Box(modifier = Modifier.weight(1f)) {
+        Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             when (val state = uiState) {
                 is AboutUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -205,9 +211,10 @@ fun AboutAppScreenContent(
                 is AboutUiState.Success -> {
                     Column(
                         modifier = Modifier
+                            .widthIn(max = 840.dp)
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(20.dp),
+                            .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 110.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
@@ -227,9 +234,10 @@ fun AboutAppScreenContent(
                 is AboutUiState.Editing -> {
                     Column(
                         modifier = Modifier
+                            .widthIn(max = 840.dp)
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(20.dp),
+                            .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 110.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {

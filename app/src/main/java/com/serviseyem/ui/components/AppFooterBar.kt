@@ -49,21 +49,23 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
+            .padding(top = 12.dp)
             .testTag("app_footer_bar")
     ) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(72.dp)
+                .wrapContentHeight()
                 .align(Alignment.BottomCenter),
             color = Color(0xFF121A26),
             shadowElevation = 8.dp
         ) {
             Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 4.dp),
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .heightIn(min = 68.dp)
+                    .padding(horizontal = 4.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -154,7 +156,9 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = (-12).dp)
+                .navigationBarsPadding()
+                .offset(y = (-10).dp)
+                .padding(bottom = 6.dp)
         ) {
             FloatingActionButton(
                 onClick = { viewModel.navigateToScreen(AppScreens.USER_BROWSE) },
@@ -180,17 +184,19 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                     Text(
                         text = "ASH",
                         fontSize = 9.sp,
-                        lineHeight = 11.sp,
+                        lineHeight = 12.sp,
                         fontWeight = FontWeight.Black,
                         color = Color.Black
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = if (isEn) "Home" else "الرئيسية",
                 fontSize = 11.sp,
-                lineHeight = 14.sp,
+                lineHeight = 17.sp,
+                maxLines = 2,
+                softWrap = true,
                 fontWeight = FontWeight.Bold,
                 color = if (isHome) Color(0xFFFFB300) else Color(0xFFC9D2E0),
                 textAlign = TextAlign.Center

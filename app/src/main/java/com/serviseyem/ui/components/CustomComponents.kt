@@ -75,12 +75,13 @@ fun Luxury3DNavIcon(
     forceWhiteText: Boolean = false,
     onClick: () -> Unit
 ) {
-    val actualSize = 32f
+    val actualSize = iconSizeDp.coerceIn(22, 34).toFloat()
     val sizeDp = actualSize.dp
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
+            .heightIn(min = 48.dp)
             .clickable(onClick = onClick)
             .padding(horizontal = 2.dp, vertical = 2.dp)
             .wrapContentHeight()
@@ -157,10 +158,10 @@ fun Luxury3DNavIcon(
         Text(
             text = label,
             fontSize = 11.sp,
-            lineHeight = 15.sp,
-            maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            softWrap = false,
+            lineHeight = 17.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Clip,
+            softWrap = true,
             color = if (isSelected) Color(0xFFFFC93C) else Color(0xFFC9D2E0),
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -437,9 +438,11 @@ fun CategoryChip(name: String, icon: String, isSelected: Boolean, themeColors: V
         Text(
             text = name,
             fontSize = 11.sp,
+            lineHeight = 16.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             color = if (isSelected) themeColors.accent else Color.White,
-            maxLines = 1,
+            maxLines = 2,
+            softWrap = true,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()

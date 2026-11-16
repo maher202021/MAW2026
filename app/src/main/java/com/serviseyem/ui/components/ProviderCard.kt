@@ -319,10 +319,10 @@ fun ProviderCard(
                         shape = RoundedCornerShape(10.dp),
                         color = Color(0xFF1E293B),
                         border = BorderStroke(1.dp, Color(0xFF334155)),
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.sizeIn(minWidth = 44.dp, minHeight = 44.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Star, contentDescription = "المفضلة", tint = Color(0xFFF59E0B), modifier = Modifier.size(17.dp))
+                            Icon(Icons.Default.Star, contentDescription = "المفضلة", tint = Color(0xFFF59E0B), modifier = Modifier.size(18.dp))
                         }
                     }
 
@@ -337,15 +337,15 @@ fun ProviderCard(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f).height(36.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                        modifier = Modifier.weight(1f).heightIn(min = 44.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text("📅", fontSize = 11.sp)
-                            Text("حجز", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            Text("حجز", color = Color.White, fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, softWrap = true, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                         }
                     }
 
@@ -354,16 +354,16 @@ fun ProviderCard(
                         onClick = { showDetailsDialog = true },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f).height(36.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 44.dp),
                         border = BorderStroke(0.8.dp, Color(0xFF334155)),
-                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text("📋", fontSize = 11.sp)
-                            Text("التفاصيل", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            Text("التفاصيل", color = Color.White, fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, softWrap = true, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                         }
                     }
 
@@ -372,15 +372,15 @@ fun ProviderCard(
                         onClick = { onChatOpen(provider.id) },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f).height(36.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                        modifier = Modifier.weight(1f).heightIn(min = 44.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text("💬", fontSize = 11.sp)
-                            Text("محادثة", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            Text("محادثة", color = Color.White, fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, softWrap = true, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                         }
                     }
                 }

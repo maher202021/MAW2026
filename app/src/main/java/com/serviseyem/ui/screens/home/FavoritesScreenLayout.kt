@@ -86,7 +86,7 @@ fun FavoritesScreenLayout(
         modifier = Modifier
             .fillMaxSize()
             .background(themeColors.background),
-        contentPadding = PaddingValues(12.dp),
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 110.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // 1. Header Banner Card (شريط المفضلة العلوي الفاخر)
@@ -151,7 +151,7 @@ fun FavoritesScreenLayout(
                     IconButton(
                         onClick = onBackClick,
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(44.dp)
                             .background(Color.White.copy(alpha = 0.08f), CircleShape)
                     ) {
                         Icon(
@@ -283,7 +283,7 @@ fun FavoritesScreenLayout(
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
                             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 11.dp),
-                            modifier = Modifier.padding(top = 6.dp)
+                            modifier = Modifier.padding(top = 6.dp).heightIn(min = 44.dp)
                         ) {
                             Text(
                                 text = "تصفح المتاجر والخدمات الآن 🚀",
@@ -440,7 +440,7 @@ fun FavoriteProviderCard(
             IconButton(
                 onClick = onCall,
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(44.dp)
                     .background(Color(0xFF10B981).copy(alpha = 0.15f), CircleShape)
             ) {
                 Icon(Icons.Default.Phone, contentDescription = "اتصال", tint = Color(0xFF10B981), modifier = Modifier.size(18.dp))
@@ -449,7 +449,7 @@ fun FavoriteProviderCard(
             IconButton(
                 onClick = onRemoveFavorite,
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(44.dp)
                     .background(Color(0xFFEF4444).copy(alpha = 0.15f), CircleShape)
             ) {
                 Icon(Icons.Default.Favorite, contentDescription = "إزالة من المفضلة", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
@@ -505,7 +505,7 @@ fun FavoriteStoreCard(
                 IconButton(
                     onClick = onCall,
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(44.dp)
                         .background(Color(0xFF10B981).copy(alpha = 0.15f), CircleShape)
                 ) {
                     Icon(Icons.Default.Phone, contentDescription = "اتصال", tint = Color(0xFF10B981), modifier = Modifier.size(18.dp))
@@ -515,7 +515,7 @@ fun FavoriteStoreCard(
             IconButton(
                 onClick = onRemoveFavorite,
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(44.dp)
                     .background(Color(0xFFEF4444).copy(alpha = 0.15f), CircleShape)
             ) {
                 Icon(Icons.Default.Favorite, contentDescription = "إزالة من المفضلة", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
@@ -571,7 +571,7 @@ fun FavoritePropertyCard(
                 IconButton(
                     onClick = onCall,
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(44.dp)
                         .background(Color(0xFF10B981).copy(alpha = 0.15f), CircleShape)
                 ) {
                     Icon(Icons.Default.Phone, contentDescription = "اتصال", tint = Color(0xFF10B981), modifier = Modifier.size(18.dp))
@@ -581,7 +581,7 @@ fun FavoritePropertyCard(
             IconButton(
                 onClick = onRemoveFavorite,
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(44.dp)
                     .background(Color(0xFFEF4444).copy(alpha = 0.15f), CircleShape)
             ) {
                 Icon(Icons.Default.Favorite, contentDescription = "إزالة من المفضلة", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))

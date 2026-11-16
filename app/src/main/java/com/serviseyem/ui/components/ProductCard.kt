@@ -175,8 +175,8 @@ fun ProductListItemCard(
                                     android.widget.Toast.makeText(context, "✅ تم حفظ التعديل السريع للمنتج!", android.widget.Toast.LENGTH_SHORT).show()
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                                modifier = Modifier.height(36.dp)
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                                modifier = Modifier.heightIn(min = 44.dp)
                             ) {
                                 Text("💾 حفظ", fontSize = 9.sp, color = Color.White)
                             }
@@ -222,7 +222,8 @@ fun ProductListItemCard(
                 onClick = onOrderClick,
                 colors = ButtonDefaults.buttonColors(containerColor = if (isMedical) Color(0xFF0284C7) else themeColors.accent),
                 shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                modifier = Modifier.heightIn(min = 44.dp)
             ) {
                 val btnText = when {
                     isMedical -> "📅 حجز موعد"

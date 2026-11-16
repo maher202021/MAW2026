@@ -132,7 +132,7 @@ fun AppHeaderBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -153,7 +153,7 @@ fun AppHeaderBar(
                     // 1. الجهة اليمنى في RTL (البداية): زر الرجوع عند التفرع + زر الإشعارات
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         if (showBackButton) {
                             IconButton(
@@ -234,7 +234,7 @@ fun AppHeaderBar(
                     // 3. الجهة اليسرى في RTL (النهاية): زر البحث + طلباتي + تحديث
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         val isOrdersActive = currentScreen == "ORDERS_VIEW"
                         Surface(
@@ -244,24 +244,24 @@ fun AppHeaderBar(
                             border = BorderStroke(1.dp, Color(0xFFEA580C)),
                             shadowElevation = 2.dp,
                             modifier = Modifier
-                                .heightIn(min = 34.dp)
+                                .heightIn(min = 44.dp)
                                 .wrapContentWidth()
                                 .testTag("header_my_orders_button")
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                             ) {
                                 Text("📋", fontSize = 11.sp)
                                 Text(
                                     text = if (isEn) "Orders" else "طلباتي",
                                     fontSize = 11.5.sp,
-                                    lineHeight = 18.sp,
+                                    lineHeight = 17.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color.White,
-                                    softWrap = false,
-                                    maxLines = 1
+                                    softWrap = true,
+                                    maxLines = 2
                                 )
                             }
                         }

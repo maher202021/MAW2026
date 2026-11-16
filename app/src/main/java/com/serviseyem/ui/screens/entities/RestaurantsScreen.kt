@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -137,9 +138,9 @@ fun RestaurantsScreen(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
                 shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth().height(38.dp)
+                modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp)
             ) {
-                Text("➕ تسجيل وإضافة مطعم / كافيه جديد", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                Text("➕ تسجيل وإضافة مطعم / كافيه جديد", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.5.sp, maxLines = 2, softWrap = true, textAlign = TextAlign.Center)
             }
         },
         itemContent = { rest ->
@@ -425,20 +426,22 @@ fun RestaurantCard(
                         shadowElevation = 3.dp,
                         modifier = Modifier
                             .weight(1f)
-                            .height(29.dp)
+                            .heightIn(min = 44.dp)
                             .clickable { onClick() }
                     ) {
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
-                                .fillMaxSize()
+                                .fillMaxWidth()
+                                .heightIn(min = 44.dp)
                                 .background(
                                     Brush.verticalGradient(
                                         listOf(Color.White.copy(alpha = 0.25f), Color.Transparent)
                                     )
                                 )
+                                .padding(horizontal = 4.dp, vertical = 4.dp)
                         ) {
-                            Text("التفاصيل 📋", fontSize = 9.5.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                            Text("التفاصيل 📋", fontSize = 9.5.sp, lineHeight = 14.sp, maxLines = 2, softWrap = true, textAlign = TextAlign.Center, color = Color.Black, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -449,11 +452,11 @@ fun RestaurantCard(
                         shadowElevation = 2.dp,
                         modifier = Modifier
                             .weight(1.1f)
-                            .height(29.dp)
+                            .heightIn(min = 44.dp)
                             .clickable { onChatClick() }
                     ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Text("محادثة 💬", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(horizontal = 4.dp, vertical = 4.dp)) {
+                            Text("محادثة 💬", color = Color.White, fontSize = 9.5.sp, lineHeight = 14.sp, maxLines = 2, softWrap = true, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -464,11 +467,11 @@ fun RestaurantCard(
                         shadowElevation = 2.dp,
                         modifier = Modifier
                             .weight(1f)
-                            .height(29.dp)
+                            .heightIn(min = 44.dp)
                             .clickable { onOrderMealClick() }
                     ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Text("اطلب 🍕", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(horizontal = 4.dp, vertical = 4.dp)) {
+                            Text("اطلب 🍕", color = Color.White, fontSize = 9.5.sp, lineHeight = 14.sp, maxLines = 2, softWrap = true, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

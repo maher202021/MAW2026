@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -49,13 +50,14 @@ fun OwnerDashboardScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(themeColors.surface)
+                .statusBarsPadding()
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "رجوع", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع", tint = Color.White)
                 }
                 Column {
                     Text(
@@ -98,13 +100,18 @@ fun OwnerDashboardScreen(
             .sumOf { it.totalAmount }
             .takeIf { it > 0.0 } ?: 0.0
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
         ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 840.dp)
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 110.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
             // 4 Stats Cards Grid
             Text("📊 الإحصائيات والأداء اليومي:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
 
@@ -237,6 +244,7 @@ fun OwnerDashboardScreen(
                         }
                     }
                 }
+            }
             }
         }
     }
