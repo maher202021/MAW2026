@@ -253,7 +253,7 @@ class MainActivity : ComponentActivity() {
         var keepSplashOnScreen = true
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             keepSplashOnScreen = false
-        }, 1100)
+        }, 350)
         splashScreen.setKeepOnScreenCondition { keepSplashOnScreen }
         super.onCreate(savedInstanceState)
         pendingNavigationIntent.value = intent
@@ -412,7 +412,42 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = colors.background
                     ) {
-                        AppNavigator(viewModel = viewModel, themeColors = colors, permissionLauncher = permissionLauncher, locationPermissions = locationPermissions)
+                        var showWelcomeSplash by remember { mutableStateOf(true) }
+                        LaunchedEffect(navIntent) {
+                            val active = navIntent
+                            val hasDeepLink = active != null && (
+                                !active.getStringExtra("openChatChannelId").isNullOrBlank() ||
+                                !active.getStringExtra("openUrgentRequestCode").isNullOrBlank() ||
+                                !active.getStringExtra("navigate_to").isNullOrBlank() ||
+                                !active.getStringExtra("target_screen").isNullOrBlank()
+                            )
+                            if (hasDeepLink) {
+                                showWelcomeSplash = false
+                            } else if (showWelcomeSplash) {
+                                kotlinx.coroutines.delay(2200)
+                                showWelcomeSplash = false
+                            }
+                        }
+
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            AppNavigator(
+                                viewModel = viewModel,
+                                themeColors = colors,
+                                permissionLauncher = permissionLauncher,
+                                locationPermissions = locationPermissions
+                            )
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = showWelcomeSplash,
+                                exit = androidx.compose.animation.fadeOut(
+                                    animationSpec = androidx.compose.animation.core.tween(400)
+                                )
+                            ) {
+                                YemenSplashScreen(
+                                    settingsState = settingsState,
+                                    onSkip = { showWelcomeSplash = false }
+                                )
+                            }
+                        }
                     }
                 }
             }

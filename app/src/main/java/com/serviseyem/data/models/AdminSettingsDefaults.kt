@@ -4,7 +4,7 @@ package com.serviseyem.data
  * 🧱 القيم الافتراضية النصية الطويلة المستخدمة في AdminSettingsEntity
  */
 internal object AdminSettingsDefaults {
-    const val WELCOME_MESSAGE = "مرحباً بكم في منصة الخدمات اليمنية الشاملة"
+    const val WELCOME_MESSAGE = "أهلاً بكم في دليل خدمات اليمن — خدمات موثوقة بين يديك"
     const val CHAT_DISABLED_ANNOUNCEMENT = "خدمة الدردشة متوقفة حالياً للصيانة، نعتذر عن الإزعاج"
     const val REGISTRATION_REQUIREMENTS =
         "الاسم الثلاثي للفني|Mandatory,رقم الهاتف|Mandatory,قسم الصيانة|Mandatory,المدينة والمحافظة|Mandatory,الحي أو الشارع|Optional,صورة سيلفي شخصية|Optional,صورة الهوية المهنية|Optional,نماذج من أعمالك السابقة|Optional"
@@ -15,7 +15,7 @@ internal object AdminSettingsDefaults {
     const val ABOUT_CUSTOM_INFO =
         "تطبيق دليل خدمات اليمن الذكي هو منصة متكاملة مخصصة لربط المستخدمين والعملاء بأمهر الفنيين، المهندسين، ومقدمي الخدمات في شتى المجالات والصيانة في مختلف محافظات الجمهورية اليمنية بسهولة وسرعة فائقة."
     const val SPLASH_WELCOME_MESSAGE =
-        "التطبيق الأول في اليمن والوطن العربي الذي يربط مقدمي الخدمات وأصحاب المهن بالمستخدمين فورياً"
+        "منصتك الموثوقة للوصول السريع إلى الفنيين المعتمدين والمتاجر والمراكز الطبية والعقارات في كافة محافظات اليمن بسهولة وأمان"
     const val STORES_TERMS =
         "شروط تسجيل المحل: يرجى إدخال بيانات صحيحة ومطابقة للواقع التجاري وصور واضحة."
     const val PROPERTIES_TERMS =

@@ -285,7 +285,7 @@ fun AdminCustomBannerView(settingsState: AdminSettingsEntity, themeColors: Visua
                     }
                     else -> {
                         // Text Banner
-                        val welcomeMsg = "أهلاً بكم في دليل خدمات اليمن! المنصة الأولى لربط مقدمي الخدمات والمهنيين والمراكز التجارية مع المستخدمين، وانتظروا الإضافات القادمة! ✨"
+                        val welcomeMsg = "أهلاً بكم في دليل خدمات اليمن! منصتكم الموثوقة للتواصل السريع مع مقدمي الخدمات والمهنيين والمتاجر في جميع المحافظات ✨"
                         val displayText = if (settingsState.bannerContent.contains("خصومات") || settingsState.bannerContent.contains("الصيانة الكهربائية") || settingsState.bannerContent.isBlank()) {
                             welcomeMsg
                         } else {

@@ -253,8 +253,13 @@ open class AuthViewModel @Inject constructor() : BaseViewModel() {
             db.collection("providers").whereEqualTo("phone", phoneToLookup).get().addOnSuccessListener { snapshot ->
                 if (snapshot != null && !snapshot.isEmpty) {
                     val candidates = snapshot.documents.mapNotNull { doc ->
-                        doc.toObject(ProviderEntity::class.java)?.let { entity ->
-                            if (entity.id.isBlank()) entity.copy(id = doc.id) else entity
+                        try {
+                            doc.toObject(ProviderEntity::class.java)?.let { entity ->
+                                if (entity.id.isBlank()) entity.copy(id = doc.id) else entity
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("AuthViewModel", "Error parsing provider in autoSync", e)
+                            null
                         }
                     }
                     val prov = candidates.firstOrNull { !it.isDeleted } ?: candidates.firstOrNull()
@@ -279,8 +284,23 @@ open class AuthViewModel @Inject constructor() : BaseViewModel() {
                     db.collection("stores").whereEqualTo("phone", phoneToLookup).get().addOnSuccessListener { sSnap ->
                         if (sSnap != null && !sSnap.isEmpty) {
                             val candidates = sSnap.documents.mapNotNull { doc ->
-                                doc.toObject(com.serviseyem.data.StoreEntity::class.java)?.let { entity ->
-                                    if (entity.id.isBlank()) entity.copy(id = doc.id) else entity
+                                try {
+                                    doc.toObject(com.serviseyem.data.StoreEntity::class.java)?.let { entity ->
+                                        if (entity.id.isBlank()) entity.copy(id = doc.id) else entity
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("AuthViewModel", "Error parsing store in autoSync", e)
+                                    try {
+                                        com.serviseyem.data.StoreEntity(
+                                            id = doc.id,
+                                            name = doc.getString("name") ?: "",
+                                            phone = doc.getString("phone") ?: "",
+                                            cityId = doc.getString("cityId") ?: "",
+                                            isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true
+                                        )
+                                    } catch (_: Exception) {
+                                        null
+                                    }
                                 }
                             }
                             val st = candidates.firstOrNull { !it.isDeleted } ?: candidates.firstOrNull()
@@ -303,7 +323,12 @@ open class AuthViewModel @Inject constructor() : BaseViewModel() {
                         } else {
                             db.collection("pending_providers").whereEqualTo("phone", phoneToLookup).get().addOnSuccessListener { pSnapshot ->
                                 if (pSnapshot != null && !pSnapshot.isEmpty) {
-                                    val pend = pSnapshot.documents.first().toObject(PendingProviderEntity::class.java)
+                                    val pend = try {
+                                        pSnapshot.documents.first().toObject(PendingProviderEntity::class.java)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("AuthViewModel", "Error parsing pending_provider in autoSync", e)
+                                        null
+                                    }
                                     if (pend != null) {
                                         val pendId = "user_" + pend.phone
                                         _currentUserId.value = pendId

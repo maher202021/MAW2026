@@ -1,7 +1,7 @@
 <resources>
     <!-- 🌟 الشاشة الافتتاحية الترحيبية (Android Core SplashScreen) -->
     <style name="Theme.AlYemenServices.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#070A13</item>
+        <item name="windowSplashScreenBackground">#07402D</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
         <item name="postSplashScreenTheme">@style/Theme.AlYemenServices</item>
     </style>

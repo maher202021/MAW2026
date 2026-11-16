@@ -157,9 +157,13 @@ fun loadCardSettings() {
                 ?.addSnapshotListener { snapshot, error ->
                     if (error != null) return@addSnapshotListener
                     if (snapshot != null && snapshot.exists()) {
-                        val settings = snapshot.toObject(CardSettings::class.java)
-                        if (settings != null) {
-                            _cardSettings.value = settings
+                        try {
+                            val settings = snapshot.toObject(CardSettings::class.java)
+                            if (settings != null) {
+                                _cardSettings.value = settings
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("SettingsViewModel", "Error parsing card settings", e)
                         }
                     }
                 }
@@ -172,7 +176,12 @@ fun updateTheme(themeId: String) {
         val updated = _settings.value.copy(activeThemeId = themeId)
         _settings.value = updated
         db.collection("settings").document("main_settings").get().addOnSuccessListener { snapshot ->
-            val s = snapshot.toObject(AdminSettingsEntity::class.java) ?: AdminSettingsEntity()
+            val s = try {
+                snapshot.toObject(AdminSettingsEntity::class.java)
+            } catch (e: Exception) {
+                android.util.Log.e("SettingsViewModel", "Error parsing main_settings", e)
+                null
+            } ?: AdminSettingsEntity()
             db.collection("settings").document("main_settings").set(s.copy(activeThemeId = themeId), com.google.firebase.firestore.SetOptions.merge())
         }.addOnFailureListener {
             db.collection("settings").document("main_settings").set(updated, com.google.firebase.firestore.SetOptions.merge())
@@ -505,7 +514,12 @@ fun triggerManualSync(context: android.content.Context) {
         db.collection("app_settings").document("color_scheme").get()
             .addOnSuccessListener { doc ->
                 if (doc != null && doc.exists()) {
-                    val cloud = doc.toObject(com.serviseyem.data.ColorSchemeEntity::class.java)
+                    val cloud = try {
+                        doc.toObject(com.serviseyem.data.ColorSchemeEntity::class.java)
+                    } catch (e: Exception) {
+                        android.util.Log.e("SettingsViewModel", "Error parsing color_scheme", e)
+                        null
+                    }
                     if (cloud != null) {
                         val local = _colorScheme.value
                         if (cloud.version > local.version) {

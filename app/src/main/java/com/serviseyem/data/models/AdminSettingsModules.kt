@@ -5,7 +5,7 @@ import androidx.annotation.Keep
 @Keep
 data class BrandingSettings(
     val appName: String = "دليل خدمات اليمن",
-    val welcomeMessage: String = "مرحباً بكم في منصة الخدمات اليمنية الشاملة",
+    val welcomeMessage: String = "أهلاً بكم في دليل خدمات اليمن — خدمات موثوقة بين يديك",
     val activeThemeId: String = "EMERALD_YEMEN",
     val customPrimaryHex: String = "#059669",
     val customSecondaryHex: String = "#115E59",
