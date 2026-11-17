@@ -15,6 +15,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -406,7 +408,11 @@ internal fun NavigationPickOnMapBar(
             }
         } else {
             val (la, lo) = pickedNavPoint
-            val nearest = remember(la, lo) { OfflinePlacesDb.nearest(context, la, lo) }
+            val nearest by produceState<String?>(initialValue = null, key1 = la, key2 = lo) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    OfflinePlacesDb.nearest(context, la, lo)
+                }
+            }
             val label = nearest?.let { "قرب $it" } ?: "نقطة على الخريطة"
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("الوجهة: $label", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)

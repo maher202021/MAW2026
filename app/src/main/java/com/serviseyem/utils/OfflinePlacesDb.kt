@@ -84,33 +84,53 @@ object OfflinePlacesDb {
         query: String,
         userLat: Double,
         userLng: Double,
-        limit: Int = 20
+        limit: Int = 25
     ): List<RealValhallaNavigator.SearchAddressResult> {
         val database = open(context) ?: return emptyList()
+        val normQuery = ArabicNormalizer.normalize(query)
         val variants = DialectSynonyms.expand(query)
-            .ifEmpty { listOf(ArabicNormalizer.normalize(query)) }
+            .ifEmpty { listOf(normQuery) }
             .filter { it.length >= 2 }
-            .take(3)
+            .take(8)
         val rows = LinkedHashMap<String, Pair<Row, Int>>()
-        for (v in variants) {
-            val esc = likeEsc(v)
+
+        fun addRows(sql: String, args: Array<String>, matchTerm: String) {
             try {
-                database.rawQuery(
-                    "SELECT name, name_norm, kind, importance, lat, lng FROM places WHERE name_norm LIKE ? ESCAPE '\\' ORDER BY importance DESC LIMIT 80",
-                    arrayOf("%$esc%")
-                ).use { c ->
+                database.rawQuery(sql, args).use { c ->
                     while (c.moveToNext()) {
                         val r = Row(c.getString(0), c.getString(1), c.getString(2), c.getInt(3), c.getDouble(4), c.getDouble(5))
-                        val q = if (r.norm == v) 2 else if (r.norm.startsWith(v)) 1 else 0
+                        val q = if (r.norm == matchTerm) 3 else if (r.norm.startsWith(matchTerm)) 2 else 1
                         val k = "${r.norm}_${"%.3f".format(Locale.US, r.lat)}_${"%.3f".format(Locale.US, r.lng)}"
                         val prev = rows[k]
                         if (prev == null || prev.second < q) rows[k] = r to q
                     }
                 }
             } catch (_: Exception) {
-                // تجاهل فشل استعلام واحد
             }
         }
+
+        // 1) Multi-token AND query if user typed multiple words (e.g. "جولة المصباحي" or "صرافة حدة")
+        val tokens = normQuery.split(' ').filter { it.length >= 2 }
+        if (tokens.size >= 2) {
+            val whereClause = tokens.joinToString(" AND ") { "name_norm LIKE ? ESCAPE '\\'" }
+            val args = tokens.map { "%${likeEsc(it)}%" }.toTypedArray()
+            addRows(
+                "SELECT name, name_norm, kind, importance, lat, lng FROM places WHERE $whereClause ORDER BY importance DESC LIMIT 60",
+                args,
+                normQuery
+            )
+        }
+
+        // 2) Full & expanded dialect variant queries
+        for (v in variants) {
+            val esc = likeEsc(v)
+            addRows(
+                "SELECT name, name_norm, kind, importance, lat, lng FROM places WHERE name_norm LIKE ? ESCAPE '\\' ORDER BY importance DESC LIMIT 60",
+                arrayOf("%$esc%"),
+                v
+            )
+        }
+
         val hasUser = LandmarkAddress.isValid(userLat, userLng)
         return rows.values.sortedWith(
             compareByDescending<Pair<Row, Int>> { it.second }

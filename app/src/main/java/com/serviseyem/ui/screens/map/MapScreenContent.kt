@@ -294,78 +294,115 @@ fun MapScreenContent(
                 state.currentMapMode = MapMode.VELA_3D
             }
 
-            MapFilterBar(
-                selectedCategory = state.selectedCategory,
-                onCategorySelected = { state.selectedCategory = it },
-                selectedCity = state.selectedCity,
-                onCitySelected = { city ->
-                    state.selectedCity = city
-                    if (city != "الكل") {
-                        val coords = OfflineMapManager.getCityCoordinates(city)
-                        viewModel.updateUserLocation(coords.latitude, coords.longitude)
-                    }
-                },
-                searchQuery = state.searchQuery,
-                onSearchQueryChange = { state.searchQuery = it },
-                onResultSelected = { result ->
-                    state.searchQuery = result.title
-                    state.panOffset = Offset.Zero
-                    state.zoomScale = 1.8f
-                    val script = "if (window.flyToLocation) { window.flyToLocation(${result.latitude}, ${result.longitude}, 18); }"
-                    webViewRef?.evaluateJavascript(script, null)
-                    when (val item = result.originalItem) {
-                        is ProviderEntity -> state.selectedEntity = item
-                        is StoreEntity -> state.selectedEntity = item
-                        is PropertyEntity -> state.selectedEntity = item
-                        is StreetOrLandmark -> {
-                            state.pendingNavDestination = item
-                            state.currentMapMode = MapMode.NAVIGATION
-                        }
-                    }
-                },
-                providers = providers,
-                stores = stores,
-                properties = properties,
-                userLat = safeUserLat,
-                userLng = safeUserLng,
-                onBackClick = onBackClick,
-                focusTick = searchFocusTick,
-                onVoiceSearchClick = {
-                    if (voiceHelper.hasMicPermission()) voiceHelper.start()
-                    else micPermLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                },
-                themeColors = themeColors,
+            Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
+                    .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(top = 8.dp)
-            )
-
-            if (state.isContextualSuggestionVisible) {
-                ContextualSmartSuggestionsCard(
-                    isVisible = state.isContextualSuggestionVisible,
-                    currentCity = state.selectedCity,
-                    onApplySuggestion = { cat ->
-                        state.selectedCategory = cat
-                        state.isContextualSuggestionVisible = false
+                    .padding(top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                MapFilterBar(
+                    selectedCategory = state.selectedCategory,
+                    onCategorySelected = { state.selectedCategory = it },
+                    selectedCity = state.selectedCity,
+                    onCitySelected = { city ->
+                        state.selectedCity = city
+                        if (city != "الكل") {
+                            val coords = OfflineMapManager.getCityCoordinates(city)
+                            viewModel.updateUserLocation(coords.latitude, coords.longitude)
+                        }
                     },
-                    onDismiss = { state.isContextualSuggestionVisible = false },
-                    themeColors = themeColors,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .statusBarsPadding()
-                        .padding(top = 70.dp, start = 16.dp, end = 16.dp)
+                    searchQuery = state.searchQuery,
+                    onSearchQueryChange = { state.searchQuery = it },
+                    onResultSelected = { result ->
+                        state.panOffset = Offset.Zero
+                        state.zoomScale = 1.8f
+                        webViewRef?.post {
+                            webViewRef?.evaluateJavascript(
+                                "if (window.flyToLocation) { window.flyToLocation(${result.latitude}, ${result.longitude}, 17); }",
+                                null
+                            )
+                        }
+                        when (val item = result.originalItem) {
+                            is ProviderEntity -> {
+                                state.searchQuery = result.title
+                                state.selectedEntity = item
+                            }
+                            is StoreEntity -> {
+                                state.searchQuery = result.title
+                                state.selectedEntity = item
+                            }
+                            is PropertyEntity -> {
+                                state.searchQuery = result.title
+                                state.selectedEntity = item
+                            }
+                            is StreetOrLandmark -> {
+                                state.searchQuery = ""
+                                val markerArr = org.json.JSONArray().put(
+                                    org.json.JSONObject()
+                                        .put("name", item.name)
+                                        .put("lat", result.latitude)
+                                        .put("lng", result.longitude)
+                                )
+                                webViewRef?.post {
+                                    webViewRef?.evaluateJavascript(
+                                        "if (window.setWaypointMarkers) { window.setWaypointMarkers($markerArr); }",
+                                        null
+                                    )
+                                }
+                                state.pendingNavDestination = item
+                                state.currentMapMode = MapMode.NAVIGATION
+                            }
+                            else -> {
+                                state.searchQuery = ""
+                                val landmark = StreetOrLandmark(
+                                    name = result.title,
+                                    type = result.subtitle,
+                                    city = state.selectedCity,
+                                    area = result.subtitle,
+                                    lat = result.latitude,
+                                    lng = result.longitude
+                                )
+                                state.pendingNavDestination = landmark
+                                state.currentMapMode = MapMode.NAVIGATION
+                            }
+                        }
+                    },
+                    providers = providers,
+                    stores = stores,
+                    properties = properties,
+                    userLat = safeUserLat,
+                    userLng = safeUserLng,
+                    onBackClick = onBackClick,
+                    focusTick = searchFocusTick,
+                    onVoiceSearchClick = {
+                        if (voiceHelper.hasMicPermission()) voiceHelper.start()
+                        else micPermLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    },
+                    themeColors = themeColors
                 )
-            }
 
-            MapGnssBadge(
-                satelliteStatus = satelliteStatus,
-                onClick = { state.isGnssPanelOpen = true },
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .statusBarsPadding()
-                    .padding(top = 70.dp, start = 12.dp)
-            )
+                MapGnssBadge(
+                    satelliteStatus = satelliteStatus,
+                    onClick = { state.isGnssPanelOpen = true },
+                    modifier = Modifier.padding(start = 12.dp)
+                )
+
+                if (state.isContextualSuggestionVisible) {
+                    ContextualSmartSuggestionsCard(
+                        isVisible = state.isContextualSuggestionVisible,
+                        currentCity = state.selectedCity,
+                        onApplySuggestion = { cat ->
+                            state.selectedCategory = cat
+                            state.isContextualSuggestionVisible = false
+                        },
+                        onDismiss = { state.isContextualSuggestionVisible = false },
+                        themeColors = themeColors,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+            }
 
             MapControlsDock(
                 state = state,
@@ -421,8 +458,8 @@ fun MapScreenContent(
                     themeColors = themeColors,
                     initialDestination = state.pendingNavDestination,
                     onDrawRouteOnMap = { lat1, lng1, lat2, lng2, destName ->
-                        val escapedName = destName.replace("'", "\\'")
-                        val script = "if (window.drawRoute) { window.drawRoute($lat1, $lng1, $lat2, $lng2, '#00E5FF', '$escapedName'); }"
+                        val quotedName = org.json.JSONObject.quote(destName)
+                        val script = "if (window.drawRoute) { window.drawRoute($lat1, $lng1, $lat2, $lng2, '#00E5FF', $quotedName); }"
                         webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
                     },
                     onClearRoute = {

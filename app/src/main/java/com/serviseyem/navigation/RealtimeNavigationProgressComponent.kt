@@ -100,14 +100,14 @@ fun RealtimeNavigationProgressComponent(
                 IconButton(
                     onClick = onToggleVoice,
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(48.dp)
                         .background(Color.White.copy(alpha = 0.08f), CircleShape)
                 ) {
                     Icon(
                         imageVector = if (isVoiceMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                        contentDescription = "الصوت",
+                        contentDescription = "تبديل التوجيه الصوتي",
                         tint = if (isVoiceMuted) Color.Gray else Color(0xFF00E5FF),
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }

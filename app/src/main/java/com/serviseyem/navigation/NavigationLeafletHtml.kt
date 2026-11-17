@@ -1,44 +1,6 @@
 package com.serviseyem.navigation
 
-import org.json.JSONArray
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
-
-internal fun fetchNominatimPlaces(query: String): List<NavigationSearchResult> {
-    return try {
-        val encoded = URLEncoder.encode("$query, Yemen", "UTF-8")
-        val url = URL("https://nominatim.openstreetmap.org/search?format=json&q=$encoded&countrycodes=ye&limit=5&addressdetails=1")
-        val conn = (url.openConnection() as HttpURLConnection).apply {
-            connectTimeout = 5000
-            readTimeout = 5000
-            setRequestProperty("User-Agent", "YemenServicesGuide/1.0 (Android)")
-        }
-
-        if (conn.responseCode == 200) {
-            val text = conn.inputStream.bufferedReader().use { it.readText() }
-            val array = JSONArray(text)
-            val list = mutableListOf<NavigationSearchResult>()
-            for (i in 0 until array.length()) {
-                val obj = array.getJSONObject(i)
-                val displayName = obj.optString("display_name", "")
-                val parts = displayName.split(",")
-                val title = parts.firstOrNull()?.trim() ?: displayName
-                val subtitle = parts.drop(1).take(2).joinToString(", ").trim()
-                val lat = obj.optDouble("lat", 0.0)
-                val lon = obj.optDouble("lon", 0.0)
-                if (lat != 0.0 && lon != 0.0) {
-                    list.add(NavigationSearchResult(title = title, subtitle = subtitle, lat = lat, lng = lon, isLocal = false))
-                }
-            }
-            list
-        } else {
-            emptyList()
-        }
-    } catch (_: Exception) {
-        emptyList()
-    }
-}
+import org.json.JSONObject
 
 internal fun buildNavigationLeafletHtml(
     startLat: Double,
@@ -53,14 +15,16 @@ internal fun buildNavigationLeafletHtml(
     } else {
         "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
     }
+    val subdomainsValue = if (preferOsmOffline) "abc" else "abcd"
+    val safeDestJson = JSONObject.quote(destName)
     return """
     <!DOCTYPE html>
     <html lang="ar" dir="rtl">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <link rel="stylesheet" href="file:///android_asset/leaflet.css" />
+        <script src="file:///android_asset/leaflet.js"></script>
         <style>
             html, body, #map { width: 100%; height: 100%; margin: 0; padding: 0; background: #070B14; }
             #map.no-tiles {
@@ -99,12 +63,10 @@ internal fun buildNavigationLeafletHtml(
                 font-family: sans-serif;
                 pointer-events: none;
             }
-            .user-pulse {
-                width: 22px; height: 22px;
-                background: #00E5FF;
-                border: 3px solid #ffffff;
-                border-radius: 50%;
-                box-shadow: 0 0 15px #00E5FF;
+            .user-nav-arrow {
+                width: 30px; height: 30px;
+                display: flex; align-items: center; justify-content: center;
+                transition: transform 0.25s ease;
             }
             .dest-pulse {
                 width: 26px; height: 26px;
@@ -129,7 +91,7 @@ internal fun buildNavigationLeafletHtml(
 
             var baseLayer = L.tileLayer('$primaryTileUrl', {
                 maxZoom: 19,
-                subdomains: 'abcd'
+                subdomains: '$subdomainsValue'
             }).addTo(map);
 
             var tileErrCount = 0;
@@ -150,11 +112,20 @@ internal fun buildNavigationLeafletHtml(
             });
             baseLayer.on('tileload', function() { tileErrCount = 0; notifyNavTiles(false); });
 
-            var userIcon = L.divIcon({ className: 'user-pulse', iconSize: [22, 22] });
-            var destIcon = L.divIcon({ className: 'dest-pulse', iconSize: [26, 26] });
+            function makeUserHtml(deg) {
+                var rot = isFinite(deg) ? deg : 0;
+                return '<div class="user-nav-arrow" style="transform:rotate(' + rot + 'deg)">' +
+                    '<svg width="30" height="30" viewBox="0 0 30 30">' +
+                    '<circle cx="15" cy="15" r="12" fill="rgba(0,229,255,0.22)" />' +
+                    '<path d="M15 3 L23 24 L15 19 L7 24 Z" fill="#00E5FF" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/>' +
+                    '</svg></div>';
+            }
+            var userIcon = L.divIcon({ className: '', html: makeUserHtml(0), iconSize: [30, 30], iconAnchor: [15, 15] });
+            var destIcon = L.divIcon({ className: 'dest-pulse', iconSize: [26, 26], iconAnchor: [13, 13] });
 
             var userMarker = L.marker([$startLat, $startLon], { icon: userIcon }).addTo(map);
-            var destMarker = L.marker([$endLat, $endLon], { icon: destIcon }).addTo(map).bindPopup('$destName');
+            var destMarker = L.marker([$endLat, $endLon], { icon: destIcon }).addTo(map).bindPopup('');
+            destMarker.getPopup().setContent($safeDestJson);
 
             var routePolyline = null;
             var pickMode = false;
@@ -171,19 +142,13 @@ internal fun buildNavigationLeafletHtml(
             });
 
             window.renderNavigationRouteSafe = function(args) {
-                var sLat = args.sLat;
-                var sLng = args.sLng;
-                var eLat = args.eLat;
-                var eLng = args.eLng;
-                var coords = args.coords || [];
-                var title = args.title || '';
-                window.renderNavigationRoute(sLat, sLng, eLat, eLng, coords, title);
+                window.renderNavigationRoute(args.sLat, args.sLng, args.eLat, args.eLng, args.coords || [], args.title || '');
             };
 
             window.renderNavigationRoute = function(sLat, sLng, eLat, eLng, coords, title) {
                 userMarker.setLatLng([sLat, sLng]);
                 destMarker.setLatLng([eLat, eLng]);
-                destMarker.setPopupContent(title);
+                destMarker.setPopupContent(String(title || ''));
 
                 if (routePolyline) {
                     map.removeLayer(routePolyline);
@@ -201,11 +166,25 @@ internal fun buildNavigationLeafletHtml(
                     lineJoin: 'round'
                 }).addTo(map);
 
-                map.fitBounds(routePolyline.getBounds(), { padding: [80, 80] });
+                if (latlngs.length > 0) {
+                    map.fitBounds(routePolyline.getBounds(), { padding: [80, 80] });
+                }
             };
 
             window.updateUserPosition = function(lat, lng, heading) {
                 userMarker.setLatLng([lat, lng]);
+                var arrow = userMarker.getElement() && userMarker.getElement().querySelector('.user-nav-arrow');
+                if (arrow && isFinite(heading)) {
+                    arrow.style.transform = 'rotate(' + heading + 'deg)';
+                }
+            };
+
+            window.applySmartZoom = function(zoomLevel) {
+                if (!isFinite(zoomLevel)) return;
+                var cur = map.getZoom();
+                if (Math.abs(cur - zoomLevel) >= 1) {
+                    map.setZoom(zoomLevel, { animate: true });
+                }
             };
 
             window.centerOnUser = function(lat, lng) {

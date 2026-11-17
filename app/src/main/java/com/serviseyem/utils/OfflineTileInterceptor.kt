@@ -220,7 +220,10 @@ object OfflineTileInterceptor {
     fun intercept(context: Context, request: WebResourceRequest?): WebResourceResponse? {
         val uri = request?.url ?: return null
         val host = uri.host?.lowercase() ?: return null
-        if (!host.endsWith("openstreetmap.org")) return null
+        val isStandardXyzHost = host.endsWith("openstreetmap.org") ||
+            host.endsWith("opentopomap.org") ||
+            host.endsWith("cartocdn.com")
+        if (!isStandardXyzHost) return null
 
         val path = uri.path ?: return null
         val match = OSM_TILE_REGEX.matchEntire(path) ?: return null

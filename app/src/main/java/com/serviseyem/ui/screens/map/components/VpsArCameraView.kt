@@ -1,7 +1,12 @@
 package com.serviseyem.ui.screens.map.components
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -9,7 +14,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -43,7 +47,14 @@ import androidx.core.content.ContextCompat
 import com.serviseyem.data.PropertyEntity
 import com.serviseyem.data.ProviderEntity
 import com.serviseyem.data.StoreEntity
+import com.serviseyem.ui.screens.map.utils.MapDistanceCalculator
+import com.serviseyem.utils.CrossFuzzySearchEngine
+import com.serviseyem.utils.OfflinePlacesDb
 import com.serviseyem.utils.VisualThemePalette
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Composable
 fun VpsArCameraView(
@@ -93,6 +104,69 @@ fun VpsArCameraView(
         nearbyStores.take(5).forEach { list.add(Triple(it.name, "🏪 متجر", it)) }
         nearbyProperties.take(3).forEach { list.add(Triple(it.title, "🏢 عقار", it)) }
         list
+    }
+
+    // Real-time compass azimuth for AR bearing indicator
+    var deviceAzimuth by remember { mutableFloatStateOf(0f) }
+    DisposableEffect(context) {
+        val sm = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        val rotSensor = sm?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+        val listener = object : SensorEventListener {
+            private val rotMatrix = FloatArray(9)
+            private val orientation = FloatArray(3)
+            override fun onSensorChanged(event: SensorEvent) {
+                if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
+                    SensorManager.getRotationMatrixFromVector(rotMatrix, event.values)
+                    SensorManager.getOrientation(rotMatrix, orientation)
+                    val deg = ((Math.toDegrees(orientation[0].toDouble()).toFloat() % 360f) + 360f) % 360f
+                    if (abs(deg - deviceAzimuth) >= 2f) {
+                        deviceAzimuth = deg
+                    }
+                }
+            }
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+        }
+        if (sm != null && rotSensor != null) {
+            sm.registerListener(listener, rotSensor, SensorManager.SENSOR_DELAY_UI)
+        }
+        onDispose {
+            sm?.unregisterListener(listener)
+        }
+    }
+
+    val offlineNearestDb by produceState<String?>(initialValue = null, key1 = userLat, key2 = userLng) {
+        if (userLat != 0.0 || userLng != 0.0) {
+            value = withContext(Dispatchers.IO) { OfflinePlacesDb.nearest(context, userLat, userLng, 900.0) }
+        }
+    }
+
+    val allLandmarks = remember(context) { CrossFuzzySearchEngine.getOrLoadLandmarks(context) }
+    val facingLandmarkText = remember(userLat, userLng, deviceAzimuth, allLandmarks, offlineNearestDb) {
+        val dirLabel = MapDistanceCalculator.cardinalDirectionAr(deviceAzimuth)
+        if (userLat == 0.0 && userLng == 0.0) {
+            "اتجاه البوصلة: $dirLabel (${deviceAzimuth.roundToInt()}°) • جارٍ تثبيت GPS"
+        } else {
+            val best = allLandmarks
+                .map { lm ->
+                    val dist = MapDistanceCalculator.calculateDistanceMeters(userLat, userLng, lm.lat, lm.lng)
+                    val bearing = MapDistanceCalculator.calculateBearingDegrees(userLat, userLng, lm.lat, lm.lng)
+                    val diff = abs(((bearing - deviceAzimuth + 540f) % 360f) - 180f)
+                    Triple(lm, dist, diff)
+                }
+                .minByOrNull { (_, dist, diff) -> dist + diff * 18.0 }
+
+            when {
+                best != null && best.second < 15_000 -> {
+                    val distStr = MapDistanceCalculator.formatDistance(best.second)
+                    val lmDir = MapDistanceCalculator.cardinalDirectionAr(
+                        MapDistanceCalculator.calculateBearingDegrees(userLat, userLng, best.first.lat, best.first.lng)
+                    )
+                    "${best.first.name} (${best.first.city}) • $distStr نحو $lmDir"
+                }
+                !offlineNearestDb.isNullOrBlank() -> "$offlineNearestDb • اتجاه $dirLabel (${deviceAzimuth.roundToInt()}°)"
+                else -> "اتجاه الكاميرا: $dirLabel (${deviceAzimuth.roundToInt()}°)"
+            }
+        }
     }
 
     Box(
@@ -209,6 +283,7 @@ fun VpsArCameraView(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
                     border = BorderStroke(1.dp, Color(0xFF00E5FF)),
                     shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Icon(
@@ -354,7 +429,7 @@ fun VpsArCameraView(
                 }
             }
 
-            // 📷 ميزة النقطة 15: التقاط المعالم والشوارع في وضع الواقع المعزز (AR Street Overlay)
+            // AR Dynamic Landmark & Compass Bearing Overlay
             Surface(
                 shape = RoundedCornerShape(14.dp),
                 color = Color(0xFF1E293B).copy(alpha = 0.9f),
@@ -373,16 +448,18 @@ fun VpsArCameraView(
                     )
                     Column {
                         Text(
-                            text = "الشارع / المعلم المقابل للكاميرا 🎯",
+                            text = "المعلم المقابل للكاميرا والبوصلة 🎯",
                             color = Color(0xFF10B981),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "شارع حدة • تقاطع الرويشان الرئيسي (صنعاء)",
+                            text = facingLandmarkText,
                             color = Color.White,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }

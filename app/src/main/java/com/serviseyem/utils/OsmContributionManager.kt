@@ -43,6 +43,7 @@ object OsmContributionManager {
         }
         array.put(obj)
         prefs.edit().putString("landmarks", array.toString()).apply()
+        CrossFuzzySearchEngine.invalidateCache()
     }
 
     fun getPendingLandmarks(context: Context): List<LandmarkNode> {

@@ -31,35 +31,53 @@ class NavigationForegroundService : Service() {
         const val EXTRA_DISTANCE = "EXTRA_DISTANCE"
         const val EXTRA_ETA = "EXTRA_ETA"
 
+        @Volatile
+        var isRunning = false
+
         fun startService(context: Context, instruction: String, distance: String, eta: String) {
-            val intent = Intent(context, NavigationForegroundService::class.java).apply {
-                action = ACTION_START
-                putExtra(EXTRA_INSTRUCTION, instruction)
-                putExtra(EXTRA_DISTANCE, distance)
-                putExtra(EXTRA_ETA, eta)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            try {
+                val intent = Intent(context, NavigationForegroundService::class.java).apply {
+                    action = ACTION_START
+                    putExtra(EXTRA_INSTRUCTION, instruction)
+                    putExtra(EXTRA_DISTANCE, distance)
+                    putExtra(EXTRA_ETA, eta)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+                isRunning = true
+            } catch (_: Exception) {
+                isRunning = false
             }
         }
 
         fun stopService(context: Context) {
-            val intent = Intent(context, NavigationForegroundService::class.java).apply {
-                action = ACTION_STOP
+            if (!isRunning) return
+            try {
+                val intent = Intent(context, NavigationForegroundService::class.java).apply {
+                    action = ACTION_STOP
+                }
+                context.startService(intent)
+            } catch (_: Exception) {
+            } finally {
+                isRunning = false
             }
-            context.startService(intent)
         }
 
         fun updateNotification(context: Context, instruction: String, distance: String, eta: String) {
-            val intent = Intent(context, NavigationForegroundService::class.java).apply {
-                action = ACTION_UPDATE
-                putExtra(EXTRA_INSTRUCTION, instruction)
-                putExtra(EXTRA_DISTANCE, distance)
-                putExtra(EXTRA_ETA, eta)
+            if (!isRunning) return
+            try {
+                val intent = Intent(context, NavigationForegroundService::class.java).apply {
+                    action = ACTION_UPDATE
+                    putExtra(EXTRA_INSTRUCTION, instruction)
+                    putExtra(EXTRA_DISTANCE, distance)
+                    putExtra(EXTRA_ETA, eta)
+                }
+                context.startService(intent)
+            } catch (_: Exception) {
             }
-            context.startService(intent)
         }
     }
 
@@ -75,6 +93,7 @@ class NavigationForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
+                isRunning = true
                 currentInstruction = intent.getStringExtra(EXTRA_INSTRUCTION) ?: "الملاحة قيد التشغيل..."
                 currentDistance = intent.getStringExtra(EXTRA_DISTANCE) ?: ""
                 currentEta = intent.getStringExtra(EXTRA_ETA) ?: ""
@@ -87,6 +106,7 @@ class NavigationForegroundService : Service() {
                 updateExistingNotification()
             }
             ACTION_STOP -> {
+                isRunning = false
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }

@@ -90,18 +90,59 @@ class MapScreenState(
 
     companion object {
         val Saver: Saver<MapScreenState, *> = listSaver(
-            save = { listOf(it.isRadarMode, it.isHeatmapActive, it.selectedCategory, it.selectedCity, it.searchQuery, it.maxRangeKm, it.currentMapMode.name) },
-            restore = {
-                val mode = try { MapMode.valueOf(it.getOrNull(6) as? String ?: "VELA_3D") } catch (e: Exception) { MapMode.VELA_3D }
-                MapScreenState(
-                    isRadarMode = it[0] as Boolean,
-                    isHeatmapActive = it[1] as Boolean,
-                    selectedCategory = it[2] as String,
-                    selectedCity = it[3] as String,
-                    searchQuery = it[4] as String,
-                    maxRangeKm = (it[5] as Number).toFloat(),
-                    initialMode = mode
+            save = {
+                listOf(
+                    it.isRadarMode,
+                    it.isHeatmapActive,
+                    it.selectedCategory,
+                    it.selectedCity,
+                    it.searchQuery,
+                    it.maxRangeKm,
+                    it.currentMapMode.name,
+                    it.currentMapLayer,
+                    it.tiltAngle,
+                    it.is3DBuildingsActive,
+                    it.isNightModeActive,
+                    it.isNasaGibsActive,
+                    it.gibsProduct,
+                    it.isEoxCloudlessActive,
+                    it.isEsriImageryActive,
+                    it.eumetEnabled,
+                    it.eumetLayerName,
+                    it.isEarthquakeLayerActive,
+                    it.isDeadZoneOverlayActive,
+                    it.isReliabilityLayerActive,
+                    it.isRoadSafetyActive,
+                    it.isContextualSuggestionVisible
                 )
+            },
+            restore = { saved ->
+                val mode = try { MapMode.valueOf(saved.getOrNull(6) as? String ?: "VELA_3D") } catch (_: Exception) { MapMode.VELA_3D }
+                MapScreenState(
+                    isRadarMode = saved[0] as Boolean,
+                    isHeatmapActive = saved[1] as Boolean,
+                    selectedCategory = saved[2] as String,
+                    selectedCity = saved[3] as String,
+                    searchQuery = saved[4] as String,
+                    maxRangeKm = (saved[5] as Number).toFloat(),
+                    initialMode = mode
+                ).apply {
+                    currentMapLayer = (saved.getOrNull(7) as? String) ?: "google_satellite"
+                    tiltAngle = (saved.getOrNull(8) as? Number)?.toFloat() ?: 30f
+                    is3DBuildingsActive = (saved.getOrNull(9) as? Boolean) ?: true
+                    isNightModeActive = (saved.getOrNull(10) as? Boolean) ?: false
+                    isNasaGibsActive = (saved.getOrNull(11) as? Boolean) ?: false
+                    gibsProduct = (saved.getOrNull(12) as? String) ?: "viirs_noaa20"
+                    isEoxCloudlessActive = (saved.getOrNull(13) as? Boolean) ?: false
+                    isEsriImageryActive = (saved.getOrNull(14) as? Boolean) ?: false
+                    eumetEnabled = (saved.getOrNull(15) as? Boolean) ?: false
+                    eumetLayerName = (saved.getOrNull(16) as? String) ?: ""
+                    isEarthquakeLayerActive = (saved.getOrNull(17) as? Boolean) ?: false
+                    isDeadZoneOverlayActive = (saved.getOrNull(18) as? Boolean) ?: false
+                    isReliabilityLayerActive = (saved.getOrNull(19) as? Boolean) ?: false
+                    isRoadSafetyActive = (saved.getOrNull(20) as? Boolean) ?: false
+                    isContextualSuggestionVisible = (saved.getOrNull(21) as? Boolean) ?: true
+                }
             }
         )
     }

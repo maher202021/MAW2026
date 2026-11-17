@@ -26,12 +26,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.serviseyem.VoiceManager
-import com.serviseyem.ui.screens.map.utils.NavigationRouteInfo
+import com.serviseyem.ui.screens.map.utils.MapDistanceCalculator
 import com.serviseyem.ui.screens.map.utils.StreetOrLandmark
-import com.serviseyem.ui.screens.map.utils.YemeniCityLocation
 import com.serviseyem.ui.screens.map.utils.YemeniNavigationHub
 import com.serviseyem.utils.ValhallaDownloadManager
 import com.serviseyem.utils.VisualThemePalette
+import java.util.Locale
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -177,7 +179,7 @@ fun SmartNavigationPanel(
                             border = BorderStroke(1.dp, Color(0xFF38BDF8)),
                             shape = RoundedCornerShape(10.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.height(36.dp)
+                            modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                         ) {
                             Text("الوجهة", color = Color(0xFF38BDF8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
@@ -189,7 +191,7 @@ fun SmartNavigationPanel(
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                         shape = RoundedCornerShape(10.dp),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                        modifier = Modifier.height(36.dp)
+                        modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                     ) {
                         Icon(Icons.Default.ExpandLess, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(2.dp))
@@ -204,7 +206,7 @@ fun SmartNavigationPanel(
                             onCloseNavigation()
                         },
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(48.dp)
                             .background(Color(0xFF1E293B), CircleShape)
                     ) {
                         Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
@@ -255,8 +257,25 @@ fun SmartNavigationPanel(
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        // Voice Mute / Unmute Toggle
+                        IconButton(
+                            onClick = {
+                                isVoiceEnabled = !isVoiceEnabled
+                                if (!isVoiceEnabled) VoiceManager.stop()
+                                else VoiceManager.speak(context, "تم تفعيل التوجيه الصوتي")
+                            },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isVoiceEnabled) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                                contentDescription = if (isVoiceEnabled) "كتم الصوت" else "تفعيل الصوت",
+                                tint = if (isVoiceEnabled) Color(0xFF00E5FF) else Color.Gray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
                         // Minimize Button to let user see map fully
                         Button(
                             onClick = { isCollapsed = true },
@@ -264,11 +283,11 @@ fun SmartNavigationPanel(
                             border = BorderStroke(1.dp, Color(0xFF00E5FF)),
                             shape = RoundedCornerShape(10.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.height(32.dp)
+                            modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                         ) {
                             Icon(Icons.Default.ExpandMore, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(2.dp))
-                            Text("تصغير لرؤية الخريطة", color = Color(0xFF00E5FF), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("تصغير", color = Color(0xFF00E5FF), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
 
                         // Close Navigation
@@ -279,10 +298,10 @@ fun SmartNavigationPanel(
                                 onCloseNavigation()
                             },
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(48.dp)
                                 .background(Color(0xFF1E293B), CircleShape)
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color(0xFFEF4444), modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
                         }
                     }
                 }
@@ -334,7 +353,7 @@ fun SmartNavigationPanel(
                         onClick = {
                             selectedNavTab = 2
                             if (isVoiceEnabled) {
-                                VoiceManager.speak("تم تفعيل وضع المشي، يعرض المساجد ونقاط المياه ودرجة الانحدار")
+                                VoiceManager.speak(context, "تم تفعيل وضع المشي لعرض أقرب المساجد ونقاط الخدمات")
                             }
                         },
                         text = {
@@ -348,9 +367,30 @@ fun SmartNavigationPanel(
                     )
                 }
 
+                // Dynamic nearest POIs relative to current GPS for walking mode
+                val nearestMosqueText = remember(userLat, userLng, allLandmarks) {
+                    if (userLat == 0.0 && userLng == 0.0) return@remember "حدد GPS"
+                    val m = allLandmarks
+                        .filter { it.name.contains("جامع") || it.name.contains("مسجد") }
+                        .map { it to MapDistanceCalculator.calculateDistanceMeters(userLat, userLng, it.lat, it.lng) }
+                        .minByOrNull { it.second }
+                    if (m != null) "${m.first.name} (${MapDistanceCalculator.formatDistance(m.second)})" else "لا مساجد مسجلة قريبة"
+                }
+                val nearestSupplyText = remember(userLat, userLng, allLandmarks) {
+                    if (userLat == 0.0 && userLng == 0.0) return@remember "حدد GPS"
+                    val s = allLandmarks
+                        .filter { it.name.contains("سوق") || it.name.contains("مركز") || it.name.contains("مستشفى") || it.type.contains("تجاري") || it.type.contains("ماء") }
+                        .map { it to MapDistanceCalculator.calculateDistanceMeters(userLat, userLng, it.lat, it.lng) }
+                        .minByOrNull { it.second }
+                    if (s != null) "${s.first.name} (${MapDistanceCalculator.formatDistance(s.second)})" else "ابحث بالاسم للخدمات"
+                }
+                val walkingTimeText = remember(activeRoute.distanceKm) {
+                    val mins = max(1, ((activeRoute.distanceKm / 4.2) * 60).roundToInt())
+                    if (mins >= 60) "${mins / 60} س ${mins % 60} د" else "$mins دقيقة سيراً"
+                }
+
                 // Main Tab Body
                 if (selectedNavTab == 2) {
-                    // 🥈 الفكرة الثانية: "المشي كمواطن من الدرجة الأولى" (مساجد، مياه شرب سبيل، بقالات، انحدار جبلي)
                     Card(
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF162032)),
@@ -361,7 +401,7 @@ fun SmartNavigationPanel(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "🚶 مميزات مسار المشي في اليمن:",
+                                text = "🚶 مميزات مسار المشي في محيطك:",
                                 color = Color(0xFFF59E0B),
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold
@@ -373,19 +413,19 @@ fun SmartNavigationPanel(
                                 Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF1E293B), modifier = Modifier.weight(1f).padding(2.dp)) {
                                     Column(modifier = Modifier.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                         Text("🕌 أقرب مسجد", fontSize = 10.sp, color = Color.LightGray)
-                                        Text("جامع الصالح (180م)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                        Text(nearestMosqueText, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                 }
                                 Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF1E293B), modifier = Modifier.weight(1f).padding(2.dp)) {
                                     Column(modifier = Modifier.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("💧 ماء سبيل / بقالة", fontSize = 10.sp, color = Color.LightGray)
-                                        Text("سبيل مياه (95م)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00E5FF))
+                                        Text("🛒 أقرب خدمة/سوق", fontSize = 10.sp, color = Color.LightGray)
+                                        Text(nearestSupplyText, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00E5FF), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                 }
                                 Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF1E293B), modifier = Modifier.weight(1f).padding(2.dp)) {
                                     Column(modifier = Modifier.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("⛰️ انحدار الطريق", fontSize = 10.sp, color = Color.LightGray)
-                                        Text("مستوي (3°)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
+                                        Text("⏱️ زمن المشي", fontSize = 10.sp, color = Color.LightGray)
+                                        Text(walkingTimeText, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                 }
                             }
@@ -521,7 +561,7 @@ fun SmartNavigationPanel(
                                     modifier = Modifier.clickable {
                                         selectedStreetOrLandmark = street
                                         if (isVoiceEnabled) {
-                                            VoiceManager.speak("تم اختيار الوجهة: ${street.name}، ${street.area}")
+                                            VoiceManager.speak(context, "تم اختيار الوجهة: ${street.name}، ${street.area}")
                                         }
                                     }
                                 ) {
@@ -538,7 +578,7 @@ fun SmartNavigationPanel(
                     }
                 }
 
-                // Route Profile Selector (Point 14: الأسرع ⚡، الأقصر 📏، الأسهل/مستوي 🛣️)
+                // Route Profile Selector (الأسرع ⚡، الأقصر 📏، الأسهل/مستوي 🛣️)
                 var selectedRouteProfile by remember { mutableStateOf("FASTEST") }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -548,7 +588,7 @@ fun SmartNavigationPanel(
                         Triple("FASTEST", "الأسرع ⚡", "أفضل وقت وسرعة"),
                         Triple("SHORTEST", "الأقصر 📏", "أقصر مسافة بالكيلومتر"),
                         Triple("EASIEST", "الأسهل 🛣️", "طريق مستوي وخالي من المنحدرات")
-                    ).forEach { (key, label, desc) ->
+                    ).forEach { (key, label, _) ->
                         val isSelected = selectedRouteProfile == key
                         Surface(
                             shape = RoundedCornerShape(8.dp),
@@ -556,16 +596,18 @@ fun SmartNavigationPanel(
                             border = BorderStroke(1.dp, if (isSelected) Color(0xFF10B981) else Color(0xFF334155)),
                             modifier = Modifier
                                 .weight(1f)
+                                .defaultMinSize(minHeight = 48.dp)
                                 .clickable {
                                     selectedRouteProfile = key
                                     if (isVoiceEnabled) {
-                                        VoiceManager.speak("تم اختيار مسار: $label")
+                                        VoiceManager.speak(context, "تم اختيار مسار: $label")
                                     }
                                 }
                         ) {
                             Column(
-                                modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
                                 Text(
                                     text = label,
@@ -578,7 +620,7 @@ fun SmartNavigationPanel(
                     }
                 }
 
-                // Route Metrics Summary
+                // Route Metrics Summary (Distance & Duration scaled accurately to profile)
                 val distanceMultiplier = when (selectedRouteProfile) {
                     "SHORTEST" -> 0.92
                     "EASIEST" -> 1.08
@@ -586,10 +628,18 @@ fun SmartNavigationPanel(
                 }
                 val durationMultiplier = when (selectedRouteProfile) {
                     "FASTEST" -> 0.90
-                    "EASIEST" -> 1.05
+                    "EASIEST" -> 1.08
                     else -> 1.0
                 }
-                val displayDistance = String.format("%.1f", activeRoute.distanceKm * distanceMultiplier)
+                val scaledDistanceKm = activeRoute.distanceKm * distanceMultiplier
+                val displayDistance = String.format(Locale.US, "%.1f", scaledDistanceKm)
+                val baseSpeedKmH = if (selectedNavTab == 0) 68.0 else if (selectedNavTab == 2) 4.2 else 32.0
+                val scaledMinutes = max(1, ((scaledDistanceKm / baseSpeedKmH) * 60.0 * durationMultiplier).roundToInt())
+                val displayDurationText = if (scaledMinutes >= 60) {
+                    "${scaledMinutes / 60} ساعة و ${scaledMinutes % 60} دقيقة"
+                } else {
+                    "$scaledMinutes دقيقة"
+                }
 
                 Card(
                     shape = RoundedCornerShape(12.dp),
@@ -611,11 +661,11 @@ fun SmartNavigationPanel(
                             }
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Icon(Icons.Default.Timer, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(16.dp))
-                                Text(text = "الوقت: ${activeRoute.durationText}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
+                                Text(text = "الوقت: $displayDurationText", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
                             }
                         }
                         Text(
-                            text = "🛣️ ${activeRoute.highwayOrStreetName} • ${if (selectedRouteProfile == "EASIEST") "مسار ممهد لذوي الاحتياجات وبدون عقبات" else "مسار رئيسي نشط"}",
+                            text = "🛣️ ${activeRoute.highwayOrStreetName} • ${if (selectedRouteProfile == "EASIEST") "مسار ممهد وتدريج أقل" else "مسار رئيسي نشط"}",
                             fontSize = 11.sp,
                             color = Color(0xFFCBD5E1),
                             maxLines = 1,
@@ -635,7 +685,7 @@ fun SmartNavigationPanel(
                             border = BorderStroke(1.dp, Color(0xFF38BDF8)),
                             shape = RoundedCornerShape(10.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-                            modifier = Modifier.height(40.dp)
+                            modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                         ) {
                             Text("تغيير الوجهة 🎯", color = Color(0xFF38BDF8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
@@ -643,8 +693,8 @@ fun SmartNavigationPanel(
 
                     Button(
                         onClick = {
-                            val speechText = "مسار الملاحة إلى ${activeRoute.destinationName}. المسافة ${activeRoute.distanceKm} كم، والزمن المقدر ${activeRoute.durationText}. رافقتكم السلامة."
-                            VoiceManager.speak(speechText)
+                            val speechText = "مسار الملاحة إلى ${activeRoute.destinationName}. المسافة $displayDistance كم، والزمن المقدر $displayDurationText. رافقتكم السلامة."
+                            VoiceManager.speak(context, speechText)
                             Toast.makeText(context, "🗣️ جاري نطق التوجيهات...", Toast.LENGTH_SHORT).show()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
@@ -652,7 +702,7 @@ fun SmartNavigationPanel(
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(40.dp)
+                            .defaultMinSize(minHeight = 48.dp)
                     ) {
                         Icon(Icons.Default.VolumeUp, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
@@ -672,7 +722,7 @@ fun SmartNavigationPanel(
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(40.dp)
+                                .defaultMinSize(minHeight = 48.dp)
                         ) {
                             Icon(Icons.Default.Navigation, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -682,14 +732,14 @@ fun SmartNavigationPanel(
                         Button(
                             onClick = {
                                 val arrivalSpeech = "لقد وصلت إلى وجهتك: ${activeRoute.destinationName} بنجاح!"
-                                VoiceManager.speak(arrivalSpeech)
+                                VoiceManager.speak(context, arrivalSpeech)
                                 Toast.makeText(context, "🏁 تم إعلان الوصول بنجاح!", Toast.LENGTH_LONG).show()
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(40.dp)
+                                .defaultMinSize(minHeight = 48.dp)
                         ) {
                             Icon(Icons.Default.Celebration, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))

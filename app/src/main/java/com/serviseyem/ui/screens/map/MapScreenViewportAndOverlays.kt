@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SatelliteAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -166,6 +167,8 @@ internal fun MapMainViewport(
                         snackbarHostState.showSnackbar("ناسا ($title): صورة $date • تأخير نحو 3 ساعات • $resLabel")
                     }
                 },
+                isEoxCloudlessActive = state.isEoxCloudlessActive,
+                isEsriImageryActive = state.isEsriImageryActive,
                 eumetEnabled = state.eumetEnabled,
                 eumetLayer = state.eumetLayerName,
                 onOverlayStatus = { overlay, ok ->
@@ -200,7 +203,9 @@ internal fun MapGnssBadge(
         color = Color(0xFF0F172A).copy(alpha = 0.90f),
         border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.5f)),
         shadowElevation = 8.dp,
-        modifier = modifier.clickable(onClick = onClick)
+        modifier = modifier
+            .defaultMinSize(minHeight = 48.dp)
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
@@ -264,7 +269,11 @@ internal fun MapPickDestinationBar(
             }
         } else {
             val (la, lo) = pickedPoint
-            val nearest = remember(la, lo) { OfflinePlacesDb.nearest(context, la, lo) }
+            val nearest by androidx.compose.runtime.produceState<String?>(initialValue = null, key1 = la, key2 = lo) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    OfflinePlacesDb.nearest(context, la, lo)
+                }
+            }
             val label = nearest?.let { "قرب $it" } ?: "نقطة على الخريطة"
             Column(
                 modifier = Modifier.padding(14.dp),

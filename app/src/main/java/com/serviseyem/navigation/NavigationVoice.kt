@@ -5,9 +5,11 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
+import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import com.serviseyem.utils.YemeniDialectVoiceEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,18 +17,24 @@ import java.util.Locale
 
 /**
  * 🔊 NavigationVoice
- * Production-grade spoken voice guidance in Arabic with:
+ * Production-grade spoken voice guidance in Arabic (Yemeni dialect) with:
+ * - Pre-init utterance queue so initial "Start Navigation" speech is never dropped.
  * - Speed-scaled announcement intervals (~20s, ~8s, and ~2s before maneuver).
- * - System AudioFocus request with ducking support.
- * - Queue flushing on reroute and duplicate announcement prevention.
- * - Arabic TTS language support detection.
+ * - System AudioAttributes & AudioFocus request with ducking support.
+ * - Fallback locale chain (ar-YE -> ar-SA -> ar-AE -> ar-EG -> ar).
  */
 class NavigationVoice(private val context: Context) : UtteranceProgressListener() {
 
     private val TAG = "NavigationVoice"
+    private val appContext = context.applicationContext
     private var tts: TextToSpeech? = null
-    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+    private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
     private var focusRequest: AudioFocusRequest? = null
+
+    @Volatile
+    private var isReady = false
+    private val pendingQueue = ArrayDeque<Pair<String, Int>>()
+    private val queueLock = Any()
 
     private val _isMuted = MutableStateFlow(false)
     val isMuted: StateFlow<Boolean> = _isMuted.asStateFlow()
@@ -42,21 +50,68 @@ class NavigationVoice(private val context: Context) : UtteranceProgressListener(
     }
 
     private fun initTts() {
-        tts = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                val arLocale = Locale("ar")
-                val langResult = tts?.isLanguageAvailable(arLocale)
-                if (langResult == TextToSpeech.LANG_AVAILABLE || langResult == TextToSpeech.LANG_COUNTRY_AVAILABLE) {
-                    tts?.language = arLocale
-                    _isArabicSupported.value = true
+        try {
+            tts = TextToSpeech(appContext) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    val engine = tts ?: return@TextToSpeech
+                    val attrs = AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build()
+                    engine.setAudioAttributes(attrs)
+                    engine.setPitch(1.0f)
+                    engine.setSpeechRate(0.95f)
+                    engine.setOnUtteranceProgressListener(this)
+
+                    val candidates = listOf(
+                        Locale.forLanguageTag("ar-YE"),
+                        Locale.forLanguageTag("ar-SA"),
+                        Locale.forLanguageTag("ar-AE"),
+                        Locale.forLanguageTag("ar-EG"),
+                        Locale.forLanguageTag("ar")
+                    )
+                    var foundLocale: Locale? = null
+                    for (loc in candidates) {
+                        val avail = engine.isLanguageAvailable(loc)
+                        if (avail >= TextToSpeech.LANG_AVAILABLE) {
+                            foundLocale = loc
+                            break
+                        }
+                    }
+
+                    if (foundLocale != null) {
+                        engine.language = foundLocale
+                        _isArabicSupported.value = true
+                    } else {
+                        Log.w(TAG, "Arabic TTS voice not installed; attempting best-effort locale.")
+                        val fallbackRes = engine.setLanguage(Locale.forLanguageTag("ar"))
+                        if (fallbackRes < TextToSpeech.LANG_AVAILABLE) {
+                            engine.language = Locale.getDefault()
+                            _isArabicSupported.value = false
+                        } else {
+                            _isArabicSupported.value = true
+                        }
+                    }
+
+                    val toSpeak: List<Pair<String, Int>>
+                    synchronized(queueLock) {
+                        isReady = true
+                        toSpeak = pendingQueue.toList()
+                        pendingQueue.clear()
+                    }
+                    toSpeak.forEach { (text, mode) ->
+                        if (!_isMuted.value) {
+                            dispatchSpeak(text, mode)
+                        }
+                    }
                 } else {
-                    Log.w(TAG, "Arabic TTS voice not installed on device.")
+                    Log.e(TAG, "Failed to initialize TextToSpeech engine: status=$status")
                     _isArabicSupported.value = false
                 }
-                tts?.setOnUtteranceProgressListener(this)
-            } else {
-                Log.e(TAG, "Failed to initialize TextToSpeech engine.")
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception creating TextToSpeech", e)
+            _isArabicSupported.value = false
         }
     }
 
@@ -73,13 +128,6 @@ class NavigationVoice(private val context: Context) : UtteranceProgressListener(
         return newState
     }
 
-    /**
-     * Checks if an announcement should be made based on vehicle speed and distance to turn.
-     * Announcement buckets:
-     * - Far call: ~20 seconds before turn (clamped between 200m and 800m).
-     * - Mid call: ~8 seconds before turn (clamped between 80m and 250m).
-     * - Final call: ~2 seconds before turn (clamped between 25m and 50m).
-     */
     fun processTurnAnnouncement(
         instructionKey: String,
         instructionText: String,
@@ -102,11 +150,7 @@ class NavigationVoice(private val context: Context) : UtteranceProgressListener(
         }
 
         if (bucket == 0) return
-
-        // Prevent repeating the same bucket for the same maneuver
-        if (instructionKey == lastAnnouncedKey && bucket == lastAnnouncedDistanceBucket) {
-            return
-        }
+        if (instructionKey == lastAnnouncedKey && bucket == lastAnnouncedDistanceBucket) return
 
         lastAnnouncedKey = instructionKey
         lastAnnouncedDistanceBucket = bucket
@@ -122,7 +166,7 @@ class NavigationVoice(private val context: Context) : UtteranceProgressListener(
     }
 
     private fun toYemeniDialect(text: String): String {
-        var res = text
+        var res = YemeniDialectVoiceEngine.toYemeniDialect(text)
         val dialectMap = mapOf(
             "انعطف يساراً" to "لف يسار",
             "انعطف يميناً" to "لف يمين",
@@ -133,7 +177,6 @@ class NavigationVoice(private val context: Context) : UtteranceProgressListener(
             "استمر إلى الأمام" to "واصل قبالك",
             "عند الدوار" to "عند الجولة",
             "الدوار" to "الجولة",
-            "متر" to "متر",
             "كيلومتر" to "كيلو"
         )
         for ((fusha, ammiya) in dialectMap) {
@@ -143,14 +186,11 @@ class NavigationVoice(private val context: Context) : UtteranceProgressListener(
     }
 
     private fun formatYemeniDistance(meters: Double): String {
-        return if (meters in 180.0..220.0) {
-            "ميتين متر"
-        } else if (meters in 90.0..115.0) {
-            "مية متر"
-        } else if (meters in 400.0..600.0) {
-            "نص كيلو"
-        } else {
-            HaversinePrecisionNavigator.formatDistanceArabic(meters)
+        return when {
+            meters in 180.0..220.0 -> "ميتين متر"
+            meters in 90.0..115.0 -> "مية متر"
+            meters in 400.0..600.0 -> "نص كيلو"
+            else -> HaversinePrecisionNavigator.formatDistanceArabic(meters)
         }
     }
 
@@ -169,54 +209,88 @@ class NavigationVoice(private val context: Context) : UtteranceProgressListener(
 
     fun speak(text: String, queueMode: Int = TextToSpeech.QUEUE_ADD) {
         if (_isMuted.value || text.isBlank()) return
+        val formatted = toYemeniDialect(text)
+        if (!isReady) {
+            synchronized(queueLock) {
+                if (!isReady) {
+                    if (queueMode == TextToSpeech.QUEUE_FLUSH) {
+                        pendingQueue.clear()
+                    } else if (pendingQueue.size >= 3) {
+                        pendingQueue.removeFirst()
+                    }
+                    pendingQueue.addLast(formatted to queueMode)
+                    return
+                }
+            }
+        }
+        dispatchSpeak(formatted, queueMode)
+    }
 
+    private fun dispatchSpeak(text: String, queueMode: Int) {
         requestAudioFocus()
         val utteranceId = "NAV_VOICE_${System.currentTimeMillis()}"
-        tts?.speak(text, queueMode, null, utteranceId)
+        try {
+            tts?.speak(text, queueMode, Bundle(), utteranceId)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error dispatching speech: ${e.message}")
+            abandonAudioFocus()
+        }
     }
 
     fun stop() {
-        tts?.stop()
+        synchronized(queueLock) {
+            pendingQueue.clear()
+        }
+        try {
+            tts?.stop()
+        } catch (_: Exception) {}
         abandonAudioFocus()
     }
 
     fun destroy() {
+        isReady = false
         stop()
-        tts?.shutdown()
+        try {
+            tts?.shutdown()
+        } catch (_: Exception) {}
         tts = null
     }
 
     private fun requestAudioFocus() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (focusRequest == null) {
-                val attributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build()
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (focusRequest == null) {
+                    val attributes = AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build()
 
-                focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
-                    .setAudioAttributes(attributes)
-                    .setAcceptsDelayedFocusGain(false)
-                    .build()
+                    focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                        .setAudioAttributes(attributes)
+                        .setAcceptsDelayedFocusGain(false)
+                        .build()
+                }
+                focusRequest?.let { audioManager?.requestAudioFocus(it) }
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager?.requestAudioFocus(
+                    null,
+                    AudioManager.STREAM_NOTIFICATION,
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+                )
             }
-            focusRequest?.let { audioManager?.requestAudioFocus(it) }
-        } else {
-            @Suppress("DEPRECATION")
-            audioManager?.requestAudioFocus(
-                null,
-                AudioManager.STREAM_NOTIFICATION,
-                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
-            )
-        }
+        } catch (_: Exception) {}
     }
 
     private fun abandonAudioFocus() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            focusRequest?.let { audioManager?.abandonAudioFocusRequest(it) }
-        } else {
-            @Suppress("DEPRECATION")
-            audioManager?.abandonAudioFocus(null)
-        }
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                focusRequest?.let { audioManager?.abandonAudioFocusRequest(it) }
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager?.abandonAudioFocus(null)
+            }
+        } catch (_: Exception) {}
     }
 
     override fun onStart(utteranceId: String?) {}
@@ -225,7 +299,12 @@ class NavigationVoice(private val context: Context) : UtteranceProgressListener(
         abandonAudioFocus()
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onError(utteranceId: String?) {
+        abandonAudioFocus()
+    }
+
+    override fun onError(utteranceId: String?, errorCode: Int) {
         abandonAudioFocus()
     }
 }

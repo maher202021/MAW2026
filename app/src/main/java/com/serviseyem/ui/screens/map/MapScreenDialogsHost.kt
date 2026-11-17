@@ -198,8 +198,21 @@ internal fun MapScreenDialogsHost(
         GroupTrackingDialog(
             isGroupActive = state.currentGroupCode.isNotBlank(),
             currentGroupCode = state.currentGroupCode,
+            userLat = safeUserLat,
+            userLng = safeUserLng,
             onStartGroupSession = { code ->
                 state.currentGroupCode = code
+                if (safeUserLat != 0.0 || safeUserLng != 0.0) {
+                    val memberJson = org.json.JSONArray().apply {
+                        put(org.json.JSONObject().apply {
+                            put("name", "موقعي ($code)")
+                            put("lat", safeUserLat)
+                            put("lng", safeUserLng)
+                        })
+                    }.toString()
+                    val quoted = org.json.JSONObject.quote(memberJson)
+                    webViewRef?.post { webViewRef.evaluateJavascript("if (window.setGroupMembers) { window.setGroupMembers($quoted); }", null) }
+                }
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar("تم تفعيل تتبع المجموعة: $code 👥")
                 }
@@ -207,6 +220,7 @@ internal fun MapScreenDialogsHost(
             onStopGroupSession = {
                 state.currentGroupCode = ""
                 state.isGroupTrackingActive = false
+                webViewRef?.post { webViewRef.evaluateJavascript("if (window.setGroupMembers) { window.setGroupMembers([]); }", null) }
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar("تم إيقاف تتبع المجموعة 🔴")
                 }
@@ -241,12 +255,31 @@ internal fun MapScreenDialogsHost(
             onCalculatePlannedRoute = { start, stops, dest ->
                 state.currentMapMode = MapMode.NAVIGATION
                 state.currentMapLayer = "navigation"
-                val startCoords = OfflineMapManager.getCityCoordinates(start)
-                val destCoords = OfflineMapManager.getCityCoordinates(dest)
-                val script = "if (window.drawRoute) { window.drawRoute(${startCoords.latitude}, ${startCoords.longitude}, ${destCoords.latitude}, ${destCoords.longitude}, '#00E5FF', 'مسار $start إلى $dest'); }"
+                val points = buildList {
+                    val sc = OfflineMapManager.getCityCoordinates(start)
+                    add(Triple(start, sc.latitude, sc.longitude))
+                    stops.forEach { stopName ->
+                        val stc = OfflineMapManager.getCityCoordinates(stopName)
+                        add(Triple(stopName, stc.latitude, stc.longitude))
+                    }
+                    val dc = OfflineMapManager.getCityCoordinates(dest)
+                    add(Triple(dest, dc.latitude, dc.longitude))
+                }
+                val wpJson = org.json.JSONArray().apply {
+                    points.forEach { (name, la, lo) ->
+                        put(org.json.JSONObject().apply {
+                            put("name", name)
+                            put("lat", la)
+                            put("lng", lo)
+                        })
+                    }
+                }.toString()
+                val quotedWp = org.json.JSONObject.quote(wpJson)
+                val script = "if (window.drawMultiStopRoute) { window.drawMultiStopRoute($quotedWp, '#00E5FF'); }"
                 webViewRef?.post { webViewRef.evaluateJavascript(script, null) }
+                val viaText = if (stops.isNotEmpty()) " عبر ${stops.joinToString(" ← ")}" else ""
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar("تم تخطيط ورسم المسار من $start عبر ${stops.joinToString()} إلى $dest 🛣️")
+                    snackbarHostState.showSnackbar("تم تخطيط ورسم المسار من $start$viaText إلى $dest 🛣️")
                 }
             },
             onDismiss = { state.isRoutePlannerOpen = false }

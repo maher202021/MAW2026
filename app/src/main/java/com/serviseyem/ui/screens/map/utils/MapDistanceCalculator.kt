@@ -1,7 +1,6 @@
 package com.serviseyem.ui.screens.map.utils
 
 import kotlin.math.*
-import com.serviseyem.ui.*
 
 /**
  * 🚲 TransportMode - وسيلة التنقل لحساب وقت الوصول المتوقع
@@ -60,7 +59,34 @@ object MapDistanceCalculator {
      }
 
     /**
-     * 3. خوارزمية الجار الأقرب (Nearest Neighbor) لتحسين ترتيب محطات التوقف محلياً بدون خوادم
+     * Bearing in degrees (0..360) from (lat1, lon1) to (lat2, lon2).
+     */
+    fun calculateBearingDegrees(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
+        val phi1 = Math.toRadians(lat1)
+        val phi2 = Math.toRadians(lat2)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val y = sin(dLon) * cos(phi2)
+        val x = cos(phi1) * sin(phi2) - sin(phi1) * cos(phi2) * cos(dLon)
+        val deg = Math.toDegrees(atan2(y, x)).toFloat()
+        return ((deg % 360f) + 360f) % 360f
+    }
+
+    fun cardinalDirectionAr(bearingDeg: Float): String {
+        val d = ((bearingDeg % 360f) + 360f) % 360f
+        return when {
+            d < 22.5f || d >= 337.5f -> "شمال"
+            d < 67.5f -> "شمال شرق"
+            d < 112.5f -> "شرق"
+            d < 157.5f -> "جنوب شرق"
+            d < 202.5f -> "جنوب"
+            d < 247.5f -> "جنوب غرب"
+            d < 292.5f -> "غرب"
+            else -> "شمال غرب"
+        }
+    }
+
+    /**
+     * 3. خوارزمية تحسين ترتيب محطات التوقف (أقصر مسار يمر بالمحطات وصولاً إلى الوجهة النهائية)
      */
     data class Waypoint(val name: String, val lat: Double, val lng: Double)
 
@@ -72,19 +98,64 @@ object MapDistanceCalculator {
         destLng: Double
     ): List<Waypoint> {
         if (waypoints.size <= 1) return waypoints
+
+        fun tourDistance(order: List<Waypoint>): Double {
+            var total = 0.0
+            var curLat = startLat
+            var curLng = startLng
+            for (wp in order) {
+                total += calculateDistanceMeters(curLat, curLng, wp.lat, wp.lng)
+                curLat = wp.lat
+                curLng = wp.lng
+            }
+            if (destLat != 0.0 || destLng != 0.0) {
+                total += calculateDistanceMeters(curLat, curLng, destLat, destLng)
+            }
+            return total
+        }
+
+        // Exact shortest path across all permutations for up to 6 intermediate stops (max 720 perms)
+        if (waypoints.size <= 6) {
+            var bestOrder = waypoints
+            var bestDist = tourDistance(waypoints)
+            fun permute(current: MutableList<Waypoint>, remaining: MutableList<Waypoint>) {
+                if (remaining.isEmpty()) {
+                    val d = tourDistance(current)
+                    if (d < bestDist) {
+                        bestDist = d
+                        bestOrder = current.toList()
+                    }
+                    return
+                }
+                for (i in remaining.indices) {
+                    val next = remaining.removeAt(i)
+                    current.add(next)
+                    permute(current, remaining)
+                    current.removeAt(current.lastIndex)
+                    remaining.add(i, next)
+                }
+            }
+            permute(mutableListOf(), waypoints.toMutableList())
+            return bestOrder
+        }
+
         val unvisited = waypoints.toMutableList()
         val optimized = mutableListOf<Waypoint>()
         var currentLat = startLat
         var currentLng = startLng
 
         while (unvisited.isNotEmpty()) {
-            val nearest = unvisited.minByOrNull { wp ->
-                calculateDistanceMeters(currentLat, currentLng, wp.lat, wp.lng)
+            val next = unvisited.minByOrNull { wp ->
+                val leg = calculateDistanceMeters(currentLat, currentLng, wp.lat, wp.lng)
+                val destBias = if (unvisited.size == 1 && (destLat != 0.0 || destLng != 0.0)) {
+                    calculateDistanceMeters(wp.lat, wp.lng, destLat, destLng)
+                } else 0.0
+                leg + destBias
             } ?: break
-            optimized.add(nearest)
-            currentLat = nearest.lat
-            currentLng = nearest.lng
-            unvisited.remove(nearest)
+            optimized.add(next)
+            currentLat = next.lat
+            currentLng = next.lng
+            unvisited.remove(next)
         }
         return optimized
     }

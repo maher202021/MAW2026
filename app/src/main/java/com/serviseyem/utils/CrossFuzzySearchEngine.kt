@@ -8,6 +8,9 @@ import com.serviseyem.ui.screens.map.utils.CityAliases
 import com.serviseyem.ui.screens.map.utils.OfflineMapManager
 import com.serviseyem.ui.screens.map.utils.StreetOrLandmark
 import com.serviseyem.ui.screens.map.utils.YemeniNavigationHub
+import com.serviseyem.ui.screens.map.visualaddress.LandmarkRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.util.*
 import kotlin.math.*
@@ -15,9 +18,9 @@ import kotlin.math.*
 /**
  * 🔍 CrossFuzzySearchEngine
  * محرك البحث الذكي الهجين والشامل (Universal Search Engine):
- * 1. المعالم اليمنية من yemen_landmarks.json (مساجد، مدارس، مستشفيات، جولات، جامعات)
- * 2. المتاجر والخدمات والمراكز من MainViewModel
- * 3. الشوارع والأحياء مع خوارزمية Levenshtein المتقدمة للتسامح مع الأخطاء الإملائية
+ * 1. المعالم اليمنية من yemen_landmarks.json + LandmarkRepository + إضافات المجتمع (مساجد، مدارس، صرافات، مستشفيات، جولات، جامعات)
+ * 2. المتاجر والخدمات والمراكز من التطبيق
+ * 3. الشوارع والأحياء مع خوارزمية Levenshtein المحسّنة والسريعة للتسامح مع الأخطاء الإملائية
  * 4. دعم لهجات اليمن (صنعاني، عدني، حضرمي، تعزي) والمترادفات المحلية
  * 5. حساب مسافة Haversine من موقع GPS الحالي للمستخدم والترتيب الذكي حسب القرب الجغرافي
  */
@@ -39,10 +42,15 @@ object CrossFuzzySearchEngine {
         CITY, AREA, STREET, PROVIDER, STORE, PROPERTY, PERSON, LANDMARK
     }
 
+    @Volatile
     private var cachedLandmarks: List<StreetOrLandmark>? = null
 
+    fun invalidateCache() {
+        cachedLandmarks = null
+    }
+
     /**
-     * تحميل معالم اليمن وفهرستها من أصول التطبيق أو الذاكرة
+     * تحميل معالم اليمن وفهرستها من أصول التطبيق + المستودع الدائم + مساهمات المستخدمين
      */
     fun getOrLoadLandmarks(context: Context? = null): List<StreetOrLandmark> {
         cachedLandmarks?.let { return it }
@@ -65,13 +73,51 @@ object CrossFuzzySearchEngine {
                         )
                     )
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Fallback to in-memory popular streets
+            }
+
+            try {
+                OsmContributionManager.getPendingLandmarks(context).forEach { node ->
+                    val typeAr = when (node.category) {
+                        "mosque" -> "مسجد"
+                        "water_well" -> "بئر مياه"
+                        "market" -> "سوق"
+                        "fuel" -> "محطة وقود"
+                        "workshop" -> "ورشة"
+                        else -> "معلم مجتمعي"
+                    }
+                    list.add(
+                        StreetOrLandmark(
+                            name = node.name,
+                            type = typeAr,
+                            city = node.city.ifBlank { "اليمن" },
+                            area = node.notes.ifBlank { "مضاف من المجتمع" },
+                            lat = node.latitude,
+                            lng = node.longitude
+                        )
+                    )
+                }
+            } catch (_: Exception) {
             }
         }
 
+        // دمج معالم LandmarkRepository (جولات، مساجد، أسواق، جامعات، مستشفيات)
+        LandmarkRepository.getAllLandmarks().forEach { lm ->
+            list.add(
+                StreetOrLandmark(
+                    name = lm.name,
+                    type = lm.category.labelArabic,
+                    city = lm.cityId,
+                    area = lm.aliases.joinToString(" / "),
+                    lat = lm.latitude,
+                    lng = lm.longitude
+                )
+            )
+        }
+
         list.addAll(YemeniNavigationHub.POPULAR_STREETS_LANDMARKS)
-        val distinctList = list.distinctBy { it.name }
+        val distinctList = list.distinctBy { normalizeText(it.name) + "_" + String.format(Locale.US, "%.3f_%.3f", it.lat, it.lng) }
         cachedLandmarks = distinctList
         return distinctList
     }
@@ -81,7 +127,7 @@ object CrossFuzzySearchEngine {
      */
     fun computeHaversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         if (lat1 == 0.0 || lon1 == 0.0 || lat2 == 0.0 || lon2 == 0.0) return Double.MAX_VALUE
-        val r = 6371.0 // نصف قطر الأرض بالكيلومتر
+        val r = 6371.0
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)
         val a = sin(dLat / 2).pow(2) +
@@ -97,6 +143,18 @@ object CrossFuzzySearchEngine {
         } else {
             String.format(Locale.US, "%.1f كم", distKm)
         }
+    }
+
+    suspend fun searchEverythingAsync(
+        query: String,
+        providers: List<ProviderEntity>,
+        stores: List<StoreEntity>,
+        properties: List<PropertyEntity>,
+        userLat: Double = 0.0,
+        userLng: Double = 0.0,
+        context: Context? = null
+    ): List<SearchResult> = withContext(Dispatchers.Default) {
+        searchEverything(query, providers, stores, properties, userLat, userLng, context)
     }
 
     /**
@@ -168,36 +226,40 @@ object CrossFuzzySearchEngine {
             }
         }
 
-        // 3. البحث في المعالم اليمنية (مساجد، مدارس، مستشفيات، جولات، شوارع) من JSON والذاكرة
+        // 3. البحث في المعالم اليمنية (مساجد، مدارس، صرافات، مستشفيات، جولات، شوارع)
         val allLandmarks = getOrLoadLandmarks(context)
-        val queryTokens = cleanQuery.split(" ", "-", "•", "/").map { it.trim() }.filter { it.length >= 2 }
+        val queryTokens = cleanQuery.split(' ', '-', '•', '/').map { it.trim() }.filter { it.length >= 2 }
         allLandmarks.forEach { landmark ->
             val combinedTarget = normalizeText("${landmark.name} ${landmark.area} ${landmark.city} ${landmark.type}")
-            val isDialectMatch = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(rawQuery, combinedTarget) ||
-                dialectVariants.any { variant -> variant.length >= 2 && combinedTarget.contains(variant) }
+            val isDialectMatch = dialectVariants.any { variant -> variant.length >= 2 && combinedTarget.contains(variant) }
             val scoreName = calculateMatchScore(cleanQuery, normalizeText(landmark.name))
-            val scoreCombined = calculateMatchScore(cleanQuery, combinedTarget)
+            val scoreCombined = if (scoreName >= 70) scoreName else calculateMatchScore(cleanQuery, combinedTarget)
 
-            // Tokenized matching: check if query tokens match target name or combined string
-            val tokenMatches = queryTokens.count { token -> combinedTarget.contains(token) }
-            val hasTokenMatch = tokenMatches > 0 && queryTokens.isNotEmpty()
+            val tokenMatches = if (queryTokens.isNotEmpty()) queryTokens.count { token -> combinedTarget.contains(token) } else 0
+            val allTokensMatch = queryTokens.isNotEmpty() && tokenMatches == queryTokens.size
 
             val effectiveScore = maxOf(
                 scoreName,
                 scoreCombined,
-                if (hasTokenMatch) (60 + tokenMatches * 10) else 0,
-                if (isDialectMatch) 75 else 0
+                when {
+                    allTokensMatch -> 85
+                    tokenMatches > 0 -> 58 + tokenMatches * 10
+                    else -> 0
+                },
+                if (isDialectMatch) 76 else 0
             )
 
             if (effectiveScore > 25) {
                 val dist = if (hasGps) computeHaversineKm(userLat, userLng, landmark.lat, landmark.lng) else null
                 val distText = dist?.let { " • يبعد ${formatDistance(it)}" } ?: ""
                 val typeIcon = when {
+                    landmark.type.contains("صراف") || landmark.type.contains("بنك") || landmark.name.contains("كريمي", true) || landmark.name.contains("صراف") -> "💱"
                     landmark.type.contains("مسجد") || landmark.type.contains("جامع") || landmark.name.contains("جامع") || landmark.name.contains("مسجد") -> "🕌"
                     landmark.type.contains("مستشفى") || landmark.name.contains("مستشفى") || landmark.name.contains("طبي") -> "🏥"
                     landmark.type.contains("مدرسة") || landmark.type.contains("جامعة") || landmark.name.contains("مدرسة") || landmark.name.contains("جامعة") -> "🎓"
                     landmark.type.contains("جولة") || landmark.type.contains("دوار") || landmark.name.contains("جولة") -> "🔄"
                     landmark.type.contains("شارع") || landmark.name.contains("شارع") || landmark.name.contains("خط") -> "🛣️"
+                    landmark.type.contains("وقود") -> "⛽"
                     else -> "🏛️"
                 }
 
@@ -219,14 +281,11 @@ object CrossFuzzySearchEngine {
 
         // 4. البحث عن الفنيين ومزودي الخدمات (الأشخاص)
         providers.forEach { p ->
-            val providerTarget = normalizeText("${p.name} ${p.profession} ${p.specialization}")
-            val isDialectMatch = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(
-                rawQuery, "${p.name} ${p.profession} ${p.specialization}"
-            ) || dialectVariants.any { variant -> variant.length >= 2 && providerTarget.contains(variant) }
+            val providerTarget = normalizeText("${p.name} ${p.profession} ${p.specialization} ${p.customCategoryName} ${p.area} ${p.localNeighborhood}")
+            val isDialectMatch = dialectVariants.any { variant -> variant.length >= 2 && providerTarget.contains(variant) }
             val scoreName = calculateMatchScore(cleanQuery, normalizeText(p.name))
-            val scoreProf = calculateMatchScore(cleanQuery, normalizeText(p.profession))
-            val scoreSpec = calculateMatchScore(cleanQuery, normalizeText(p.specialization))
-            val maxScore = maxOf(scoreName, scoreProf, scoreSpec, if (isDialectMatch) 70 else 0)
+            val scoreProf = calculateMatchScore(cleanQuery, normalizeText("${p.profession} ${p.specialization} ${p.area}"))
+            val maxScore = maxOf(scoreName, scoreProf, if (isDialectMatch) 72 else 0)
 
             if (maxScore > 30) {
                 val dist = if (hasGps) computeHaversineKm(userLat, userLng, p.latitude, p.longitude) else null
@@ -249,13 +308,11 @@ object CrossFuzzySearchEngine {
 
         // 5. البحث في المتاجر والمراكز الطبية والمطاعم
         stores.forEach { s ->
-            val storeTarget = normalizeText("${s.name} ${s.categoryId} ${s.description}")
-            val isDialectMatch = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(
-                rawQuery, "${s.name} ${s.categoryId} ${s.description}"
-            ) || dialectVariants.any { variant -> variant.length >= 2 && storeTarget.contains(variant) }
+            val storeTarget = normalizeText("${s.name} ${s.categoryId} ${s.description} ${s.localNeighborhood} ${s.sectionId}")
+            val isDialectMatch = dialectVariants.any { variant -> variant.length >= 2 && storeTarget.contains(variant) }
             val scoreName = calculateMatchScore(cleanQuery, normalizeText(s.name))
-            val scoreCat = calculateMatchScore(cleanQuery, normalizeText(s.categoryId))
-            val maxScore = maxOf(scoreName, scoreCat, if (isDialectMatch) 70 else 0)
+            val scoreCat = calculateMatchScore(cleanQuery, normalizeText("${s.categoryId} ${s.localNeighborhood} ${s.description}"))
+            val maxScore = maxOf(scoreName, scoreCat, if (isDialectMatch) 72 else 0)
 
             if (maxScore > 30) {
                 val dist = if (hasGps) computeHaversineKm(userLat, userLng, s.latitude, s.longitude) else null
@@ -284,9 +341,7 @@ object CrossFuzzySearchEngine {
         // 6. البحث في العقارات
         properties.forEach { pr ->
             val propTarget = normalizeText("${pr.title} ${pr.localNeighborhood} ${pr.propertyType}")
-            val isDialectMatch = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(
-                rawQuery, "${pr.title} ${pr.localNeighborhood} ${pr.propertyType}"
-            ) || dialectVariants.any { variant -> variant.length >= 2 && propTarget.contains(variant) }
+            val isDialectMatch = dialectVariants.any { variant -> variant.length >= 2 && propTarget.contains(variant) }
             val scoreTitle = calculateMatchScore(cleanQuery, normalizeText(pr.title))
             val scoreLoc = calculateMatchScore(cleanQuery, normalizeText(pr.localNeighborhood))
             val maxScore = maxOf(scoreTitle, scoreLoc, if (isDialectMatch) 70 else 0)
@@ -310,8 +365,6 @@ object CrossFuzzySearchEngine {
             }
         }
 
-        // تصفية وترتيب النتائج:
-        // إذا كان موقع GPS متوفراً: ترتيب النتائج القوية أولاً حسب المسافة الأقرب
         val distinct = results.distinctBy { it.title + it.type.name + it.latitude.toString() }
 
         return if (hasGps) {
@@ -319,15 +372,12 @@ object CrossFuzzySearchEngine {
                 compareByDescending<SearchResult> { it.score >= 80 }
                     .thenBy { it.distanceKm ?: Double.MAX_VALUE }
                     .thenByDescending { it.score }
-            ).take(20)
+            ).take(25)
         } else {
-            distinct.sortedByDescending { it.score }.take(20)
+            distinct.sortedByDescending { it.score }.take(25)
         }
     }
 
-    /**
-     * واجهة البحث الأصلية (للتوافق القديم)
-     */
     fun search(
         query: String,
         providers: List<ProviderEntity>,
@@ -342,20 +392,31 @@ object CrossFuzzySearchEngine {
         )
     }
 
-    /**
-     * توحيد النصوص العربية والإنجليزية
-     */
     private fun normalizeText(text: String): String {
-        var t = text.lowercase(Locale.getDefault()).trim()
-        t = t.replace("أ", "ا")
-            .replace("إ", "ا")
-            .replace("آ", "ا")
-            .replace("ة", "ه")
-            .replace("ى", "ي")
-            .replace("ؤ", "و")
-            .replace("ئ", "ي")
-            .replace("  ", " ")
-        return t
+        if (text.isBlank()) return ""
+        val sb = StringBuilder(text.length)
+        var prevSpace = false
+        for (raw in text.trim().lowercase(Locale.getDefault())) {
+            if (raw in '\u064B'..'\u065F' || raw == '\u0640') continue
+            val ch = when (raw) {
+                'أ', 'إ', 'آ' -> 'ا'
+                'ة' -> 'ه'
+                'ى' -> 'ي'
+                'ؤ' -> 'و'
+                'ئ' -> 'ي'
+                else -> raw
+            }
+            if (ch.isWhitespace()) {
+                if (!prevSpace) {
+                    sb.append(' ')
+                    prevSpace = true
+                }
+            } else {
+                sb.append(ch)
+                prevSpace = false
+            }
+        }
+        return sb.toString().trim()
     }
 
     private fun calculateMatchScore(query: String, target: String): Int {
@@ -364,22 +425,28 @@ object CrossFuzzySearchEngine {
         if (target.startsWith(query)) return 90
         if (target.contains(query)) return 75
 
-        val distance = levenshtein(query, target)
         val maxLength = maxOf(query.length, target.length)
+        if (abs(query.length - target.length) > (maxLength * 0.55).toInt() + 1) return 0
+
+        val distance = levenshtein(query, target)
         val score = ((maxLength - distance).toDouble() / maxLength.toDouble() * 100).toInt()
-        return if (score > 40) score else 0
+        return if (score > 45) score else 0
     }
 
     private fun levenshtein(s1: String, s2: String): Int {
-        val dp = Array(s1.length + 1) { IntArray(s2.length + 1) }
-        for (i in 0..s1.length) dp[i][0] = i
-        for (j in 0..s2.length) dp[0][j] = j
+        var prev = IntArray(s2.length + 1) { it }
+        var curr = IntArray(s2.length + 1)
         for (i in 1..s1.length) {
+            curr[0] = i
+            val c1 = s1[i - 1]
             for (j in 1..s2.length) {
-                val cost = if (s1[i - 1] == s2[j - 1]) 0 else 1
-                dp[i][j] = minOf(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
+                val cost = if (c1 == s2[j - 1]) 0 else 1
+                curr[j] = minOf(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
             }
+            val tmp = prev
+            prev = curr
+            curr = tmp
         }
-        return dp[s1.length][s2.length]
+        return prev[s2.length]
     }
 }

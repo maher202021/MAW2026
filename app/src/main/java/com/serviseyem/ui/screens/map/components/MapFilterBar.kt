@@ -73,18 +73,95 @@ fun MapFilterBar(
 
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
-    val smartResults = remember(searchQuery, providers, stores, properties, userLat, userLng) {
-        if (searchQuery.isNotBlank()) {
-            CrossFuzzySearchEngine.searchEverything(
-                query = searchQuery,
+    var smartResults by remember { mutableStateOf<List<CrossFuzzySearchEngine.SearchResult>>(emptyList()) }
+    var isSearchingOnline by remember { mutableStateOf(false) }
+
+    LaunchedEffect(searchQuery, providers, stores, properties, userLat, userLng) {
+        val q = searchQuery.trim()
+        if (q.isBlank()) {
+            smartResults = emptyList()
+            isSearchingOnline = false
+            return@LaunchedEffect
+        }
+
+        // المرحلة 1: نتائج فورية من محرك البحث الضبابي المحلي والمعالم اليمنية
+        val localImmediate = CrossFuzzySearchEngine.searchEverythingAsync(
+            query = q,
+            providers = providers,
+            stores = stores,
+            properties = properties,
+            userLat = userLat,
+            userLng = userLng,
+            context = context
+        )
+        smartResults = localImmediate
+
+        if (q.length < 2) {
+            isSearchingOnline = false
+            return@LaunchedEffect
+        }
+
+        // المرحلة 2: مهلة قصيرة ثم بحث متوازٍ في قاعدة الأماكن وOSM (جولات، صرافات، مساجد، مدارس، شوارع)
+        kotlinx.coroutines.delay(180)
+        isSearchingOnline = true
+        try {
+            val outcome = com.serviseyem.utils.PlaceSearch.search(
+                context = context,
+                query = q,
                 providers = providers,
                 stores = stores,
-                properties = properties,
                 userLat = userLat,
-                userLng = userLng,
-                context = context
+                userLng = userLng
             )
-        } else emptyList()
+            if (outcome is com.serviseyem.utils.PlaceSearchOutcome.Results) {
+                val merged = LinkedHashMap<String, CrossFuzzySearchEngine.SearchResult>()
+                localImmediate.forEach { res ->
+                    val key = "${res.title.trim()}_${String.format(Locale.US, "%.3f_%.3f", res.latitude, res.longitude)}"
+                    merged.putIfAbsent(key, res)
+                }
+                val hasUserGps = userLat != 0.0 && userLng != 0.0
+                outcome.items.forEach { item ->
+                    val key = "${item.shortName.trim()}_${String.format(Locale.US, "%.3f_%.3f", item.latitude, item.longitude)}"
+                    if (!merged.containsKey(key)) {
+                        val distKm = if (hasUserGps) {
+                            CrossFuzzySearchEngine.computeHaversineKm(userLat, userLng, item.latitude, item.longitude)
+                        } else null
+                        val distSuffix = distKm?.let {
+                            if (it < 1.0) " • ${(it * 1000).toInt()} م" else " • ${String.format(Locale.US, "%.1f", it)} كم"
+                        } ?: ""
+                        val searchType = when (item.category) {
+                            "city" -> CrossFuzzySearchEngine.SearchType.CITY
+                            "road", "street" -> CrossFuzzySearchEngine.SearchType.STREET
+                            "area" -> CrossFuzzySearchEngine.SearchType.AREA
+                            else -> CrossFuzzySearchEngine.SearchType.LANDMARK
+                        }
+                        val landmarkObj = com.serviseyem.ui.screens.map.utils.StreetOrLandmark(
+                            name = item.shortName,
+                            type = item.displayName,
+                            city = selectedCity.takeIf { it != "الكل" } ?: "اليمن",
+                            area = item.displayName,
+                            lat = item.latitude,
+                            lng = item.longitude
+                        )
+                        merged[key] = CrossFuzzySearchEngine.SearchResult(
+                            id = "hybrid_${item.shortName}_${item.latitude}_${item.longitude}",
+                            title = item.shortName,
+                            subtitle = "${item.icon} ${item.displayName}$distSuffix",
+                            type = searchType,
+                            latitude = item.latitude,
+                            longitude = item.longitude,
+                            originalItem = landmarkObj,
+                            score = 70,
+                            distanceKm = distKm
+                        )
+                    }
+                }
+                smartResults = merged.values.take(30)
+            }
+        } catch (_: Exception) {
+        } finally {
+            isSearchingOnline = false
+        }
     }
 
     val categories = remember {
@@ -117,12 +194,12 @@ fun MapFilterBar(
                 shadowElevation = 8.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(54.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 6.dp),
+                        .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -130,7 +207,7 @@ fun MapFilterBar(
                             haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                             onBackClick() 
                         },
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -140,12 +217,20 @@ fun MapFilterBar(
                         )
                     }
 
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "بحث",
-                        tint = Color(0xFF10B981),
-                        modifier = Modifier.size(18.dp)
-                    )
+                    if (isSearchingOnline) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = Color(0xFF10B981)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "بحث",
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
 
                     Spacer(modifier = Modifier.width(4.dp))
 
@@ -154,7 +239,7 @@ fun MapFilterBar(
                         onValueChange = onSearchQueryChange,
                         placeholder = {
                             Text(
-                                text = "ابحث عن شارع، معلم، محل، فني...",
+                                text = "ابحث عن جولة، صرافة، جامع، شارع...",
                                 fontSize = 12.5.sp,
                                 color = Color.White.copy(alpha = 0.6f),
                                 maxLines = 1,
@@ -184,13 +269,13 @@ fun MapFilterBar(
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(
                                     onClick = { onSearchQueryChange("") },
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Close,
                                         contentDescription = "مسح",
-                                        tint = Color.White.copy(alpha = 0.6f),
-                                        modifier = Modifier.size(16.dp)
+                                        tint = Color.White.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
@@ -210,7 +295,9 @@ fun MapFilterBar(
                             haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                             onVoiceSearchClick()
                         },
-                        modifier = Modifier.testTag("map_voice_search_button")
+                        modifier = Modifier
+                            .size(48.dp)
+                            .testTag("map_voice_search_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Mic,
@@ -221,14 +308,17 @@ fun MapFilterBar(
                     }
 
                     VerticalDivider(
-                        modifier = Modifier.height(20.dp).padding(horizontal = 4.dp),
+                        modifier = Modifier.height(20.dp).padding(horizontal = 2.dp),
                         color = Color.White.copy(alpha = 0.2f)
                     )
 
-                    IconButton(onClick = { 
-                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                        showFiltersSheet = true 
-                    }) {
+                    IconButton(
+                        onClick = { 
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            showFiltersSheet = true 
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.FilterList,
                             contentDescription = "تصفية",
@@ -242,7 +332,7 @@ fun MapFilterBar(
 
         // 🧠 Smart Autocomplete Results (Floating Layer)
         AnimatedVisibility(
-            visible = (smartResults.isNotEmpty() || (searchQuery.length > 2 && isSearchFocused)),
+            visible = (smartResults.isNotEmpty() || (searchQuery.length >= 2 && isSearchFocused)),
             enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
             exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically()
         ) {
@@ -269,19 +359,34 @@ fun MapFilterBar(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        imageVector = Icons.Default.SearchOff,
-                                        contentDescription = null,
-                                        tint = Color.White.copy(alpha = 0.3f),
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        "لا توجد نتائج مطابقة لـ \"$searchQuery\"",
-                                        color = Color.White.copy(alpha = 0.5f),
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                                    if (isSearchingOnline) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(28.dp),
+                                            strokeWidth = 2.5.dp,
+                                            color = Color(0xFF10B981)
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            "جاري البحث في خرائط اليمن وOSM...",
+                                            color = Color.White.copy(alpha = 0.7f),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.SearchOff,
+                                            contentDescription = null,
+                                            tint = Color.White.copy(alpha = 0.3f),
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            "لا توجد نتائج مطابقة لـ \"$searchQuery\"",
+                                            color = Color.White.copy(alpha = 0.5f),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                 }
                             }
                         }

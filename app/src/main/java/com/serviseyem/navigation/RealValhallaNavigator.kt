@@ -136,22 +136,26 @@ class RealValhallaNavigator(private val context: Context) {
             }
 
             val bridge = valhallaBridge
-            if (!isEngineInitialized || bridge == null) {
-                return@withContext ValhallaRoutingEngine.calculateBasicDirectRoute(
-                    startLat, startLon, endLat, endLon, destinationName
-                )
+            if (isEngineInitialized && bridge != null) {
+                try {
+                    return@withContext ValhallaRoutingEngine.calculateValhallaOfflineRoute(
+                        bridge, startLat, startLon, endLat, endLon, destinationName
+                    )
+                } catch (e: Exception) {
+                    Log.e(TAG, "Valhalla native route error, trying OSRM fallback: ${e.message}")
+                }
             }
 
-            try {
-                ValhallaRoutingEngine.calculateValhallaOfflineRoute(
-                    bridge, startLat, startLon, endLat, endLon, destinationName
-                )
-            } catch (e: Exception) {
-                Log.e(TAG, "Valhalla native route error, falling back to direct line: ${e.message}")
-                ValhallaRoutingEngine.calculateBasicDirectRoute(
+            if (com.serviseyem.utils.NetworkUtils.hasInternetTransport(context)) {
+                val osrmResult = ValhallaRoutingEngine.calculateOsrmOnlineRoute(
                     startLat, startLon, endLat, endLon, destinationName
                 )
+                if (osrmResult != null) return@withContext osrmResult
             }
+
+            ValhallaRoutingEngine.calculateBasicDirectRoute(
+                startLat, startLon, endLat, endLon, destinationName
+            )
         }
     }
 

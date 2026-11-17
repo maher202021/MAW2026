@@ -39,20 +39,20 @@ fun ContextualSmartSuggestionsCard(
     val suggestionInfo = remember(currentHour, currentCity) {
         when {
             currentHour in 6..10 -> Pair(
-                "🍳 بوفيهات ومأكولات إفطار شعبية مثرية في $currentCity",
-                "بوفيه"
+                "🍳 بوفيهات ومأكولات إفطار شعبية قريبة في $currentCity",
+                "RESTAURANTS"
             )
             currentHour in 11..15 -> Pair(
-                "🍲 أشهى المطاعم والسلته اليمني القريبة منك الآن في $currentCity",
-                "مطعم"
+                "🍲 أشهى المطاعم والمقاهي القريبة منك الآن في $currentCity",
+                "RESTAURANTS"
             )
             currentHour in 16..20 -> Pair(
-                "🔧 فنيين وميكانيكيين متاحين الآن لخدمتك في $currentCity",
-                "ميكانيكي"
+                "🔧 فنيون وميكانيكيون متاحون الآن لخدمتك في $currentCity",
+                "PROVIDERS"
             )
             else -> Pair(
                 "💊 صيدليات ومراكز طوارئ خافرة تعمل الآن في $currentCity",
-                "صيدلية"
+                "MEDICAL"
             )
         }
     }
@@ -75,7 +75,7 @@ fun ContextualSmartSuggestionsCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -110,13 +110,13 @@ fun ContextualSmartSuggestionsCard(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Button(
                         onClick = { onApplySuggestion(suggestionInfo.second) },
                         colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                        modifier = Modifier.height(32.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text("عرض ⚡", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
@@ -124,13 +124,13 @@ fun ContextualSmartSuggestionsCard(
 
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "تجاهل",
                             tint = Color.Gray,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }

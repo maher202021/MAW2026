@@ -79,7 +79,8 @@ class LocationEngine(private val context: Context) : SensorEventListener {
     private val kalmanQ = 3.0 // Process noise (meters per second)
 
     private var lastRawLocation: Location? = null
-    private var lastFixElapsedTimeNanos: Long = 0
+    private var lastFixElapsedTimeNanos: Long = 0L
+    private var trackingStartElapsedNanos: Long = 0L
     private var isTracking = false
 
     // Sensor Fusion Heading
@@ -104,6 +105,8 @@ class LocationEngine(private val context: Context) : SensorEventListener {
     fun startNavigationTracking() {
         if (isTracking) return
         isTracking = true
+        trackingStartElapsedNanos = SystemClock.elapsedRealtimeNanos()
+        _isGpsLostFlow.value = false
 
         registerSensors()
 
@@ -114,6 +117,11 @@ class LocationEngine(private val context: Context) : SensorEventListener {
             .build()
 
         try {
+            fusedClient.lastLocation.addOnSuccessListener { cached ->
+                if (cached != null && lastRawLocation == null) {
+                    processNewLocation(cached)
+                }
+            }
             fusedClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
             startGpsWatchdog()
         } catch (_: SecurityException) {
@@ -128,6 +136,7 @@ class LocationEngine(private val context: Context) : SensorEventListener {
     fun startIdleTracking() {
         stopTracking()
         isTracking = true
+        trackingStartElapsedNanos = SystemClock.elapsedRealtimeNanos()
 
         val request = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 10000L)
             .setMinUpdateIntervalMillis(5000L)
@@ -148,6 +157,11 @@ class LocationEngine(private val context: Context) : SensorEventListener {
             fusedClient.removeLocationUpdates(locationCallback)
         } catch (_: Exception) {}
         unregisterSensors()
+    }
+
+    fun destroy() {
+        stopTracking()
+        engineScope.cancel()
     }
 
     private fun processNewLocation(raw: Location) {
@@ -218,13 +232,11 @@ class LocationEngine(private val context: Context) : SensorEventListener {
             kalmanVarianceLat = variance
             kalmanVarianceLon = variance
         } else {
-            // Apply independent time prediction variance for Latitude
             kalmanVarianceLat += kalmanQ * kalmanQ
             val kLat = kalmanVarianceLat / (kalmanVarianceLat + variance)
             kalmanLat += kLat * (lat - kalmanLat)
             kalmanVarianceLat = (1.0 - kLat) * kalmanVarianceLat
 
-            // Apply independent time prediction variance for Longitude
             kalmanVarianceLon += kalmanQ * kalmanQ
             val kLon = kalmanVarianceLon / (kalmanVarianceLon + variance)
             kalmanLon += kLon * (lon - kalmanLon)
@@ -238,8 +250,14 @@ class LocationEngine(private val context: Context) : SensorEventListener {
             var deadReckoningSeconds = 0
             while (isActive && isTracking) {
                 delay(1000L)
-                val elapsedSinceFixMs = (SystemClock.elapsedRealtimeNanos() - lastFixElapsedTimeNanos) / 1_000_000L
-                if (elapsedSinceFixMs > 3500L) {
+                val now = SystemClock.elapsedRealtimeNanos()
+                if (lastFixElapsedTimeNanos == 0L) {
+                    val waitingMs = (now - trackingStartElapsedNanos) / 1_000_000L
+                    _isGpsLostFlow.value = waitingMs > 8000L
+                    continue
+                }
+                val elapsedSinceFixMs = (now - lastFixElapsedTimeNanos) / 1_000_000L
+                if (elapsedSinceFixMs > 4000L) {
                     _isGpsLostFlow.value = true
                     if (deadReckoningSeconds < 10) {
                         deadReckoningSeconds++

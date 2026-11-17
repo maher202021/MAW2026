@@ -230,25 +230,26 @@ fun MapBottomSheet(
 
                 // Close & Share & Navigation Row
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Share Location
+                    // Consolidated Share Location & Details
                     IconButton(
                         onClick = {
                             haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                             try {
                                 val mapUrl = "https://www.google.com/maps/search/?api=1&query=$lat,$lng"
-                                val shareText = "📍 $title\n$subtitle\nالموقع على الخريطة:\n$mapUrl"
+                                val phoneLine = if (phone.isNotBlank()) "\n📞 الهاتف: $phone" else ""
+                                val shareText = "📍 $title\n🏷️ $subtitle ($categoryLabel)$phoneLine\n🗺️ الموقع على الخريطة:\n$mapUrl\nعبر تطبيق دليل خدمات اليمن"
                                 val intent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
                                     putExtra(Intent.EXTRA_TEXT, shareText)
                                 }
-                                context.startActivity(Intent.createChooser(intent, "مشاركة الموقع"))
+                                context.startActivity(Intent.createChooser(intent, "مشاركة الموقع والبيانات"))
                             } catch (e: Exception) {
                                 e.printStackTrace()
                             }
                         },
-                        modifier = Modifier.size(32.dp).testTag("share_location_btn")
+                        modifier = Modifier.size(48.dp).testTag("share_location_btn")
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = "مشاركة الموقع", tint = Color(0xFF38BDF8), modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Share, contentDescription = "مشاركة الموقع", tint = Color(0xFF38BDF8), modifier = Modifier.size(20.dp))
                     }
 
                     // Internal App Navigation
@@ -258,29 +259,9 @@ fun MapBottomSheet(
                             onDismiss()
                             onStartNavigation?.invoke(lat, lng, title)
                         },
-                        modifier = Modifier.size(32.dp).testTag("internal_nav_btn")
+                        modifier = Modifier.size(48.dp).testTag("internal_nav_btn")
                     ) {
-                        Icon(Icons.Default.Navigation, contentDescription = "بدء الملاحة في تطبيقنا", tint = Color(0xFF10B981), modifier = Modifier.size(18.dp))
-                    }
-
-                    // Share Button (زر مشاركة البيانات)
-                    IconButton(
-                        onClick = {
-                            try {
-                                val shareText = "📍 $title\n🏷️ $subtitle ($categoryLabel)\n📞 الهاتف: $phone\n🗺️ تمت المشاركة عبر تطبيق دليل خدمات اليمن"
-                                val sendIntent = Intent().apply {
-                                    action = Intent.ACTION_SEND
-                                    putExtra(Intent.EXTRA_TEXT, shareText)
-                                    type = "text/plain"
-                                }
-                                context.startActivity(Intent.createChooser(sendIntent, "مشاركة بيانات الخدمة"))
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
-                        },
-                        modifier = Modifier.size(32.dp).testTag("share_entity_btn")
-                    ) {
-                        Icon(Icons.Default.Share, contentDescription = "مشاركة", tint = Color(0xFF38BDF8), modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Navigation, contentDescription = "بدء الملاحة في تطبيقنا", tint = Color(0xFF10B981), modifier = Modifier.size(20.dp))
                     }
 
                     // Close Button
@@ -289,7 +270,7 @@ fun MapBottomSheet(
                             haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                             onDismiss()
                         },
-                        modifier = Modifier.size(32.dp).testTag("close_bottom_sheet_btn")
+                        modifier = Modifier.size(48.dp).testTag("close_bottom_sheet_btn")
                     ) {
                         Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color(0xFF94A3B8), modifier = Modifier.size(20.dp))
                     }
@@ -368,7 +349,7 @@ fun MapBottomSheet(
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(38.dp)
+                                .defaultMinSize(minHeight = 48.dp)
                                 .testTag("call_action_btn")
                         ) {
                             Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -397,7 +378,7 @@ fun MapBottomSheet(
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                             modifier = Modifier
                                 .weight(1.1f)
-                                .height(38.dp)
+                                .defaultMinSize(minHeight = 48.dp)
                                 .testTag("whatsapp_action_btn")
                         ) {
                             Text("💬", fontSize = 13.sp)
@@ -420,7 +401,7 @@ fun MapBottomSheet(
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(38.dp)
+                            .defaultMinSize(minHeight = 48.dp)
                             .testTag("chat_action_btn")
                     ) {
                         Icon(Icons.Default.MailOutline, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -464,7 +445,7 @@ fun MapBottomSheet(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         modifier = Modifier
                             .weight(1.4f)
-                            .height(40.dp)
+                            .defaultMinSize(minHeight = 48.dp)
                             .testTag("book_entity_btn")
                     ) {
                         Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(15.dp))
@@ -486,7 +467,7 @@ fun MapBottomSheet(
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(40.dp)
+                            .defaultMinSize(minHeight = 48.dp)
                             .testTag("view_details_action_btn")
                     ) {
                         Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -508,7 +489,7 @@ fun MapBottomSheet(
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                         modifier = Modifier
                             .weight(0.95f)
-                            .height(40.dp)
+                            .defaultMinSize(minHeight = 48.dp)
                             .testTag("aleph_assistant_action_btn")
                     ) {
                         Text("👁️ Aleph", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)

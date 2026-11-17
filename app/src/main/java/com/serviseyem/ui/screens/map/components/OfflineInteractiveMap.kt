@@ -138,20 +138,23 @@ fun OfflineInteractiveMap(
             }
         }
 
+        val currentZoomScale by rememberUpdatedState(zoomScale)
+        val currentPanOffset by rememberUpdatedState(panOffset)
+
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
                     detectTransformGestures { _, pan, zoom, _ ->
-                        val nextZoom = (zoomScale * zoom).coerceIn(0.25f, 8.0f)
+                        val nextZoom = (currentZoomScale * zoom).coerceIn(0.25f, 8.0f)
                         onZoomScaleChange(nextZoom)
-                        onPanOffsetChange(panOffset + pan)
+                        onPanOffsetChange(currentPanOffset + pan)
                     }
                 }
                 .pointerInput(screenPoints, pickMode, centerX, centerY, metersPerPx) {
                     detectTapGestures(
                         onDoubleTap = {
-                            val nextZoom = (zoomScale * 1.4f).coerceIn(0.25f, 8.0f)
+                            val nextZoom = (currentZoomScale * 1.4f).coerceIn(0.25f, 8.0f)
                             onZoomScaleChange(nextZoom)
                         },
                         onTap = { tapOffset ->
@@ -288,7 +291,7 @@ private fun BoxScope.OfflineMapHudOverlays(
         modifier = Modifier
             .align(Alignment.TopEnd)
             .padding(end = 16.dp, top = 80.dp)
-            .size(38.dp)
+            .size(48.dp)
             .clickable(onClick = onResetPan)
     ) {
         Box(contentAlignment = Alignment.Center) {

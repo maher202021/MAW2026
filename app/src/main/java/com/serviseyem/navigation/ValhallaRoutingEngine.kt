@@ -84,6 +84,8 @@ internal object ValhallaRoutingEngine {
                 }
 
                 val maneuverType = mapValhallaManeuverType(typeCode)
+                val shapeIdx = m.optInt("begin_shape_index", 0)
+                val maneuverPt = decodedPoints.getOrNull(shapeIdx)
 
                 instructions.add(
                     NavigationInstruction(
@@ -91,7 +93,10 @@ internal object ValhallaRoutingEngine {
                         maneuverType = maneuverType,
                         distanceRemaining = remainingDistMeters,
                         segmentDistance = segMeters,
-                        streetName = streetName
+                        streetName = streetName,
+                        maneuverLat = maneuverPt?.lat ?: endLat,
+                        maneuverLon = maneuverPt?.lon ?: endLon,
+                        shapeIndex = shapeIdx
                     )
                 )
 
@@ -105,7 +110,9 @@ internal object ValhallaRoutingEngine {
                     text = "انطلق نحو $destinationName",
                     maneuverType = ManeuverType.START,
                     distanceRemaining = totalDistanceKm * 1000.0,
-                    segmentDistance = totalDistanceKm * 1000.0
+                    segmentDistance = totalDistanceKm * 1000.0,
+                    maneuverLat = endLat,
+                    maneuverLon = endLon
                 )
             )
             instructions.add(
@@ -114,7 +121,9 @@ internal object ValhallaRoutingEngine {
                     maneuverType = ManeuverType.DESTINATION,
                     distanceRemaining = 0.0,
                     segmentDistance = 0.0,
-                    streetName = destinationName
+                    streetName = destinationName,
+                    maneuverLat = endLat,
+                    maneuverLon = endLon
                 )
             )
         }
@@ -127,6 +136,129 @@ internal object ValhallaRoutingEngine {
             isOfflineEngine = true,
             modeLabel = "ملاحة أوفلاين حقيقية (Valhalla)"
         )
+    }
+
+    /**
+     * مسار حقيقي متتبع للشوارع عبر OSRM عند توفر الإنترنت وعدم توفر حزم Valhalla الأوفلاين
+     */
+    fun calculateOsrmOnlineRoute(
+        startLat: Double,
+        startLon: Double,
+        endLat: Double,
+        endLon: Double,
+        destinationName: String
+    ): NavigationRouteResult? {
+        var conn: java.net.HttpURLConnection? = null
+        return try {
+            val url = java.net.URL(
+                "https://router.project-osrm.org/route/v1/driving/$startLon,$startLat;$endLon,$endLat?overview=full&geometries=polyline6&steps=true"
+            )
+            conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 5000
+                readTimeout = 5000
+                setRequestProperty("User-Agent", "AlYemenServicesApp/1.2 (Android)")
+            }
+            if (conn.responseCode !in 200..299) return null
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            val json = JSONObject(body)
+            if (json.optString("code") != "Ok") return null
+            val routes = json.optJSONArray("routes") ?: return null
+            if (routes.length() == 0) return null
+
+            val route = routes.getJSONObject(0)
+            val totalDistM = route.optDouble("distance", 0.0)
+            val totalDurSec = route.optDouble("duration", 60.0).toInt().coerceAtLeast(30)
+            val geometry = route.optString("geometry", "")
+            val points = if (geometry.isNotBlank()) decodePolyline6(geometry) else listOf(
+                RoutePoint(startLat, startLon),
+                RoutePoint(endLat, endLon)
+            )
+
+            val instructions = mutableListOf<NavigationInstruction>()
+            val legs = route.optJSONArray("legs")
+            var remDist = totalDistM
+            if (legs != null && legs.length() > 0) {
+                val steps = legs.getJSONObject(0).optJSONArray("steps")
+                if (steps != null) {
+                    for (i in 0 until steps.length()) {
+                        val step = steps.getJSONObject(i)
+                        val stepDist = step.optDouble("distance", 0.0)
+                        val streetName = step.optString("name", "")
+                        val maneuver = step.optJSONObject("maneuver")
+                        val mTypeStr = maneuver?.optString("type", "") ?: ""
+                        val mModStr = maneuver?.optString("modifier", "") ?: ""
+                        val locArr = maneuver?.optJSONArray("location")
+                        val mLon = locArr?.optDouble(0, endLon) ?: endLon
+                        val mLat = locArr?.optDouble(1, endLat) ?: endLat
+
+                        val (maneuverType, arText) = translateOsrmManeuver(mTypeStr, mModStr, streetName, destinationName)
+                        instructions.add(
+                            NavigationInstruction(
+                                text = arText,
+                                maneuverType = maneuverType,
+                                distanceRemaining = remDist,
+                                segmentDistance = stepDist,
+                                streetName = streetName,
+                                maneuverLat = mLat,
+                                maneuverLon = mLon
+                            )
+                        )
+                        remDist = (remDist - stepDist).coerceAtLeast(0.0)
+                    }
+                }
+            }
+
+            if (instructions.isEmpty()) {
+                instructions.add(
+                    NavigationInstruction(
+                        text = "انطلق نحو $destinationName",
+                        maneuverType = ManeuverType.START,
+                        distanceRemaining = totalDistM,
+                        segmentDistance = totalDistM,
+                        maneuverLat = endLat,
+                        maneuverLon = endLon
+                    )
+                )
+            }
+
+            NavigationRouteResult.Success(
+                points = points,
+                instructions = instructions,
+                totalDistanceMeters = totalDistM,
+                estimatedDurationSeconds = totalDurSec,
+                isOfflineEngine = false,
+                modeLabel = "ملاحة شوارع حية (OSM)"
+            )
+        } catch (e: Exception) {
+            Log.w("ValhallaRoutingEngine", "OSRM fallback error: ${e.message}")
+            null
+        } finally {
+            conn?.disconnect()
+        }
+    }
+
+    private fun translateOsrmManeuver(
+        type: String,
+        modifier: String,
+        streetName: String,
+        destinationName: String
+    ): Pair<ManeuverType, String> {
+        val onStreet = if (streetName.isNotBlank()) " إلى $streetName" else ""
+        if (type == "depart") return ManeuverType.START to "انطلق في المسار$onStreet"
+        if (type == "arrive") return ManeuverType.DESTINATION to "وصلت إلى وجهتك: $destinationName"
+        if (type == "roundabout" || type == "rotary" || type == "exit roundabout") {
+            return ManeuverType.ROUNDABOUT to "عند الدوار، اسلك المخرج$onStreet"
+        }
+        return when (modifier) {
+            "uturn" -> ManeuverType.U_TURN to "استدر للخلف (يو تيرن)$onStreet"
+            "sharp right" -> ManeuverType.SHARP_RIGHT to "انعطف يميناً بقوة$onStreet"
+            "right" -> ManeuverType.TURN_RIGHT to "انعطف يميناً$onStreet"
+            "slight right" -> ManeuverType.SLIGHT_RIGHT to "اتجه قليلاً إلى اليمين$onStreet"
+            "sharp left" -> ManeuverType.SHARP_LEFT to "انعطف يساراً بقوة$onStreet"
+            "left" -> ManeuverType.TURN_LEFT to "انعطف يساراً$onStreet"
+            "slight left" -> ManeuverType.SLIGHT_LEFT to "اتجه قليلاً إلى اليسار$onStreet"
+            else -> ManeuverType.STRAIGHT to "استمر للأمام$onStreet"
+        }
     }
 
     /**
@@ -148,18 +280,22 @@ internal object ValhallaRoutingEngine {
 
         val basicInstructions = listOf(
             NavigationInstruction(
-                text = "تقريبي - مسافة مباشرة نحو $destinationName (يرجى تحميل خرائط الأوفلاين للتوجيه الشارعي)",
+                text = "مسار مباشر نحو $destinationName",
                 maneuverType = ManeuverType.START,
                 distanceRemaining = directDistance,
                 segmentDistance = directDistance,
-                streetName = "مسار مباشر"
+                streetName = "مسار مباشر",
+                maneuverLat = endLat,
+                maneuverLon = endLon
             ),
             NavigationInstruction(
                 text = "الوصول إلى $destinationName",
                 maneuverType = ManeuverType.DESTINATION,
                 distanceRemaining = 0.0,
                 segmentDistance = 0.0,
-                streetName = destinationName
+                streetName = destinationName,
+                maneuverLat = endLat,
+                maneuverLon = endLon
             )
         )
 
@@ -171,7 +307,7 @@ internal object ValhallaRoutingEngine {
             totalDistanceMeters = directDistance,
             estimatedDurationSeconds = durationSeconds,
             isOfflineEngine = false,
-            modeLabel = "تقريبي - مسافة مباشرة (حزمة الأوفلاين غير محملة)"
+            modeLabel = "تقريبي - مسافة مباشرة (أضف حزمة الأوفلاين للتوجيه بلا نت)"
         )
     }
 

@@ -23,6 +23,7 @@ import com.serviseyem.utils.VisualThemePalette
  * 🗺️ AddOsmLandmarkDialog
  * نافذة إضافة معلم يمني جديد لتوأمة وتحسين OpenStreetMap محلياً
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AddOsmLandmarkDialog(
     userLat: Double,
@@ -79,7 +80,7 @@ fun AddOsmLandmarkDialog(
                             )
                         }
                     }
-                    IconButton(onClick = onDismiss) {
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color.Gray)
                     }
                 }
@@ -100,11 +101,12 @@ fun AddOsmLandmarkDialog(
                 )
 
                 Text("نوع المعلم:", color = Color.LightGray, fontSize = 11.sp)
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    categories.take(3).forEach { cat ->
+                    categories.forEach { cat ->
                         FilterChip(
                             selected = selectedCategory == cat,
                             onClick = { selectedCategory = cat },
@@ -156,7 +158,7 @@ fun AddOsmLandmarkDialog(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth().height(42.dp)
+                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
                 ) {
                     Text("حفظ المعلم والمساهمة في الخريطة 🌟", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }

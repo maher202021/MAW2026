@@ -66,6 +66,8 @@ fun RealLeafletMapView(
     isNasaGibsActive: Boolean = false,
     gibsProduct: String = "viirs_noaa20",
     onGibsInfo: ((String, String) -> Unit)? = null,
+    isEoxCloudlessActive: Boolean = false,
+    isEsriImageryActive: Boolean = false,
     eumetEnabled: Boolean = false,
     eumetLayer: String = "",
     onOverlayStatus: ((String, Boolean) -> Unit)? = null,
@@ -79,9 +81,20 @@ fun RealLeafletMapView(
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     var isMapReady by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    val latestProviders by rememberUpdatedState(nearbyProviders)
+    val latestStores by rememberUpdatedState(nearbyStores)
+    val latestProperties by rememberUpdatedState(nearbyProperties)
+    val latestOnProviderSelected by rememberUpdatedState(onProviderSelected)
+    val latestOnStoreSelected by rememberUpdatedState(onStoreSelected)
+    val latestOnPropertySelected by rememberUpdatedState(onPropertySelected)
+    val latestOnDeselect by rememberUpdatedState(onDeselect)
+    val latestOnTilesFailedOffline by rememberUpdatedState(onTilesFailedOffline)
+    val latestOnEarthquakeDataLoaded by rememberUpdatedState(onEarthquakeDataLoaded)
+    val latestOnEarthquakeDataError by rememberUpdatedState(onEarthquakeDataError)
     val latestOnMapPicked by rememberUpdatedState(onMapPicked)
     val latestOnGibsInfo by rememberUpdatedState(onGibsInfo)
     val latestOnOverlayStatus by rememberUpdatedState(onOverlayStatus)
+    val latestOnMapLoadFailed by rememberUpdatedState(onMapLoadFailed)
     
     // التحقق المسبق من وجود ملف map.html لتجنب الشاشات السوداء تماماً
     val isAssetAvailable = remember {
@@ -110,12 +123,13 @@ fun RealLeafletMapView(
     }
 
     // تحويل البيانات إلى JSON مهيأ للبلاطات والعلامات
-    val markersJson = remember(nearbyProviders, nearbyStores, nearbyProperties, selectedCity) {
+    val offsetsSnapshot = dynamicOffsets.toMap()
+    val markersJson = remember(nearbyProviders, nearbyStores, nearbyProperties, selectedCity, offsetsSnapshot, userCoords) {
         MapJsonBuilder.buildMarkersJson(
             nearbyProviders = nearbyProviders,
             nearbyStores = nearbyStores,
             nearbyProperties = nearbyProperties,
-            dynamicOffsets = dynamicOffsets,
+            dynamicOffsets = offsetsSnapshot,
             safeUserLat = userCoords.first,
             safeUserLng = userCoords.second
         )
@@ -124,7 +138,8 @@ fun RealLeafletMapView(
     // إرسال العلامات للخريطة عند اكتمال الجاهزية أو تغير البيانات
     LaunchedEffect(isMapReady, markersJson) {
         if (isMapReady && webViewRef != null) {
-            val script = "if (window.setMarkers) { window.setMarkers('$markersJson'); }"
+            val quoted = org.json.JSONObject.quote(markersJson)
+            val script = "if (window.setMarkers) { window.setMarkers($quoted); }"
             webViewRef?.evaluateJavascript(script, null)
         }
     }
@@ -141,17 +156,20 @@ fun RealLeafletMapView(
     LaunchedEffect(isMapReady, selectedCity) {
         if (isMapReady && webViewRef != null) {
             val cityCoords = OfflineMapManager.getCityCoordinates(selectedCity)
-            val script = "if (window.setCity) { window.setCity('${cityCoords.nameAr}', ${cityCoords.latitude}, ${cityCoords.longitude}, ${cityCoords.defaultZoom}); }"
+            val quotedCity = org.json.JSONObject.quote(cityCoords.nameAr)
+            val script = "if (window.setCity) { window.setCity($quotedCity, ${cityCoords.latitude}, ${cityCoords.longitude}, ${cityCoords.defaultZoom}); }"
             webViewRef?.evaluateJavascript(script, null)
         }
     }
 
-    // تبديل أوضاع خريطة Vela (3D أو الصور الجوية OAM)
+    // تبديل أوضاع خريطة Vela (3D أو الصور الجوية OAM) والطبقة المختارة
     LaunchedEffect(isMapReady, mapMode, currentMapLayer) {
         if (isMapReady && webViewRef != null) {
+            val quotedMode = org.json.JSONObject.quote(mapMode.name)
+            val quotedLayer = org.json.JSONObject.quote(currentMapLayer)
             val script = """
-                if (window.setVelaMode) { window.setVelaMode('${mapMode.name}'); }
-                if (window.switchLayer) { window.switchLayer('$currentMapLayer'); }
+                if (window.setVelaMode) { window.setVelaMode($quotedMode); }
+                if (window.switchLayer) { window.switchLayer($quotedLayer); }
             """.trimIndent()
             webViewRef?.evaluateJavascript(script, null)
         }
@@ -159,8 +177,9 @@ fun RealLeafletMapView(
 
     // إمالة الكاميرا التفاعلية للوضع ثلاثي الأبعاد 3D Tilt
     LaunchedEffect(isMapReady, tiltAngle, mapMode) {
-        if (isMapReady && webViewRef != null && mapMode == MapMode.VELA_3D) {
-            val script = "if (window.setTilt) { window.setTilt($tiltAngle); }"
+        if (isMapReady && webViewRef != null) {
+            val effectiveTilt = if (mapMode == MapMode.VELA_3D) tiltAngle else 0f
+            val script = "if (window.setTilt) { window.setTilt($effectiveTilt); }"
             webViewRef?.evaluateJavascript(script, null)
         }
     }
@@ -176,11 +195,30 @@ fun RealLeafletMapView(
         }
     }
 
-    // 🛰️ مزامنة منتج ناسا GIBS المحدد عند تفعيل الطبقة
+    // 🛰️ مزامنة وتفعيل/إيقاف طبقة ناسا GIBS
     LaunchedEffect(isMapReady, isNasaGibsActive, gibsProduct) {
+        if (!isMapReady || webViewRef == null) return@LaunchedEffect
         val allowed = setOf("viirs_noaa20", "viirs_snpp", "truecolor", "landtemp")
-        if (isMapReady && webViewRef != null && isNasaGibsActive && gibsProduct in allowed) {
-            webViewRef?.evaluateJavascript("if (window.setGibs) { window.setGibs('$gibsProduct'); }", null)
+        if (isNasaGibsActive && gibsProduct in allowed) {
+            val quoted = org.json.JSONObject.quote(gibsProduct)
+            webViewRef?.evaluateJavascript(
+                "if (window.setGibs) { window.setGibs($quoted); } if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer(true); }",
+                null
+            )
+        } else {
+            webViewRef?.evaluateJavascript("if (window.toggleNasaGibsLayer) { window.toggleNasaGibsLayer(false); }", null)
+        }
+    }
+
+    // 🛰️ مزامنة طبقة EOX Cloudless (10m) و Esri World Imagery
+    LaunchedEffect(isMapReady, isEoxCloudlessActive) {
+        if (isMapReady && webViewRef != null) {
+            webViewRef?.evaluateJavascript("if (window.toggleEoxCloudlessLayer) { window.toggleEoxCloudlessLayer($isEoxCloudlessActive); }", null)
+        }
+    }
+    LaunchedEffect(isMapReady, isEsriImageryActive) {
+        if (isMapReady && webViewRef != null) {
+            webViewRef?.evaluateJavascript("if (window.toggleEsriWorldImageryLayer) { window.toggleEsriWorldImageryLayer($isEsriImageryActive); }", null)
         }
     }
 
@@ -188,7 +226,8 @@ fun RealLeafletMapView(
     LaunchedEffect(isMapReady, eumetEnabled, eumetLayer) {
         if (!isMapReady) return@LaunchedEffect
         val safe = if (com.serviseyem.utils.EumetViewCatalog.isSafe(eumetLayer)) eumetLayer else ""
-        webViewRef?.evaluateJavascript("if (window.setEumet) { window.setEumet(${eumetEnabled && safe.isNotEmpty()}, '$safe'); }", null)
+        val quotedSafe = org.json.JSONObject.quote(safe)
+        webViewRef?.evaluateJavascript("if (window.setEumet) { window.setEumet(${eumetEnabled && safe.isNotEmpty()}, $quotedSafe); }", null)
     }
 
     // [تعديل] التحكم في التكبير والتصغير التفاعلي وربطه مباشرة مع خريطة OpenStreetMap
@@ -228,7 +267,7 @@ fun RealLeafletMapView(
                         .put("lng", lng)
                 )
             }
-            webViewRef?.evaluateJavascript("if (window.setWaypointMarkers) { window.setWaypointMarkers(${arr}); }", null)
+            webViewRef?.evaluateJavascript("if (window.setWaypointMarkers) { window.setWaypointMarkers($arr); }", null)
         }
     }
 
@@ -259,7 +298,7 @@ fun RealLeafletMapView(
                             loadWithOverviewMode = true
                             useWideViewPort = true
                             allowFileAccess = true
-                            allowContentAccess = true
+                            allowContentAccess = false
                             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                         }
 
@@ -267,20 +306,20 @@ fun RealLeafletMapView(
                         addJavascriptInterface(object {
                             @JavascriptInterface
                             fun onMapReady() {
-                                isMapReady = true
+                                post { isMapReady = true }
                             }
 
                             @JavascriptInterface
                             fun onMapClicked() {
-                                webViewRef?.post {
+                                post {
                                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                                    onDeselect()
+                                    latestOnDeselect()
                                 }
                             }
 
                             @JavascriptInterface
                             fun onMapPicked(lat: Double, lng: Double) {
-                                webViewRef?.post {
+                                post {
                                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                                     latestOnMapPicked?.invoke(lat, lng)
                                 }
@@ -288,56 +327,53 @@ fun RealLeafletMapView(
 
                             @JavascriptInterface
                             fun onMarkerClicked(id: String, type: String) {
-                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                                when (type.uppercase()) {
-                                    "PROVIDER" -> {
-                                        nearbyProviders.find { it.id == id }?.let { onProviderSelected(it) }
-                                    }
-                                    "STORE", "RESTAURANT", "MEDICAL" -> {
-                                        nearbyStores.find { it.id == id }?.let { onStoreSelected(it) }
-                                    }
-                                    "PROPERTY" -> {
-                                        nearbyProperties.find { it.id == id }?.let { onPropertySelected(it) }
+                                post {
+                                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                    when (type.uppercase()) {
+                                        "PROVIDER" -> {
+                                            latestProviders.find { it.id == id }?.let { latestOnProviderSelected(it) }
+                                        }
+                                        "STORE", "RESTAURANT", "MEDICAL" -> {
+                                            latestStores.find { it.id == id }?.let { latestOnStoreSelected(it) }
+                                        }
+                                        "PROPERTY" -> {
+                                            latestProperties.find { it.id == id }?.let { latestOnPropertySelected(it) }
+                                        }
                                     }
                                 }
                             }
 
                             @JavascriptInterface
                             fun switchLayer(layerKey: String) {
-                                webViewRef?.post {
-                                    webViewRef?.evaluateJavascript("if (window.switchLayer) { window.switchLayer('$layerKey'); }", null)
+                                post {
+                                    val quoted = org.json.JSONObject.quote(layerKey)
+                                    evaluateJavascript("if (window.switchLayer) { window.switchLayer($quoted); }", null)
                                 }
                             }
 
                             @JavascriptInterface
                             fun onEarthquakeDataLoaded(timestamp: Long, count: Int) {
-                                onEarthquakeDataLoaded?.invoke(timestamp, count)
+                                post { latestOnEarthquakeDataLoaded?.invoke(timestamp, count) }
                             }
 
                             @JavascriptInterface
                             fun onEarthquakeDataError(error: String) {
-                                onEarthquakeDataError?.invoke(error)
+                                post { latestOnEarthquakeDataError?.invoke(error) }
                             }
 
                             @JavascriptInterface
                             fun onTilesFailedOffline(layerKey: String) {
-                                webViewRef?.post {
-                                    onTilesFailedOffline?.invoke(layerKey)
-                                }
+                                post { latestOnTilesFailedOffline?.invoke(layerKey) }
                             }
 
                             @JavascriptInterface
                             fun onGibsInfo(product: String, date: String) {
-                                webViewRef?.post {
-                                    latestOnGibsInfo?.invoke(product, date)
-                                }
+                                post { latestOnGibsInfo?.invoke(product, date) }
                             }
 
                             @JavascriptInterface
                             fun onOverlayStatus(name: String, ok: Boolean) {
-                                webViewRef?.post {
-                                    latestOnOverlayStatus?.invoke(name, ok)
-                                }
+                                post { latestOnOverlayStatus?.invoke(name, ok) }
                             }
                         }, "AndroidBridge")
 
@@ -369,7 +405,7 @@ fun RealLeafletMapView(
                                 // [تعديل] لا ننتقل للبديل إلا إذا كان الملف الأساسي المحلي نفسه فشل لضمان عدم ظهور شاشة سوداء
                                 if (failingUrl?.contains("map.html") == true) {
                                     hasLoadError = true
-                                    onMapLoadFailed?.invoke()
+                                    latestOnMapLoadFailed?.invoke()
                                 }
                             }
 
@@ -381,7 +417,7 @@ fun RealLeafletMapView(
                                 super.onReceivedError(view, request, error)
                                 if (request?.isForMainFrame == true) {
                                     hasLoadError = true
-                                    onMapLoadFailed?.invoke()
+                                    latestOnMapLoadFailed?.invoke()
                                 }
                             }
                         }

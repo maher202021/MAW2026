@@ -42,14 +42,15 @@ object MapScreenFilters {
         selectedCity: String,
         searchQuery: String
     ): List<ProviderEntity> {
-        val cleanQuery = searchQuery.trim().lowercase()
+        val cleanQuery = searchQuery.trim()
+        val normQuery = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.normalizeArabicText(cleanQuery)
         return providers.filter { p ->
             val matchesCat = selectedCategory == "ALL" || selectedCategory == "PROVIDERS"
             val matchesCity = matchesCityFilter(selectedCity, p.cityId, p.area, p.localNeighborhood)
-            val combinedTarget = "${p.name} ${p.profession} ${p.customCategoryName} ${p.specialization} ${p.area} ${p.localNeighborhood}"
-            val matchesQuery = cleanQuery.isEmpty() ||
-                    combinedTarget.lowercase().contains(cleanQuery) ||
-                    com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(cleanQuery, combinedTarget)
+            val matchesQuery = normQuery.isEmpty() || run {
+                val combinedTarget = "${p.name} ${p.profession} ${p.customCategoryName} ${p.specialization} ${p.area} ${p.localNeighborhood}"
+                com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(normQuery, combinedTarget)
+            }
             matchesCat && matchesCity && matchesQuery
         }
     }
@@ -60,7 +61,7 @@ object MapScreenFilters {
         selectedCity: String,
         searchQuery: String
     ): List<StoreEntity> {
-        val cleanQuery = searchQuery.trim().lowercase()
+        val normQuery = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.normalizeArabicText(searchQuery)
         return stores.filter { s ->
             val isMedical = s.isMedicalCenter()
             val isRestaurant = s.isRestaurantOrCafe()
@@ -74,10 +75,10 @@ object MapScreenFilters {
                 else -> false
             }
             val matchesCity = matchesCityFilter(selectedCity, s.cityId, "", s.localNeighborhood)
-            val combinedTarget = "${s.name} ${s.description} ${s.localNeighborhood} ${s.sectionId} ${s.categoryId}"
-            val matchesQuery = cleanQuery.isEmpty() ||
-                    combinedTarget.lowercase().contains(cleanQuery) ||
-                    com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(cleanQuery, combinedTarget)
+            val matchesQuery = normQuery.isEmpty() || run {
+                val combinedTarget = "${s.name} ${s.description} ${s.localNeighborhood} ${s.sectionId} ${s.categoryId}"
+                com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(normQuery, combinedTarget)
+            }
             matchesCat && matchesCity && matchesQuery
         }
     }
@@ -88,14 +89,14 @@ object MapScreenFilters {
         selectedCity: String,
         searchQuery: String
     ): List<PropertyEntity> {
-        val cleanQuery = searchQuery.trim().lowercase()
+        val normQuery = com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.normalizeArabicText(searchQuery)
         return properties.filter { pr ->
             val matchesCat = selectedCategory == "ALL" || selectedCategory == "PROPERTIES"
             val matchesCity = matchesCityFilter(selectedCity, pr.cityId, "", pr.localNeighborhood)
-            val combinedTarget = "${pr.title} ${pr.description} ${pr.localNeighborhood}"
-            val matchesQuery = cleanQuery.isEmpty() ||
-                    combinedTarget.lowercase().contains(cleanQuery) ||
-                    com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(cleanQuery, combinedTarget)
+            val matchesQuery = normQuery.isEmpty() || run {
+                val combinedTarget = "${pr.title} ${pr.description} ${pr.localNeighborhood}"
+                com.serviseyem.ui.screens.map.utils.YemeniLocalSearchEngine.matchesDialectQuery(normQuery, combinedTarget)
+            }
             matchesCat && matchesCity && matchesQuery
         }
     }
@@ -108,7 +109,6 @@ object MapScreenFilters {
         safeUserLng: Double
     ): List<MarkerRenderer.MapItemPoint> {
         val list = mutableListOf<MarkerRenderer.MapItemPoint>()
-        var angle = 0.0
 
         filteredProviders.forEach { p ->
             val resolved = com.serviseyem.ui.screens.map.utils.MapCoordinateResolver.resolveProvider(p)

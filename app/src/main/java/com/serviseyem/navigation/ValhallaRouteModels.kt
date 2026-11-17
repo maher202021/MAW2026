@@ -20,7 +20,10 @@ data class NavigationInstruction(
     val maneuverType: ManeuverType,
     val distanceRemaining: Double,
     val segmentDistance: Double,
-    val streetName: String = ""
+    val streetName: String = "",
+    val maneuverLat: Double = 0.0,
+    val maneuverLon: Double = 0.0,
+    val shapeIndex: Int = 0
 )
 
 enum class ManeuverType {

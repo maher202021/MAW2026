@@ -377,6 +377,7 @@
                     <div class="sat-item-title">Sentinel-2 (Sentinel Hub + EOX)</div>
                     <div class="sat-item-desc">أحدث صور Sentinel-2 المباشرة بدون مفاتيح</div>
                 </div>
+            </div>
             <div class="sat-menu-item" data-key="eumet" onclick="selectSatLayer('eumet', 'قمر Meteosat مباشر (EUMETSAT)')">
                 <span class="sat-item-icon">🛰️</span>
                 <div class="sat-item-info">
@@ -562,16 +563,54 @@
             }
         }
 
-        var eumetLayer = null, eumetTimer = null;
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function safeColor(c, fallback) {
+            return /^#[0-9A-Fa-f]{3,8}$/.test(c || '') ? c : (fallback || '#00E5FF');
+        }
+
+        var eumetLayer = null, eumetTimer = null, lastEumetLayerName = '';
         function setEumet(on, layerName) {
             if (!map) return;
             ensurePane('eumetPane', 262);
             if (eumetTimer) { clearInterval(eumetTimer); eumetTimer = null; }
             if (eumetLayer && map.hasLayer(eumetLayer)) map.removeLayer(eumetLayer);
             eumetLayer = null;
-            if (!on || !/^[A-Za-z0-9_:.\-]{3,80}$/.test(layerName || '')) return;
+            if (!on) return;
+            if (/^[A-Za-z0-9_:.\-]{3,80}$/.test(layerName || '')) {
+                lastEumetLayerName = layerName;
+            }
+            var targetLayer = lastEumetLayerName;
+            if (!targetLayer) {
+                fetch('https://view.eumetsat.int/geoserver/ows?service=WMS&version=1.3.0&request=GetCapabilities')
+                    .then(function(r) { return r.text(); })
+                    .then(function(xml) {
+                        var rx = /<Name>([^<]{3,80})<\/Name>\s*<Title>([^<]{1,200})<\/Title>/gi;
+                        var m;
+                        while ((m = rx.exec(xml)) !== null) {
+                            var nm = (m[1] || '').trim();
+                            var tt = (m[2] || '').trim();
+                            if (nm.indexOf(':') > -1 && /^[A-Za-z0-9_:.\-]{3,80}$/.test(nm) &&
+                                (/iodc/i.test(tt) || /indian ocean/i.test(tt) || /41\.5/.test(tt))) {
+                                setEumet(true, nm);
+                                return;
+                            }
+                        }
+                        notifyOverlay('eumet', false);
+                    })
+                    .catch(function() { notifyOverlay('eumet', false); });
+                return;
+            }
             eumetLayer = L.tileLayer.wms('https://view.eumetsat.int/geoserver/wms', {
-                layers: layerName,
+                layers: targetLayer,
                 format: 'image/png',
                 transparent: true,
                 version: '1.3.0',
@@ -673,7 +712,7 @@
                 var html = '<div class="custom-pin-container">' +
                     '<div class="custom-pin-head" style="background-color:#EF4444;">🏁</div>' +
                     '<div class="custom-pin-arrow" style="border-top-color:#EF4444;"></div>' +
-                    '<div class="custom-pin-label">' + (item.name || 'الوجهة') + '</div></div>';
+                    '<div class="custom-pin-label">' + escapeHtml(item.name || 'الوجهة') + '</div></div>';
                 var m = L.marker([item.lat, item.lng], {
                     icon: L.divIcon({ className: '', html: html, iconSize: [32, 46], iconAnchor: [16, 44] }),
                     zIndexOffset: 2500
@@ -1004,7 +1043,7 @@
                 toggleRainViewerLayer(true);
             } else if (key === 'eumet') {
                 switchLayer('google_hybrid');
-                setEumet(true, 'msg_iodc:rgb_dust');
+                setEumet(true, lastEumetLayerName);
             } else if (key === 'nasa') {
                 switchLayer('google_hybrid');
                 toggleNasaGibsLayer(true);
@@ -1053,7 +1092,7 @@
                     weight: 1.5,
                     dashArray: '6, 4'
                 });
-                circle.bindTooltip(z.label || "منطقة غير مغطاة بخدمات ⚠️", { permanent: false, direction: 'top' });
+                circle.bindTooltip(escapeHtml(z.label || "منطقة غير مغطاة بخدمات ⚠️"), { permanent: false, direction: 'top' });
                 deadZoneLayerGroup.addLayer(circle);
             });
         }
@@ -1078,7 +1117,7 @@
                     weight: 2,
                     dashArray: '4, 4'
                 });
-                var tooltipText = '⚠️ ' + (h.title || 'طريق وعر') + '<br><small>' + (h.desc || 'صعوبة الطريق: ' + h.difficulty + '/5') + '</small>';
+                var tooltipText = '⚠️ ' + escapeHtml(h.title || 'طريق وعر') + '<br><small>' + escapeHtml(h.desc || ('صعوبة الطريق: ' + h.difficulty + '/5')) + '</small>';
                 circle.bindTooltip(tooltipText, { permanent: false, direction: 'top' });
                 roadSafetyLayerGroup.addLayer(circle);
             });
@@ -1105,7 +1144,7 @@
                     weight: 2
                 });
                 var badgeIcon = z.status === 'AVAILABLE' ? '🟢 متاح الآن' : (z.status === 'BUSY' ? '🟡 منشغل حالياً' : '🔴 غير مغطى');
-                var tooltipText = '<b>' + (z.areaName || 'منطقة') + '</b><br>' + badgeIcon + '<br><small>' + (z.details || '') + '</small>';
+                var tooltipText = '<b>' + escapeHtml(z.areaName || 'منطقة') + '</b><br>' + badgeIcon + '<br><small>' + escapeHtml(z.details || '') + '</small>';
                 circle.bindTooltip(tooltipText, { permanent: false, direction: 'top' });
                 reliabilityLayerGroup.addLayer(circle);
             });
@@ -1121,7 +1160,7 @@
                 var html = '<div class="custom-pin-container">' +
                     '<div class="custom-pin-head" style="background-color:#10B981;">👤</div>' +
                     '<div class="custom-pin-arrow" style="border-top-color:#10B981;"></div>' +
-                    '<div class="custom-pin-label">'+m.name+'</div></div>';
+                    '<div class="custom-pin-label">' + escapeHtml(m.name || 'عضو') + '</div></div>';
                 var marker = L.marker([m.lat, m.lng], {
                     icon: L.divIcon({ className:'', html: html, iconSize:[32,46], iconAnchor:[16,44] })
                 });
@@ -1160,7 +1199,7 @@
             var targetKey = key;
             if (key === 'google_satellite' || key === 'hybrid') targetKey = 'google_hybrid';
             if (key === 'streets') targetKey = 'google_streets';
-            if (key === 'osm') targetKey = 'osm_ar';
+            if (key === 'osm' || key === 'osm_offline') targetKey = 'osm_ar';
 
             failedTileCount = 0;
             loadedTileCount = 0;
@@ -1179,7 +1218,6 @@
             var el = document.getElementById('map');
             if (mode === 'VELA_3D' || mode === 'AERIAL_OAM') {
                 el.classList.add('mode-3d-tilted');
-                switchLayer('google_satellite');
             } else {
                 el.classList.remove('mode-3d-tilted');
             }
@@ -1213,11 +1251,13 @@
             if (!markerClusterGroup) return;
             markerClusterGroup.clearLayers();
             var items = (typeof json === 'string') ? JSON.parse(json) : json;
+            if (!items || !Array.isArray(items)) return;
             items.forEach(function(item) {
+                var badgeCol = safeColor(item.badgeColor, '#00E5FF');
                 var iconHtml = '<div class="custom-pin-container">' +
-                    '<div class="custom-pin-head" style="background-color:'+(item.badgeColor||'#00E5FF')+';">'+(item.emoji||'📍')+'</div>' +
-                    '<div class="custom-pin-arrow" style="border-top-color:'+(item.badgeColor||'#00E5FF')+';"></div>' +
-                    '<div class="custom-pin-label">'+item.name+'</div></div>';
+                    '<div class="custom-pin-head" style="background-color:' + badgeCol + ';">' + escapeHtml(item.emoji || '📍') + '</div>' +
+                    '<div class="custom-pin-arrow" style="border-top-color:' + badgeCol + ';"></div>' +
+                    '<div class="custom-pin-label">' + escapeHtml(item.name) + '</div></div>';
                 var marker = L.marker([item.lat, item.lng], {
                     icon: L.divIcon({ className:'', html: iconHtml, iconSize:[32,46], iconAnchor:[16,44] })
                 });
@@ -1238,7 +1278,7 @@
 
         function drawRealRoute(lat1, lng1, lat2, lng2, color, destName) {
             clearRoute();
-            var routeColor = color || '#0D5C3A';
+            var routeColor = safeColor(color, '#0D5C3A');
 
             var destHtml = '<div style="background:#0D5C3A; color:#E0F2FE; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; border:2px solid #D4A017; box-shadow:0 0 12px #0D5C3A; font-size:18px;">🏁</div>';
             destinationMarker = L.marker([lat2, lng2], {
@@ -1246,7 +1286,7 @@
             }).addTo(map);
 
             if (destName) {
-                destinationMarker.bindTooltip(destName, { permanent: true, direction: 'top', className: 'custom-pin-label' });
+                destinationMarker.bindTooltip(escapeHtml(destName), { permanent: true, direction: 'top', className: 'custom-pin-label' });
             }
 
             // Real Road Routing via OSRM Demo API
@@ -1274,6 +1314,39 @@
                     drawFallbackStraightRoute(lat1, lng1, lat2, lng2, routeColor);
                 });
         }
+
+        function drawMultiStopRoute(waypointsJson, color) {
+            clearRoute();
+            var pts = (typeof waypointsJson === 'string') ? JSON.parse(waypointsJson) : waypointsJson;
+            if (!pts || !Array.isArray(pts) || pts.length < 2) return;
+            var routeColor = safeColor(color, '#10B981');
+            setWaypointMarkers(pts);
+            var coordParam = pts.map(function(p) { return p.lng + ',' + p.lat; }).join(';');
+            var osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' + coordParam + '?overview=full&geometries=geojson';
+            fetch(osrmUrl)
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data && data.routes && data.routes.length > 0) {
+                        var latLngs = data.routes[0].geometry.coordinates.map(function(pt) { return [pt[1], pt[0]]; });
+                        activeRouteLine = L.polyline(latLngs, {
+                            color: routeColor, weight: 6, opacity: 0.95, lineJoin: 'round', lineCap: 'round'
+                        }).addTo(map);
+                        map.fitBounds(activeRouteLine.getBounds(), { padding: [60, 60], maxZoom: 16 });
+                    } else {
+                        activeRouteLine = L.polyline(pts.map(function(p) { return [p.lat, p.lng]; }), {
+                            color: routeColor, weight: 5, opacity: 0.9, dashArray: '10, 8'
+                        }).addTo(map);
+                        map.fitBounds(activeRouteLine.getBounds(), { padding: [60, 60], maxZoom: 16 });
+                    }
+                })
+                .catch(function() {
+                    activeRouteLine = L.polyline(pts.map(function(p) { return [p.lat, p.lng]; }), {
+                        color: routeColor, weight: 5, opacity: 0.9, dashArray: '10, 8'
+                    }).addTo(map);
+                    map.fitBounds(activeRouteLine.getBounds(), { padding: [60, 60], maxZoom: 16 });
+                });
+        }
+        window.drawMultiStopRoute = drawMultiStopRoute;
 
         function drawFallbackStraightRoute(lat1, lng1, lat2, lng2, color) {
             var midLat = (lat1 + lat2) / 2;
@@ -1387,10 +1460,10 @@
                             var popupContent = 
                                 '<div style="direction:rtl; text-align:right; font-family:sans-serif; min-width:170px; line-height:1.4;">' +
                                     '<div style="font-weight:bold; color:#DC2626; font-size:13px; margin-bottom:4px;">🌋 هزة أرضية مسجلة</div>' +
-                                    '<div style="font-size:12px; color:#1E293B; margin-bottom:3px;"><b>الموقع:</b> ' + place + '</div>' +
-                                    '<div style="font-size:12px; color:#1E293B; margin-bottom:3px;"><b>القوة:</b> <span style="font-weight:bold; color:#DC2626;">' + mag + ' ريختر</span></div>' +
-                                    '<div style="font-size:12px; color:#64748B; margin-bottom:3px;"><b>العمق:</b> ' + depth + '</div>' +
-                                    '<div style="font-size:11px; color:#94A3B8;"><b>الوقت:</b> ' + date + '</div>' +
+                                    '<div style="font-size:12px; color:#1E293B; margin-bottom:3px;"><b>الموقع:</b> ' + escapeHtml(place) + '</div>' +
+                                    '<div style="font-size:12px; color:#1E293B; margin-bottom:3px;"><b>القوة:</b> <span style="font-weight:bold; color:#DC2626;">' + escapeHtml(mag) + ' ريختر</span></div>' +
+                                    '<div style="font-size:12px; color:#64748B; margin-bottom:3px;"><b>العمق:</b> ' + escapeHtml(depth) + '</div>' +
+                                    '<div style="font-size:11px; color:#94A3B8;"><b>الوقت:</b> ' + escapeHtml(date) + '</div>' +
                                 '</div>';
 
                             layer.bindPopup(popupContent);

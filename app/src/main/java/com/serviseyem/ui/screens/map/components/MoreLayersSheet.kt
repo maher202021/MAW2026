@@ -35,6 +35,7 @@ fun Row3(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp)
             .clickable { onCheckedChange(!checked) }
             .padding(vertical = 10.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -124,7 +125,7 @@ fun MoreLayersSheet(
                 }
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
@@ -194,6 +195,7 @@ fun MoreLayersSheet(
                         Box(modifier = Modifier.padding(vertical = 4.dp)) {
                             OutlinedButton(
                                 onClick = { menu = true },
+                                modifier = Modifier.defaultMinSize(minHeight = 48.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.6f)),
                                 colors = ButtonDefaults.outlinedButtonColors(

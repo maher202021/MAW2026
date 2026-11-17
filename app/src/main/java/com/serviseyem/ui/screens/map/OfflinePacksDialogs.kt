@@ -442,48 +442,62 @@ fun PlacesDownloadDialog(
                 }
 
                 if (!isBusy) {
-                    // 1. خيار التحميل المباشر من الإنترنت (متاح دائماً برابط التحميل الرسمي المباشر)
-                    Button(
-                        onClick = {
-                            isBusy = true
-                            errorMessage = null
-                            progress = 0.05f
-                            statusText = "جاري الاتصال وتحميل قاعدة الأماكن..."
-                            coroutineScope.launch {
-                                val res = PlacesDbDownloader.download(context) { p ->
-                                    progress = p
-                                    statusText = "جاري التحميل وفك الضغط (${(p * 100).toInt()}%)..."
+                    if (hasDownloadUrl) {
+                        Button(
+                            onClick = {
+                                isBusy = true
+                                errorMessage = null
+                                progress = 0.05f
+                                statusText = "جاري الاتصال وتحميل قاعدة الأماكن..."
+                                coroutineScope.launch {
+                                    val res = PlacesDbDownloader.download(context) { p ->
+                                        progress = p
+                                        statusText = "جاري التحميل وفك الضغط (${(p * 100).toInt()}%)..."
+                                    }
+                                    isBusy = false
+                                    res.onSuccess {
+                                        val count = OfflinePlacesDb.rowCount(context)
+                                        onDismiss()
+                                        onCompleted("تم تثبيت قاعدة الأماكن بنجاح ✓ ($count مكان)")
+                                    }.onFailure { err ->
+                                        errorMessage = err.localizedMessage ?: "فشل تحميل قاعدة الأماكن من الإنترنت"
+                                    }
                                 }
-                                isBusy = false
-                                res.onSuccess {
-                                    val count = OfflinePlacesDb.rowCount(context)
-                                    onDismiss()
-                                    onCompleted("تم تثبيت قاعدة الأماكن بنجاح ✓ ($count مكان)")
-                                }.onFailure { err ->
-                                    errorMessage = err.localizedMessage ?: "فشل تحميل قاعدة الأماكن من الإنترنت"
-                                }
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .defaultMinSize(minHeight = 46.dp)
-                            .testTag("places_download_online_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CloudDownload,
-                            contentDescription = "تحميل مباشر من الإنترنت",
-                            tint = Color.Black,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = if (installed) "تحديث قاعدة الأماكن من النت (26 MB)" else "تحميل مباشر من النت (26 ميجابايت)",
-                            color = Color.Black,
-                            fontSize = 12.5.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .defaultMinSize(minHeight = 48.dp)
+                                .testTag("places_download_online_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudDownload,
+                                contentDescription = "تحميل مباشر من الإنترنت",
+                                tint = Color.Black,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = if (installed) "تحديث قاعدة الأماكن من النت" else "تحميل قاعدة الأماكن من النت",
+                                color = Color.Black,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFF1E293B),
+                            border = BorderStroke(1.dp, Color(0xFF334155))
+                        ) {
+                            Text(
+                                text = "ℹ️ البحث عن الشوارع والمعالم يعمل حالياً تلقائياً عبر المعالم المدمجة وخوادم OSM/Photon المباشرة. لتثبيت قاعدة بيانات أوفلاين إضافية، اختر ملف places.db من ذاكرة الهاتف.",
+                                color = Color(0xFFCBD5E1),
+                                fontSize = 11.sp,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
                     }
 
                     // 2. خيار الاستيراد من ذاكرة الهاتف
@@ -497,7 +511,7 @@ fun PlacesDownloadDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .defaultMinSize(minHeight = 46.dp)
+                            .defaultMinSize(minHeight = 48.dp)
                             .testTag("places_import_from_storage_button")
                     ) {
                         Icon(
@@ -515,7 +529,7 @@ fun PlacesDownloadDialog(
                         )
                     }
                     Text(
-                        text = "💡 يمكنك اختيار ملف valhalla_tiles.tar مباشرة من مجلد ADM في هاتفك لتفعيل الملاحة فوراً دون نت.",
+                        text = "💡 يمكنك اختيار ملف valhalla_tiles.tar أو places.db مباشرة من ذاكرة هاتفك لتفعيل الملاحة فوراً دون نت.",
                         color = Color(0xFFA7F3D0),
                         fontSize = 11.sp
                     )
@@ -530,7 +544,7 @@ fun PlacesDownloadDialog(
                         isBusy = false
                         statusText = "تم إلغاء التحميل"
                     },
-                    modifier = Modifier.defaultMinSize(minHeight = 44.dp)
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                 ) {
                     Text("إلغاء ✕", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold)
                 }
@@ -538,13 +552,13 @@ fun PlacesDownloadDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(
                         onClick = onDismiss,
-                        modifier = Modifier.defaultMinSize(minHeight = 44.dp)
+                        modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                     ) {
                         Text("التحميل لاحقاً ⏳", color = Color(0xFFFBBF24), fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
                     }
                     TextButton(
                         onClick = onDismiss,
-                        modifier = Modifier.defaultMinSize(minHeight = 44.dp)
+                        modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                     ) {
                         Text("إغلاق", color = Color.Gray, fontSize = 12.5.sp)
                     }

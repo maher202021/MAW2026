@@ -20,7 +20,9 @@ import com.serviseyem.data.StoreEntity
 import com.serviseyem.ui.screens.map.utils.OfflineMapManager
 import com.serviseyem.ui.screens.map.visualaddress.LandmarkAddressPicker
 import com.serviseyem.utils.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +56,22 @@ fun DestinationChooserSheet(
     var coordText by remember { mutableStateOf("") }
     val tabs = listOf("بحث", "الخريطة", "المدن", "عناويني", "الأخيرة", "إحداثيات")
 
+    var isPlacesInstalled by remember { mutableStateOf(false) }
+    var majorDbPlaces by remember { mutableStateOf<List<Triple<String, Double, Double>>>(emptyList()) }
+
+    LaunchedEffect(context) {
+        isPlacesInstalled = withContext(Dispatchers.IO) { OfflinePlacesDb.isInstalled(context) }
+    }
+
+    LaunchedEffect(tab, isPlacesInstalled) {
+        if (tab == 2 && isPlacesInstalled && majorDbPlaces.isEmpty()) {
+            val list = withContext(Dispatchers.IO) {
+                OfflinePlacesDb.listMajor(context, 150).map { Triple(it.shortName, it.latitude, it.longitude) }
+            }
+            majorDbPlaces = list
+        }
+    }
+
     LaunchedEffect(query, tab) {
         if (tab != 0) return@LaunchedEffect
         if (query.trim().length < 2) {
@@ -61,7 +79,7 @@ fun DestinationChooserSheet(
             busy = false
             return@LaunchedEffect
         }
-        delay(500)
+        delay(220)
         busy = true
         outcome = PlaceSearch.search(
             context = context,
@@ -101,10 +119,12 @@ fun DestinationChooserSheet(
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
                 )
-                if (!OfflinePlacesDb.isInstalled(context)) {
+                if (!isPlacesInstalled) {
                     TextButton(
                         onClick = onDownloadPlaces,
-                        modifier = Modifier.testTag("chooser_download_places_chip")
+                        modifier = Modifier
+                            .defaultMinSize(minHeight = 48.dp)
+                            .testTag("chooser_download_places_chip")
                     ) {
                         Text("📥 قاعدة الأماكن", color = Color(0xFF38BDF8), fontSize = 12.sp)
                     }
@@ -230,21 +250,25 @@ fun DestinationChooserSheet(
                     }
                 }
 
-                2 -> LazyColumn {
-                    val builtin = OfflineMapManager.allCities().map { Triple(it.nameAr, it.latitude, it.longitude) }
-                    val fromDb = if (OfflinePlacesDb.isInstalled(context)) OfflinePlacesDb.listMajor(context, 150) else emptyList()
-                    items(builtin + fromDb.map { Triple(it.shortName, it.latitude, it.longitude) }) { (n, la, lo) ->
-                        Text(
-                            text = "🏙️ $n",
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .defaultMinSize(minHeight = 48.dp)
-                                .clickable { pick(n, la, lo) }
-                                .padding(12.dp)
-                        )
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+                2 -> {
+                    val builtin = remember { OfflineMapManager.allCities().map { Triple(it.nameAr, it.latitude, it.longitude) } }
+                    val combined = remember(builtin, majorDbPlaces) {
+                        builtin + majorDbPlaces
+                    }
+                    LazyColumn {
+                        items(combined) { (n, la, lo) ->
+                            Text(
+                                text = "🏙️ $n",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .clickable { pick(n, la, lo) }
+                                    .padding(12.dp)
+                            )
+                            HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+                        }
                     }
                 }
 

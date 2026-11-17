@@ -5,6 +5,7 @@ import com.serviseyem.data.PropertyEntity
 import com.serviseyem.data.ProviderEntity
 import com.serviseyem.data.StoreEntity
 
+import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
@@ -17,13 +18,13 @@ class MapRepository(context: Context? = null) {
                 firestore.collection("providers")
                     .whereEqualTo("isDeleted", false)
                     .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                    .limit(200)
+                    .limit(500)
                     .get()
                     .await()
             } catch (_: Exception) {
                 firestore.collection("providers")
                     .whereEqualTo("isDeleted", false)
-                    .limit(200)
+                    .limit(500)
                     .get()
                     .await()
             }
@@ -31,6 +32,7 @@ class MapRepository(context: Context? = null) {
                 doc.toObject(ProviderEntity::class.java)?.copy(id = doc.id)
             }
         } catch (e: Exception) {
+            Log.w("MapRepository", "Failed to fetch providers: ${e.message}")
             emptyList()
         }
     }
@@ -41,13 +43,13 @@ class MapRepository(context: Context? = null) {
                 firestore.collection("stores")
                     .whereEqualTo("isDeleted", false)
                     .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                    .limit(200)
+                    .limit(500)
                     .get()
                     .await()
             } catch (_: Exception) {
                 firestore.collection("stores")
                     .whereEqualTo("isDeleted", false)
-                    .limit(200)
+                    .limit(500)
                     .get()
                     .await()
             }
@@ -55,6 +57,7 @@ class MapRepository(context: Context? = null) {
                 doc.toObject(StoreEntity::class.java)?.copy(id = doc.id)
             }
         } catch (e: Exception) {
+            Log.w("MapRepository", "Failed to fetch stores: ${e.message}")
             emptyList()
         }
     }
@@ -65,13 +68,13 @@ class MapRepository(context: Context? = null) {
                 firestore.collection("properties")
                     .whereEqualTo("isDeleted", false)
                     .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                    .limit(200)
+                    .limit(500)
                     .get()
                     .await()
             } catch (_: Exception) {
                 firestore.collection("properties")
                     .whereEqualTo("isDeleted", false)
-                    .limit(200)
+                    .limit(500)
                     .get()
                     .await()
             }
@@ -79,6 +82,7 @@ class MapRepository(context: Context? = null) {
                 doc.toObject(PropertyEntity::class.java)?.copy(id = doc.id)
             }
         } catch (e: Exception) {
+            Log.w("MapRepository", "Failed to fetch properties: ${e.message}")
             emptyList()
         }
     }

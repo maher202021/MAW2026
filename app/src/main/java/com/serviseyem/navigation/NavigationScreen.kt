@@ -60,10 +60,16 @@ fun NavigationScreen(
     DisposableEffect(Unit) {
         activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         locationEngine.startNavigationTracking()
+        val hasFineLoc = androidx.core.content.ContextCompat.checkSelfPermission(
+            context, android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (hasFineLoc) {
+            NavigationForegroundService.startService(context, "جاري بدء الملاحة إلى $initialTargetName", "", "--:--")
+        }
 
         onDispose {
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            locationEngine.stopTracking()
+            locationEngine.destroy()
             navigationVoice.destroy()
             NavigationForegroundService.stopService(context)
         }
@@ -79,6 +85,7 @@ fun NavigationScreen(
     var pickingOnNavMap by remember { mutableStateOf(false) }
     var pickedNavPoint by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var statusBannerText by remember { mutableStateOf<String?>(null) }
+    var hasAnnouncedArrival by remember { mutableStateOf(false) }
 
     val providersList = viewModel?.providers?.collectAsState()?.value ?: emptyList()
     val storesList = viewModel?.stores?.collectAsState()?.value ?: emptyList()
@@ -98,7 +105,7 @@ fun NavigationScreen(
     var estimatedTimeText by remember { mutableStateOf("جاري الحساب...") }
     var estimatedArrivalClock by remember { mutableStateOf("--:--") }
     var totalTripDistanceMeters by remember { mutableDoubleStateOf(1000.0) }
-    var tripProgressFraction by remember { mutableFloatStateOf(0.1f) }
+    var tripProgressFraction by remember { mutableFloatStateOf(0.0f) }
 
     // Off-route tracking
     var offRouteConsecutiveSeconds by remember { mutableIntStateOf(0) }
@@ -115,7 +122,14 @@ fun NavigationScreen(
     // Map WebView reference
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
 
+    LaunchedEffect(isArabicVoiceSupported) {
+        if (!isArabicVoiceSupported && statusBannerText == null) {
+            statusBannerText = "تنبيه: صوت اللغة العربية غير مثبّت في محرك النطق بالهاتف — فعّله من إعدادات إمكانية الوصول/النطق."
+        }
+    }
+
     fun recalculateRoute(announce: Boolean = false) {
+        hasAnnouncedArrival = false
         coroutineScope.launch {
             val result = realNavigator.calculateRoute(
                 locationFix.latitude,
@@ -128,11 +142,8 @@ fun NavigationScreen(
             routeResult = result
 
             if (result is NavigationRouteResult.Success) {
-                totalTripDistanceMeters = result.totalDistanceMeters
-                tripProgressFraction = HaversinePrecisionNavigator.calculateTripProgress(
-                    result.totalDistanceMeters,
-                    result.totalDistanceMeters * 0.95
-                )
+                totalTripDistanceMeters = result.totalDistanceMeters.coerceAtLeast(1.0)
+                tripProgressFraction = 0.02f
                 remainingDistanceText = HaversinePrecisionNavigator.formatDistanceArabic(result.totalDistanceMeters)
                 estimatedTimeText = HaversinePrecisionNavigator.formatDurationArabic(result.estimatedDurationSeconds)
 
@@ -175,7 +186,7 @@ fun NavigationScreen(
                     put("coords", JSONArray(coordsJson))
                     put("title", targetName)
                 }.toString()
-                val script = "if (window.renderNavigationRouteSafe) { window.renderNavigationRouteSafe($argsObj); } else if (window.renderNavigationRoute) { window.renderNavigationRoute(${locationFix.latitude}, ${locationFix.longitude}, $targetLat, $targetLng, $coordsJson, ''); }"
+                val script = "if (window.renderNavigationRouteSafe) { window.renderNavigationRouteSafe($argsObj); } else if (window.renderNavigationRoute) { window.renderNavigationRoute(${locationFix.latitude}, ${locationFix.longitude}, $targetLat, $targetLng, $coordsJson, ${org.json.JSONObject.quote(targetName)}); }"
                 webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
             }
             isRerouting = false
@@ -188,57 +199,103 @@ fun NavigationScreen(
 
     LaunchedEffect(locationFix.latitude, locationFix.longitude) {
         val res = routeResult
-        if (res is NavigationRouteResult.Success && res.isOfflineEngine) {
-            val offRoute = realNavigator.isOffRoute(
-                locationFix.latitude,
-                locationFix.longitude,
-                locationFix.accuracyMeters,
-                res.points
+        var distToNextTurn = 999.0
+        if (res is NavigationRouteResult.Success) {
+            // 1) تحديث المسافة المتبقية والتقدم والوقت المتوقع للوصول لحظياً
+            val directRemaining = HaversinePrecisionNavigator.distanceMeters(
+                locationFix.latitude, locationFix.longitude,
+                targetLat, targetLng
             )
+            remainingDistanceText = HaversinePrecisionNavigator.formatDistanceArabic(directRemaining)
+            tripProgressFraction = HaversinePrecisionNavigator.calculateTripProgress(totalTripDistanceMeters, directRemaining)
 
-            if (offRoute) {
-                offRouteConsecutiveSeconds++
-                if (offRouteConsecutiveSeconds >= 5 && !isRerouting) {
-                    isRerouting = true
-                    currentInstruction = "جارٍ إعادة حساب المسار..."
-                    navigationVoice.announceReroute()
-                    recalculateRoute(announce = false)
+            val speedMps = (locationFix.speedKmh.coerceAtLeast(25f) * 1000.0) / 3600.0
+            val estRemainingSeconds = (directRemaining / speedMps).toInt().coerceAtLeast(15)
+            estimatedTimeText = HaversinePrecisionNavigator.formatDurationArabic(estRemainingSeconds)
+            val arrivalMillis = System.currentTimeMillis() + (estRemainingSeconds * 1000L)
+            estimatedArrivalClock = java.text.SimpleDateFormat("hh:mm a", Locale("ar")).format(java.util.Date(arrivalMillis))
+
+            // 2) اكتشاف الانحراف وإعادة التوجيه إذا كان المسار شارعياً (أكثر من نقطتين)
+            if (res.points.size > 2) {
+                val offRoute = realNavigator.isOffRoute(
+                    locationFix.latitude,
+                    locationFix.longitude,
+                    locationFix.accuracyMeters,
+                    res.points
+                )
+                if (offRoute) {
+                    offRouteConsecutiveSeconds++
+                    if (offRouteConsecutiveSeconds >= 5 && !isRerouting) {
+                        isRerouting = true
+                        currentInstruction = "جارٍ إعادة حساب المسار..."
+                        navigationVoice.announceReroute()
+                        recalculateRoute(announce = false)
+                        offRouteConsecutiveSeconds = 0
+                    }
+                } else {
                     offRouteConsecutiveSeconds = 0
                 }
-            } else {
-                offRouteConsecutiveSeconds = 0
             }
 
+            // 3) التدرج الحقيقي لخطوات الانعطاف والتنبيه الصوتي المسبق
             if (res.instructions.isNotEmpty() && activeInstructionIndex < res.instructions.size) {
+                var idx = activeInstructionIndex
+                while (idx < res.instructions.size - 1) {
+                    val step = res.instructions[idx]
+                    if (step.maneuverLat != 0.0 && step.maneuverLon != 0.0) {
+                        val d = HaversinePrecisionNavigator.distanceMeters(
+                            locationFix.latitude, locationFix.longitude,
+                            step.maneuverLat, step.maneuverLon
+                        )
+                        if (d < 22.0) {
+                            idx++
+                            continue
+                        }
+                    }
+                    break
+                }
+                if (idx != activeInstructionIndex) {
+                    activeInstructionIndex = idx
+                }
+
                 val currentStep = res.instructions[activeInstructionIndex]
-                val distToStep = currentStep.segmentDistance.coerceAtLeast(30.0)
+                currentInstruction = currentStep.text
+                nextTurnManeuver = currentStep.maneuverType
+
+                distToNextTurn = if (currentStep.maneuverLat != 0.0 && currentStep.maneuverLon != 0.0) {
+                    HaversinePrecisionNavigator.distanceMeters(
+                        locationFix.latitude, locationFix.longitude,
+                        currentStep.maneuverLat, currentStep.maneuverLon
+                    )
+                } else {
+                    directRemaining.coerceAtMost(currentStep.segmentDistance.coerceAtLeast(30.0))
+                }
 
                 navigationVoice.processTurnAnnouncement(
                     instructionKey = "${activeInstructionIndex}_${currentStep.maneuverType}",
                     instructionText = currentStep.text,
-                    distanceToTurnMeters = distToStep,
+                    distanceToTurnMeters = distToNextTurn,
                     currentSpeedKmh = locationFix.speedKmh
                 )
             }
 
-            val distToEnd = HaversinePrecisionNavigator.distanceMeters(
-                locationFix.latitude, locationFix.longitude,
-                targetLat, targetLng
+            NavigationForegroundService.updateNotification(
+                context,
+                currentInstruction,
+                remainingDistanceText,
+                estimatedArrivalClock
             )
-            if (distToEnd <= 30.0) {
+
+            // 4) إعلان الوصول في كافة أوضاع الملاحة
+            if (directRemaining <= 35.0 && !hasAnnouncedArrival) {
+                hasAnnouncedArrival = true
+                currentInstruction = "وصلت إلى وجهتك: $targetName"
+                nextTurnManeuver = ManeuverType.DESTINATION
                 navigationVoice.announceArrival(targetName)
             }
         }
 
-        val distToTurn = if (routeResult is NavigationRouteResult.Success) {
-            val currentRoute = routeResult as NavigationRouteResult.Success
-            if (currentRoute.instructions.isNotEmpty() && activeInstructionIndex < currentRoute.instructions.size) {
-                currentRoute.instructions[activeInstructionIndex].segmentDistance
-            } else 999.0
-        } else 999.0
-
-        val smartZoom = if (distToTurn < 200.0) 18 else 15
-
+        val smartZoom = if (distToNextTurn < 200.0) 18 else 15
         val script = "if (window.updateUserPosition) { window.updateUserPosition(${locationFix.latitude}, ${locationFix.longitude}, ${locationFix.bearingDegrees}); } if (window.applySmartZoom) { window.applySmartZoom($smartZoom); }"
         webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
     }
@@ -253,7 +310,7 @@ fun NavigationScreen(
         }
         searchJob?.cancel()
         searchJob = coroutineScope.launch {
-            delay(500)
+            delay(220)
             isSearching = true
             searchMessage = null
             canDownloadPlacesFromSearch = false
@@ -304,7 +361,7 @@ fun NavigationScreen(
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.cacheMode = WebSettings.LOAD_DEFAULT
-                    settings.allowFileAccess = false
+                    settings.allowFileAccess = true
                     settings.allowContentAccess = false
                     addJavascriptInterface(
                         object {

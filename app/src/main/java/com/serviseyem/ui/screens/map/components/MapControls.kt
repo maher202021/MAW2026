@@ -171,8 +171,8 @@ fun MapControls(
             )
 
             MapControlItem(
-                icon = Icons.Default.Layers,
-                label = "طبقات",
+                icon = Icons.Default.Map,
+                label = "الأساس",
                 isActive = false,
                 onClick = {
                     val nextLayer = when(currentLayer) {
@@ -217,14 +217,19 @@ fun MapControls(
                             haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                             if (mode == com.serviseyem.ui.screens.map.MapMode.ALEPH_AI) onOpenAleph() else onModeChange(mode)
                         },
-                        modifier = Modifier
-                            .size(34.dp)
-                            .background(
-                                if (isSelected) Color(0xFF10B981).copy(alpha = 0.3f) else Color.Transparent,
-                                CircleShape
-                            )
+                        modifier = Modifier.size(48.dp)
                     ) {
-                        Text(text = mode.icon, fontSize = 16.sp)
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(34.dp)
+                                .background(
+                                    if (isSelected) Color(0xFF10B981).copy(alpha = 0.3f) else Color.Transparent,
+                                    CircleShape
+                                )
+                        ) {
+                            Text(text = mode.icon, fontSize = 16.sp)
+                        }
                     }
                     Text(
                         text = modeLabel,
@@ -371,7 +376,7 @@ fun MapControls(
 
             // 🌋 Earthquake Layer (مرصد الزلازل الحية)
             MapControlItem(
-                icon = Icons.Default.Warning,
+                icon = Icons.Default.Sensors,
                 label = "زلازل",
                 isActive = isEarthquakeActive,
                 activeColor = Color(0xFFEF4444),
@@ -431,39 +436,50 @@ private fun MapControlItem(
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(34.dp)
-                    .background(
-                        if (isActive) activeColor.copy(alpha = 0.3f) else Color.Transparent,
-                        CircleShape
-                    )
+                    .size(48.dp)
                     .combinedClickable(
                         onClick = onClick,
                         onLongClick = onLongClick
                     )
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = if (isActive) activeColor else inactiveColor,
-                    modifier = Modifier.size(19.dp)
-                )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .background(
+                            if (isActive) activeColor.copy(alpha = 0.3f) else Color.Transparent,
+                            CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = label,
+                        tint = if (isActive) activeColor else inactiveColor,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
             }
         } else {
             IconButton(
                 onClick = onClick,
-                modifier = Modifier
-                    .size(34.dp)
-                    .background(
-                        if (isActive) activeColor.copy(alpha = 0.3f) else Color.Transparent,
-                        CircleShape
-                    )
+                modifier = Modifier.size(48.dp)
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = if (isActive) activeColor else inactiveColor,
-                    modifier = Modifier.size(19.dp)
-                )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .background(
+                            if (isActive) activeColor.copy(alpha = 0.3f) else Color.Transparent,
+                            CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = label,
+                        tint = if (isActive) activeColor else inactiveColor,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
             }
         }
         Text(
