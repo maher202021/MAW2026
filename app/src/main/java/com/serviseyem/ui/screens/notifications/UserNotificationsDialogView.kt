@@ -315,13 +315,14 @@ fun UserNotificationsContent(
 
     // Confirmation Dialog for Clearing All Notifications
     ConfirmationDialog(
-        isOpen = showClearAllConfirmDialog,
+        isVisible = showClearAllConfirmDialog,
         title = "مسح جميع الإشعارات",
         message = "هل أنت متأكد من رغبتك في مسح كافة الإشعارات الظاهرة؟ لا يمكن التراجع عن هذا الإجراء.",
         confirmLabel = "مسح الكل",
         cancelLabel = "إلغاء",
         isDestructive = true,
         onConfirm = {
+            showClearAllConfirmDialog = false
             notifViewModel.deleteAllNotifications()
             coroutineScope.launch {
                 snackbarHostState.showSnackbar("تم مسح جميع الإشعارات بنجاح 🗑️")
