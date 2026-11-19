@@ -8,6 +8,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -26,6 +28,7 @@ fun UnifiedSettingsSection(
     onSaveProfile: (name: String, phone: String, cityArea: String, description: String, workingHours: String, isAvailable: Boolean) -> Unit,
     onChangePassword: (oldPass: String, newPass: String) -> Unit
 ) {
+    val context = LocalContext.current
     var nameInput by remember(name) { mutableStateOf(name) }
     var phoneInput by remember(phone) { mutableStateOf(phone) }
     var cityAreaInput by remember(cityArea) { mutableStateOf(cityArea) }
@@ -89,15 +92,13 @@ fun UnifiedSettingsSection(
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = themeColors.accent)
                 )
 
-                if (workingHours.isNotBlank() || true) {
-                    OutlinedTextField(
-                        value = hoursInput,
-                        onValueChange = { hoursInput = it },
-                        label = { Text("ساعات أوقات العمل (مثال: 8 ص - 10 م)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = themeColors.accent)
-                    )
-                }
+                OutlinedTextField(
+                    value = hoursInput,
+                    onValueChange = { hoursInput = it },
+                    label = { Text("ساعات وأوقات العمل (مثال: 8 ص - 10 م)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = themeColors.accent)
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -108,22 +109,39 @@ fun UnifiedSettingsSection(
                         text = if (availableState) "حالة التوفر: متاح لاستقبال الطلبات 🟢" else "حالة التوفر: مشغول / غير متاح 🔴",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (availableState) Color(0xFF10B981) else Color(0xFFEF4444)
+                        color = if (availableState) Color(0xFF10B981) else Color(0xFFEF4444),
+                        modifier = Modifier.weight(1f)
                     )
                     Switch(
                         checked = availableState,
                         onCheckedChange = { availableState = it },
+                        modifier = Modifier.testTag("availability_switch"),
                         colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF10B981))
                     )
                 }
 
                 Button(
                     onClick = {
-                        onSaveProfile(nameInput, phoneInput, cityAreaInput, descInput, hoursInput, availableState)
+                        val trimmedName = nameInput.trim()
+                        if (trimmedName.isBlank()) {
+                            android.widget.Toast.makeText(context, "يرجى إدخال الاسم أو اسم المنشأة", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            onSaveProfile(
+                                trimmedName,
+                                phoneInput.trim(),
+                                cityAreaInput.trim(),
+                                descInput.trim(),
+                                hoursInput.trim(),
+                                availableState
+                            )
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .testTag("save_profile_button")
                 ) {
                     Text("حفظ التغيرات 💾", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                 }
@@ -154,22 +172,29 @@ fun UnifiedSettingsSection(
                 OutlinedTextField(
                     value = newPasswordInput,
                     onValueChange = { newPasswordInput = it },
-                    label = { Text("كلمة المرور الجديدة") },
+                    label = { Text("كلمة المرور الجديدة (6 أحرف على الأقل)") },
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Button(
                     onClick = {
-                        if (oldPasswordInput.isNotBlank() && newPasswordInput.isNotBlank()) {
-                            onChangePassword(oldPasswordInput, newPasswordInput)
+                        val cleanOld = oldPasswordInput.trim()
+                        val cleanNew = newPasswordInput.trim()
+                        if (cleanNew.length < 6) {
+                            android.widget.Toast.makeText(context, "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            onChangePassword(cleanOld, cleanNew)
                             oldPasswordInput = ""
                             newPasswordInput = ""
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .testTag("change_password_button"),
                     enabled = oldPasswordInput.isNotBlank() && newPasswordInput.isNotBlank()
                 ) {
                     Text("تحديث كلمة المرور 🔑", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)

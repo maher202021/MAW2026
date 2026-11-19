@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -87,17 +88,46 @@ fun UnifiedProductsServicesSection(
                         color = themeColors.accent
                     )
                 }
+                Text(
+                    text = if (isAvailable) "متاح الآن 🟢" else "غير متاح مؤقتاً 🔴",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isAvailable) Color(0xFF10B981) else Color(0xFFEF4444)
+                )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (onEditClick != null) {
-                    IconButton(onClick = onEditClick) {
-                        Text(text = "✏️", fontSize = 14.sp)
-                    }
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                if (onToggleAvailability != null) {
+                    Switch(
+                        checked = isAvailable,
+                        onCheckedChange = { onToggleAvailability(it) },
+                        modifier = Modifier.testTag("product_availability_switch"),
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF10B981))
+                    )
                 }
-                if (onDeleteClick != null) {
-                    IconButton(onClick = onDeleteClick) {
-                        Text(text = "🗑️", fontSize = 14.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (onEditClick != null) {
+                        IconButton(
+                            onClick = onEditClick,
+                            modifier = Modifier
+                                .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                .testTag("product_edit_button")
+                        ) {
+                            Text(text = "✏️", fontSize = 14.sp)
+                        }
+                    }
+                    if (onDeleteClick != null) {
+                        IconButton(
+                            onClick = onDeleteClick,
+                            modifier = Modifier
+                                .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                .testTag("product_delete_button")
+                        ) {
+                            Text(text = "🗑️", fontSize = 14.sp)
+                        }
                     }
                 }
             }

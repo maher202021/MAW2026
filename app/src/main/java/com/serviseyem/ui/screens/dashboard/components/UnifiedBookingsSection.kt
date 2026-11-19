@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -119,87 +120,114 @@ fun UnifiedBookingsSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // ✨ م2: استخدام الـ Enums الموحدة بدلاً من السلاسل النصية الخام
-                if (isPending) {
-                    if (onAcceptClick != null) {
-                        Button(
-                            onClick = onAcceptClick,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("قبول ✅", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    if (onRejectClick != null) {
-                        Button(
-                            onClick = { showRejectDialog = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("رفض ❌", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-
-                // ✨ م2: استخدام الـ Enums الموحدة بدلاً من السلاسل النصية الخام
-                if (isAccepted) {
-                    if (onStartProgressClick != null) {
-                        Button(
-                            onClick = onStartProgressClick,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("بدء التنفيذ ⚙️", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-
-                // ✨ م2: استخدام الـ Enums الموحدة بدلاً من السلاسل النصية الخام
-                if (isInProgress || isAccepted) {
-                    if (onCompleteClick != null) {
-                        Button(
-                            onClick = onCompleteClick,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("إكمال الخدمة 🏁", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-
-                // Custom order status options for stores / restaurants / medical
                 if (onUpdateOrderStatus != null) {
-                    // ✨ م2: استخدام الـ Enums الموحدة بدلاً من السلاسل النصية الخام
+                    // Order / Commercial / Delivery mode: clean mutually exclusive stage transitions
                     if (isPending) {
                         Button(
                             onClick = { onUpdateOrderStatus("IN_PREPARATION") },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                             shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp)
+                                .testTag("order_prepare_button")
                         ) {
-                            Text("قيد التجهيز 🛒", fontSize = 11.sp, color = Color.White)
+                            Text("قبول وتجهيز 🛒", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
                         }
-                    } else if (status == "IN_PREPARATION") {
+                        if (onRejectClick != null) {
+                            Button(
+                                onClick = { showRejectDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = 48.dp)
+                                    .testTag("booking_reject_button")
+                            ) {
+                                Text("رفض ❌", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    } else if (status == "IN_PREPARATION" || isAccepted || isInProgress) {
                         Button(
                             onClick = { onUpdateOrderStatus("READY") },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
                             shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp)
+                                .testTag("order_ready_button")
                         ) {
-                            Text("جاهز للتسليم 🎁", fontSize = 11.sp, color = Color.Black)
+                            Text("جاهز للتسليم 🎁", fontSize = 11.sp, color = Color.Black, fontWeight = FontWeight.Bold)
                         }
                     } else if (status == "READY") {
                         Button(
                             onClick = { onUpdateOrderStatus("DELIVERED") },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                             shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp)
+                                .testTag("order_delivered_button")
                         ) {
-                            Text("تم التسليم 🚚", fontSize = 11.sp, color = Color.White)
+                            Text("تم التسليم 🚚", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                } else {
+                    // Standard Service Booking mode
+                    if (isPending) {
+                        if (onAcceptClick != null) {
+                            Button(
+                                onClick = onAcceptClick,
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = 48.dp)
+                                    .testTag("booking_accept_button")
+                            ) {
+                                Text("قبول ✅", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        if (onRejectClick != null) {
+                            Button(
+                                onClick = { showRejectDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = 48.dp)
+                                    .testTag("booking_reject_button")
+                            ) {
+                                Text("رفض ❌", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    if (isAccepted && onStartProgressClick != null) {
+                        Button(
+                            onClick = onStartProgressClick,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp)
+                                .testTag("booking_start_button")
+                        ) {
+                            Text("بدء التنفيذ ⚙️", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    if ((isInProgress || isAccepted) && onCompleteClick != null) {
+                        Button(
+                            onClick = onCompleteClick,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp)
+                                .testTag("booking_complete_button")
+                        ) {
+                            Text("إكمال الخدمة 🏁", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -208,7 +236,9 @@ fun UnifiedBookingsSection(
                     IconButton(
                         onClick = onChatClick,
                         modifier = Modifier
+                            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                             .background(themeColors.accent.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                            .testTag("booking_chat_button")
                     ) {
                         Text(text = "💬", fontSize = 16.sp)
                     }

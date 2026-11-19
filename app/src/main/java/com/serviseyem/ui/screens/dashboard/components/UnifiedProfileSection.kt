@@ -19,6 +19,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.testTag
 import com.serviseyem.ui.components.SmartAsyncImage
 import com.serviseyem.utils.VisualThemePalette
 import kotlinx.coroutines.launch
@@ -45,7 +48,7 @@ fun UnifiedProfileSection(
     var isUploadingCover by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
     val profilePhotoPicker = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: android.net.Uri? ->
         if (uri != null && onChangePhoto != null) {
             coroutineScope.launch {
@@ -64,7 +67,7 @@ fun UnifiedProfileSection(
     }
 
     val coverPhotoPicker = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: android.net.Uri? ->
         if (uri != null && onChangeCover != null) {
             coroutineScope.launch {
@@ -112,9 +115,16 @@ fun UnifiedProfileSection(
                             .padding(8.dp)
                     ) {
                         TextButton(
-                            onClick = { if (!isUploadingCover) coverPhotoPicker.launch("image/*") },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            enabled = !isUploadingCover
+                            onClick = {
+                                if (!isUploadingCover) {
+                                    coverPhotoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                }
+                            },
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                            enabled = !isUploadingCover,
+                            modifier = Modifier
+                                .heightIn(min = 48.dp)
+                                .testTag("change_cover_button")
                         ) {
                             if (isUploadingCover) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -154,11 +164,16 @@ fun UnifiedProfileSection(
                     }
                     if (onChangePhoto != null) {
                         IconButton(
-                            onClick = { if (!isUploadingPhoto) profilePhotoPicker.launch("image/*") },
+                            onClick = {
+                                if (!isUploadingPhoto) {
+                                    profilePhotoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                }
+                            },
                             enabled = !isUploadingPhoto,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.3f))
+                                .testTag("change_avatar_button")
                         ) {
                             if (isUploadingPhoto) {
                                 CircularProgressIndicator(

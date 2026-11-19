@@ -85,6 +85,7 @@ data class UnifiedBusinessAccount(
                 deletedAt = p.deletedAt,
                 latitude = p.latitude,
                 longitude = p.longitude,
+                isBookingEnabled = p.isAvailable,
                 rawProvider = p
             )
         }
@@ -119,6 +120,7 @@ data class UnifiedBusinessAccount(
                 latitude = s.latitude,
                 longitude = s.longitude,
                 createdAt = s.createdAt,
+                isBookingEnabled = s.isActive,
                 rawStore = s
             )
         }
@@ -146,6 +148,7 @@ data class UnifiedBusinessAccount(
                 latitude = p.latitude,
                 longitude = p.longitude,
                 createdAt = p.createdAt,
+                isBookingEnabled = p.isActive,
                 rawProperty = p
             )
         }

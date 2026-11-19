@@ -6,6 +6,14 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 fun MainViewModel.updateStoreEntity(store: StoreEntity) {
+    val updatedList = adminViewModel.appState._stores.value.toMutableList()
+    val idx = updatedList.indexOfFirst { it.id == store.id }
+    if (idx >= 0) updatedList[idx] = store else updatedList.add(0, store)
+    adminViewModel.appState._stores.value = updatedList
+    if (selectedStore?.id == store.id) {
+        selectedStore = store
+    }
+    homeViewModel.applyFilters()
     viewModelScope.launch { adminViewModel.crud.saveEntity("stores", store.id, store) }
     triggerNotification("✅ تم تحديث بيانات المتجر بنجاح")
 }

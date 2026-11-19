@@ -95,35 +95,69 @@ fun ProfileActions(
                     onClick = onEditProfile,
                     colors = ButtonDefaults.buttonColors(containerColor = themeColors.primary),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.weight(1f).heightIn(min = 44.dp)
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp)
                 ) {
                     Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("تعديل الحساب 📝", fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2, softWrap = true, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, color = Color.White)
                 }
 
-                if (entityType == ProfileEntityType.STORE || entityType == ProfileEntityType.RESTAURANT) {
-                    Button(
-                        onClick = onEditProducts,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f).heightIn(min = 44.dp)
-                    ) {
-                        Icon(Icons.Default.List, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("إدارة المنتجات 📦", fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2, softWrap = true, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, color = Color.White)
+                when (entityType) {
+                    ProfileEntityType.STORE, ProfileEntityType.RESTAURANT -> {
+                        Button(
+                            onClick = onEditProducts,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                        ) {
+                            Icon(Icons.Default.List, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                if (entityType == ProfileEntityType.RESTAURANT) "إدارة القائمة 🍽️" else "إدارة المنتجات 📦",
+                                fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2, softWrap = true, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, color = Color.White
+                            )
+                        }
                     }
-                } else if (entityType == ProfileEntityType.TECHNICIAN || entityType == ProfileEntityType.REAL_ESTATE) {
-                    Button(
-                        onClick = onEditGallery,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f).heightIn(min = 44.dp)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("معرض الأعمال 📸", fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2, softWrap = true, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, color = Color.White)
+                    ProfileEntityType.MEDICAL -> {
+                        Button(
+                            onClick = onEditProducts,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D9488)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                        ) {
+                            Icon(Icons.Default.MedicalServices, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("الأطباء والخدمات 🩺", fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2, softWrap = true, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
                     }
+                    ProfileEntityType.TECHNICIAN, ProfileEntityType.REAL_ESTATE -> {
+                        Button(
+                            onClick = onEditGallery,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                if (entityType == ProfileEntityType.REAL_ESTATE) "إدارة العقارات 🏡" else "معرض الأعمال 📸",
+                                fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2, softWrap = true, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, color = Color.White
+                            )
+                        }
+                    }
+                    ProfileEntityType.JOB -> {
+                        Button(
+                            onClick = onEditProducts,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF06B6D4)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                        ) {
+                            Icon(Icons.Default.Work, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("المتقدمون والفرص 💼", fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2, softWrap = true, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, color = Color.Black)
+                        }
+                    }
+                    else -> {}
                 }
             } else {
                 // Regular customer actions

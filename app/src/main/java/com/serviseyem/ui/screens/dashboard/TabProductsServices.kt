@@ -26,10 +26,13 @@ fun TabProductsServices(
     addButtonLabel: String = "إضافة جديد ➕",
     themeColors: VisualThemePalette,
     onAddProduct: (title: String, priceYer: Double, description: String, imageUrl: String) -> Unit,
-    onDeleteProduct: (id: String) -> Unit
+    onDeleteProduct: (id: String) -> Unit,
+    onEditProduct: ((ProductItemEntity) -> Unit)? = null,
+    onToggleAvailability: ((ProductItemEntity) -> Unit)? = null
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
+    var editingProduct by remember { mutableStateOf<ProductItemEntity?>(null) }
     var itemToDelete by remember { mutableStateOf<ProductItemEntity?>(null) }
     var titleInput by remember { mutableStateOf("") }
     var priceInput by remember { mutableStateOf("") }
@@ -51,7 +54,8 @@ fun TabProductsServices(
             Button(
                 onClick = { showAddDialog = true },
                 colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.heightIn(min = 48.dp)
             ) {
                 Text(text = addButtonLabel, fontSize = 12.sp, color = Color.Black, fontWeight = FontWeight.Bold)
             }
@@ -75,17 +79,90 @@ fun TabProductsServices(
                     UnifiedProductsServicesSection(
                         title = item.title,
                         description = item.description,
-                        price = item.priceYer.toString(),
+                        price = if (item.priceYer % 1.0 == 0.0) item.priceYer.toInt().toString() else item.priceYer.toString(),
                         imageUrl = item.imageUrl,
                         isAvailable = item.isAvailable,
                         themeColors = themeColors,
-                        onEditClick = { /* Edit */ },
+                        onEditClick = if (onEditProduct != null) {
+                            { editingProduct = item }
+                        } else null,
                         onDeleteClick = { itemToDelete = item },
-                        onToggleAvailability = null
+                        onToggleAvailability = if (onToggleAvailability != null) {
+                            { onToggleAvailability(item) }
+                        } else null
                     )
                 }
             }
         }
+    }
+
+    val editTarget = editingProduct
+    if (editTarget != null && onEditProduct != null) {
+        var editTitle by remember(editTarget.id) { mutableStateOf(editTarget.title) }
+        var editPrice by remember(editTarget.id) { mutableStateOf(editTarget.priceYer.toString()) }
+        var editDesc by remember(editTarget.id) { mutableStateOf(editTarget.description) }
+        var editImage by remember(editTarget.id) { mutableStateOf(editTarget.imageUrl) }
+
+        AlertDialog(
+            onDismissRequest = { editingProduct = null },
+            title = { Text("تعديل: ${editTarget.title}", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = editTitle,
+                        onValueChange = { editTitle = it },
+                        label = { Text("الاسم / العنوان") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editPrice,
+                        onValueChange = { editPrice = it },
+                        label = { Text("السعر (بالريال اليمني)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editDesc,
+                        onValueChange = { editDesc = it },
+                        label = { Text("الوصف / التفاصيل") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    UnifiedImagePicker(
+                        currentImageUrl = editImage,
+                        label = "صورة العنصر",
+                        themeColors = themeColors,
+                        onImageSelected = { editImage = it }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val p = editPrice.toDoubleOrNull() ?: editTarget.priceYer
+                        if (editTitle.isNotBlank()) {
+                            onEditProduct(
+                                editTarget.copy(
+                                    title = editTitle.trim(),
+                                    priceYer = p,
+                                    description = editDesc.trim(),
+                                    imageUrl = editImage.trim()
+                                )
+                            )
+                            editingProduct = null
+                        } else {
+                            android.widget.Toast.makeText(context, "يرجى إدخال الاسم", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent)
+                ) {
+                    Text("حفظ التعديل 💾", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingProduct = null }) {
+                    Text("إلغاء")
+                }
+            }
+        )
     }
 
     val target = itemToDelete

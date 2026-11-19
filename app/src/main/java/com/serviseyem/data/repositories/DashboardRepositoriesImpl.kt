@@ -201,31 +201,56 @@ class ProductsRepositoryImpl(
             return@callbackFlow
         }
 
-        val listener: ListenerRegistration = firestore.collection(AppConstants.COL_PRODUCTS)
+        val byOwnerMap = java.util.concurrent.ConcurrentHashMap<String, ProductItemEntity>()
+        val byStoreMap = java.util.concurrent.ConcurrentHashMap<String, ProductItemEntity>()
+
+        fun parseDoc(doc: com.google.firebase.firestore.DocumentSnapshot): ProductItemEntity {
+            return ProductItemEntity(
+                id = doc.id,
+                ownerId = doc.getString("ownerId")?.takeIf { it.isNotBlank() }
+                    ?: doc.getString("storeId")?.takeIf { it.isNotBlank() }
+                    ?: cleanOwnerId,
+                title = doc.getString("title") ?: doc.getString("name") ?: "",
+                description = doc.getString("description") ?: "",
+                category = doc.getString("category") ?: "",
+                priceYer = doc.getDouble("priceYer") ?: doc.getDouble("price") ?: 0.0,
+                imageUrl = doc.getString("imageUrl") ?: "",
+                isAvailable = doc.getBoolean("isAvailable") ?: true,
+                createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
+            )
+        }
+
+        fun emitMerged() {
+            val merged = LinkedHashMap<String, ProductItemEntity>(byOwnerMap.size + byStoreMap.size)
+            byStoreMap.forEach { (k, v) -> merged[k] = v }
+            byOwnerMap.forEach { (k, v) -> merged[k] = v }
+            trySend(merged.values.sortedByDescending { it.createdAt })
+        }
+
+        val ownerListener: ListenerRegistration = firestore.collection(AppConstants.COL_PRODUCTS)
             .whereEqualTo("ownerId", cleanOwnerId)
             .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) {
-                    trySend(emptyList())
-                    return@addSnapshotListener
+                if (error == null && snapshot != null) {
+                    byOwnerMap.clear()
+                    snapshot.documents.forEach { doc -> byOwnerMap[doc.id] = parseDoc(doc) }
+                    emitMerged()
                 }
-
-                val items = snapshot.documents.mapNotNull { doc ->
-                    ProductItemEntity(
-                        id = doc.id,
-                        ownerId = doc.getString("ownerId") ?: cleanOwnerId,
-                        title = doc.getString("title") ?: doc.getString("name") ?: "",
-                        description = doc.getString("description") ?: "",
-                        category = doc.getString("category") ?: "",
-                        priceYer = doc.getDouble("priceYer") ?: doc.getDouble("price") ?: 0.0,
-                        imageUrl = doc.getString("imageUrl") ?: "",
-                        isAvailable = doc.getBoolean("isAvailable") ?: true,
-                        createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
-                    )
-                }
-                trySend(items)
             }
 
-        awaitClose { listener.remove() }
+        val storeListener: ListenerRegistration = firestore.collection(AppConstants.COL_PRODUCTS)
+            .whereEqualTo("storeId", cleanOwnerId)
+            .addSnapshotListener { snapshot, error ->
+                if (error == null && snapshot != null) {
+                    byStoreMap.clear()
+                    snapshot.documents.forEach { doc -> byStoreMap[doc.id] = parseDoc(doc) }
+                    emitMerged()
+                }
+            }
+
+        awaitClose {
+            ownerListener.remove()
+            storeListener.remove()
+        }
     }
 
     override fun getAllAvailableProducts(): Flow<List<ProductItemEntity>> = callbackFlow {
@@ -289,7 +314,7 @@ class ProductsRepositoryImpl(
                 return Result.failure(IllegalArgumentException("معرف المنتج غير صالح"))
             }
             val safePrice = if (product.priceYer.isNaN() || product.priceYer.isInfinite() || product.priceYer < 0.0) 0.0 else product.priceYer
-            val map = mapOf(
+            val map = mutableMapOf<String, Any>(
                 "title" to product.title.trim(),
                 "name" to product.title.trim(),
                 "description" to product.description.trim(),
@@ -299,6 +324,10 @@ class ProductsRepositoryImpl(
                 "imageUrl" to product.imageUrl.trim(),
                 "isAvailable" to product.isAvailable
             )
+            if (product.ownerId.isNotBlank()) {
+                map["ownerId"] = product.ownerId.trim()
+                map["storeId"] = product.ownerId.trim()
+            }
             firestore.collection(AppConstants.COL_PRODUCTS).document(cleanId).update(map).await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -363,7 +392,9 @@ class RatingsRepositoryImpl(
                             ?: "",
                         rating = doc.getDouble("rating") ?: entity?.rating?.toDouble() ?: 5.0,
                         comment = doc.getString("comment") ?: doc.getString("review") ?: entity?.comment ?: "",
-                        dateTimestamp = doc.getLong("timestamp") ?: doc.getLong("dateTimestamp") ?: entity?.timestamp ?: System.currentTimeMillis()
+                        dateTimestamp = doc.getLong("timestamp") ?: doc.getLong("dateTimestamp") ?: entity?.timestamp ?: System.currentTimeMillis(),
+                        reply = doc.getString("reply") ?: entity?.reply ?: "",
+                        replyTimestamp = doc.getLong("replyTimestamp") ?: entity?.replyTimestamp
                     )
                 }
                 trySend(list)
@@ -408,6 +439,24 @@ class RatingsRepositoryImpl(
             )
             firestore.collection(AppConstants.COL_RATINGS).document(id).set(map).await()
             Result.success(id)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun replyToRating(ratingId: String, replyText: String): Result<Unit> {
+        return try {
+            val cleanId = ratingId.trim()
+            val cleanReply = replyText.trim()
+            if (cleanId.isBlank() || cleanReply.isBlank()) {
+                return Result.failure(IllegalArgumentException("معرف التقييم أو نص الرد غير صالح"))
+            }
+            val updates = mapOf(
+                "reply" to cleanReply,
+                "replyTimestamp" to System.currentTimeMillis()
+            )
+            firestore.collection(AppConstants.COL_RATINGS).document(cleanId).update(updates).await()
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

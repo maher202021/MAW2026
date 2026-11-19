@@ -145,7 +145,12 @@ fun MainViewModel.toggleProviderStatus(provider: ProviderEntity) = adminViewMode
 fun MainViewModel.toggleProviderPin(providerId: String) = adminViewModel.toggleProviderPin(providerId)
 fun MainViewModel.toggleProviderVerification(providerId: String) = adminViewModel.toggleProviderVerification(providerId)
 fun MainViewModel.toggleProviderRecommendation(providerId: String) = adminViewModel.toggleProviderRecommendation(providerId)
-fun MainViewModel.updateProviderEntity(provider: ProviderEntity) = adminViewModel.updateProviderEntity(provider)
+fun MainViewModel.updateProviderEntity(provider: ProviderEntity) {
+    if (selectedProvider?.id == provider.id) {
+        selectedProvider = provider
+    }
+    adminViewModel.updateProviderEntity(provider)
+}
 fun MainViewModel.editProviderPhoneAndCategory(providerId: String, newPhone: String, newCategoryId: String) = adminViewModel.editProviderPhoneAndCategory(providerId, newPhone, newCategoryId)
 fun MainViewModel.addNewProvider(name: String, phone: String, catId: String, area: String, price: Double, isVip: Boolean) = adminViewModel.addNewProvider(name, phone, catId, area, price, isVip)
 fun MainViewModel.addNewProviderCustom(

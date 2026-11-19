@@ -310,7 +310,8 @@ fun PropertyQuickDetailsDialog(
     property: PropertyEntity,
     context: Context,
     themeColors: VisualThemePalette,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onOpenDetails: () -> Unit = {}
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -331,8 +332,14 @@ fun PropertyQuickDetailsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("🏡 ${property.title}", fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                    Text(
+                        "🏡 ${property.title}",
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = themeColors.accent,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color.Red)
                     }
                 }
@@ -350,21 +357,37 @@ fun PropertyQuickDetailsDialog(
                 }
 
                 Text("السعر: ${property.price.toInt()} ${property.currency}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
-                Text("النوع: ${property.propertyType} (${property.type})", fontSize = 11.sp, color = Color.White)
+                Text("النوع: ${property.propertyType} (${property.type}) • ${property.areaSqm.toInt()} م² • ${property.rooms} غرف", fontSize = 11.sp, color = Color.White)
                 Text("الموقع: ${property.cityId} - ${property.localNeighborhood}", fontSize = 11.sp, color = Color.LightGray)
+                if (property.description.isNotBlank()) {
+                    Text(property.description, fontSize = 10.5.sp, color = Color.Gray, maxLines = 3)
+                }
 
                 Button(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${property.phone}"))
-                        context.startActivity(intent)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                    onClick = onOpenDetails,
+                    colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth().height(44.dp)
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                 ) {
-                    Icon(Icons.Default.Phone, contentDescription = null, tint = Color.White)
+                    Icon(Icons.Default.Info, contentDescription = null, tint = Color.Black)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("اتصال بصاحب العقار (${property.phone})", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                    Text("🏡 عرض صفحة العقار بالكامل والمواصفات", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                }
+
+                if (property.phone.isNotBlank()) {
+                    Button(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${property.phone}"))
+                            context.startActivity(intent)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    ) {
+                        Icon(Icons.Default.Phone, contentDescription = null, tint = Color.White)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("اتصال بصاحب العقار (${property.phone})", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                    }
                 }
             }
         }

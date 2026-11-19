@@ -478,8 +478,73 @@ fun ServicesBrowserLayout(
                 }
             }
 
-            // 7. Join As Provider Gold Banner
+            // 7. Quick Owner Dashboard Access (if user owns a registered business) + Join Banner
             item {
+                val jobsList by viewModel.jobs.collectAsState()
+                val curUserId by viewModel.currentUserId.collectAsState()
+                val curUserPhone by viewModel.currentUserPhone.collectAsState()
+                val ownedDestination = remember(curUserId, curUserPhone, allProviders, stores, properties, jobsList) {
+                    viewModel.findOwnedBusinessDestination()
+                }
+                if (ownedDestination != null) {
+                    Surface(
+                        onClick = {
+                            val (route, prepare) = ownedDestination
+                            prepare()
+                            viewModel.selectedDashboardInitialTab = 0
+                            viewModel.navigateToScreen(route)
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFF0F172A),
+                        border = BorderStroke(1.2.dp, themeColors.accent.copy(alpha = 0.7f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                            .heightIn(min = 52.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("⚙️", fontSize = 18.sp)
+                                Column {
+                                    Text(
+                                        text = "لوحة تحكم نشاطك التجاري",
+                                        color = themeColors.accent,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                    Text(
+                                        text = "إدارة الحجوزات، المنتجات، الأسعار، والإحصائيات مباشرة",
+                                        color = Color(0xFFCBD5E1),
+                                        fontSize = 10.5.sp
+                                    )
+                                }
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = themeColors.accent
+                            ) {
+                                Text(
+                                    text = "دخول ↗",
+                                    color = Color.Black,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
                 com.serviseyem.ui.components.BespokePremiumSystem.JoinAsProviderBanner {
                     viewModel.navigateTo(AppScreens.REGISTER_FORM)
                 }
@@ -578,8 +643,11 @@ fun ServicesBrowserLayout(
                         StoresSectionView(
                             viewModel = viewModel,
                             themeColors = themeColors,
-                            onStoreClick = { 
+                            onStoreClick = {
                                 viewModel.selectedStore = it
+                                viewModel.selectedProvider = null
+                                viewModel.selectedProperty = null
+                                viewModel.selectedJob = null
                                 viewModel.navigateTo("STORE_DETAILS")
                             },
                             onCreateStoreClick = {
@@ -592,8 +660,11 @@ fun ServicesBrowserLayout(
                         RestaurantsSectionView(
                             viewModel = viewModel,
                             themeColors = themeColors,
-                            onStoreClick = { 
+                            onStoreClick = {
                                 viewModel.selectedStore = it
+                                viewModel.selectedProvider = null
+                                viewModel.selectedProperty = null
+                                viewModel.selectedJob = null
                                 viewModel.navigateTo("STORE_DETAILS")
                             },
                             onCreateRestaurantClick = {
@@ -606,8 +677,11 @@ fun ServicesBrowserLayout(
                         MedicalCentersSectionView(
                             viewModel = viewModel,
                             themeColors = themeColors,
-                            onStoreClick = { 
+                            onStoreClick = {
                                 viewModel.selectedStore = it
+                                viewModel.selectedProvider = null
+                                viewModel.selectedProperty = null
+                                viewModel.selectedJob = null
                                 viewModel.navigateTo("STORE_DETAILS")
                             },
                             onCreateMedicalClick = {
@@ -705,6 +779,9 @@ fun ServicesBrowserLayout(
                 val storeToOpen = store
                 selectedStoreForDetails = null
                 viewModel.selectedStore = storeToOpen
+                viewModel.selectedProvider = null
+                viewModel.selectedProperty = null
+                viewModel.selectedJob = null
                 viewModel.navigateTo("STORE_DETAILS")
             }
         )
@@ -715,7 +792,16 @@ fun ServicesBrowserLayout(
             property = prop,
             context = context,
             themeColors = themeColors,
-            onDismiss = { selectedPropertyForDetails = null }
+            onDismiss = { selectedPropertyForDetails = null },
+            onOpenDetails = {
+                val propToOpen = prop
+                selectedPropertyForDetails = null
+                viewModel.selectedProperty = propToOpen
+                viewModel.selectedProvider = null
+                viewModel.selectedStore = null
+                viewModel.selectedJob = null
+                viewModel.navigateTo(AppScreens.PROPERTY_DETAILS)
+            }
         )
     }
 

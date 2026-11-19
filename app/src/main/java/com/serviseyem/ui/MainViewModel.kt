@@ -219,6 +219,7 @@ class MainViewModel @Inject constructor(
     var selectedStore: com.serviseyem.data.StoreEntity? = null
     var selectedProperty: com.serviseyem.data.PropertyEntity? = null
     var selectedJob: com.serviseyem.data.JobEntity? = null
+    var selectedDashboardInitialTab by androidx.compose.runtime.mutableIntStateOf(0)
     var selectedOfferId by androidx.compose.runtime.mutableStateOf("")
     var selectedRequestId by androidx.compose.runtime.mutableStateOf("")
     var showQuickServiceDialog by androidx.compose.runtime.mutableStateOf(false)

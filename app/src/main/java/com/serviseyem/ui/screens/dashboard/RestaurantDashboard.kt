@@ -40,11 +40,38 @@ fun RestaurantDashboard(
         )
     }
 
+    DisposableEffect(restaurantViewModel) {
+        onDispose { restaurantViewModel.dispose() }
+    }
+
     val uiState by restaurantViewModel.uiState.collectAsState()
     val allBookings by viewModel.bookings.collectAsState()
 
-    val restaurantOrders = remember(allBookings, account) {
-        allBookings.filter { b -> b.providerId == account.id || b.providerPhone == account.phone }
+    val restaurantOrders = remember(allBookings, account.id, account.phone) {
+        allBookings.filter { b ->
+            b.providerId == account.id || (account.phone.isNotBlank() && b.providerPhone == account.phone)
+        }
+    }
+
+    val liveStats = remember(uiState.stats, restaurantOrders, uiState.products, uiState.reviews, account.rating, account.numReviews) {
+        val activeCount = restaurantOrders.count {
+            it.status in listOf("PENDING", "ACCEPTED", "APPROVED", "IN_PROGRESS", "IN_PREPARATION", "READY")
+        }
+        val completedCount = restaurantOrders.count {
+            it.status in listOf("COMPLETED", "DELIVERED", "PAID", "CLOSED")
+        }
+        val revenue = restaurantOrders.filter {
+            it.status in listOf("COMPLETED", "DELIVERED", "PAID", "CLOSED")
+        }.sumOf { it.totalAmount }
+        val avgRating = if (uiState.reviews.isNotEmpty()) uiState.reviews.map { it.rating }.average() else account.rating.toDouble()
+        uiState.stats.copy(
+            activeBookingsCount = maxOf(uiState.stats.activeBookingsCount, activeCount),
+            completedBookingsCount = maxOf(uiState.stats.completedBookingsCount, completedCount),
+            totalRevenueYer = maxOf(uiState.stats.totalRevenueYer, revenue),
+            averageRating = avgRating,
+            totalReviewsCount = maxOf(uiState.reviews.size, account.numReviews),
+            totalProductsCount = uiState.products.size
+        )
     }
 
     val tabs = listOf(
@@ -52,8 +79,17 @@ fun RestaurantDashboard(
         "طلبات العملاء 🛵",
         "العروض الخاصة 🎁",
         "تقييمات العملاء ⭐",
-        "الملف التعريفي 📝"
+        "الملف التعريفي 📝",
+        "الإحصائيات 📊"
     )
+
+    LaunchedEffect(Unit) {
+        val requestedTab = viewModel.selectedDashboardInitialTab
+        if (requestedTab in tabs.indices) {
+            activeTab = requestedTab
+            viewModel.selectedDashboardInitialTab = 0
+        }
+    }
 
     LaunchedEffect(restaurantViewModel) {
         restaurantViewModel.eventFlow.collect { event ->
@@ -76,6 +112,20 @@ fun RestaurantDashboard(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = themeColors.textPrimary)
+                    }
+                },
+                actions = {
+                    TextButton(
+                        onClick = {
+                            viewModel.selectedStore = account.rawStore ?: viewModel.stores.value.find { it.id == account.id }
+                            viewModel.selectedProvider = null
+                            viewModel.selectedProperty = null
+                            viewModel.selectedJob = null
+                            viewModel.navigateToScreen(AppScreens.DYNAMIC_PROFILE)
+                        },
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) {
+                        Text("معاينة 👁️", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = themeColors.surface)
@@ -125,6 +175,12 @@ fun RestaurantDashboard(
                             },
                             onDeleteProduct = { id ->
                                 restaurantViewModel.deleteMeal(id)
+                            },
+                            onEditProduct = { updated ->
+                                restaurantViewModel.updateMeal(updated)
+                            },
+                            onToggleAvailability = { meal ->
+                                restaurantViewModel.toggleMealAvailability(meal)
                             }
                         )
                     }
@@ -133,7 +189,7 @@ fun RestaurantDashboard(
                             bookings = restaurantOrders,
                             themeColors = themeColors,
                             onAcceptBooking = { bId -> viewModel.updateBookingStatus(bId, "IN_PREPARATION") },
-                            onRejectBooking = { bId, reason -> viewModel.updateBookingStatus(bId, "REJECTED") },
+                            onRejectBooking = { bId, reason -> viewModel.updateBookingStatus(bId, "REJECTED", reason) },
                             onStartProgress = { bId -> viewModel.updateBookingStatus(bId, "READY") },
                             onCompleteBooking = { bId -> viewModel.updateBookingStatus(bId, "DELIVERED") },
                             onChatWithClient = { phone ->
@@ -142,12 +198,17 @@ fun RestaurantDashboard(
                                     targetType = "RESTAURANT",
                                     targetName = account.name,
                                     targetPhone = phone,
-                                    onCreated = {}
+                                    onCreated = { channel ->
+                                        channel?.id?.let { chId ->
+                                            viewModel.targetChatChannelId = chId
+                                        }
+                                        viewModel.navigateToScreen(AppScreens.CHAT_DIRECT)
+                                    }
                                 )
                             },
                             onUpdateOrderStatus = { bId, status ->
                                 viewModel.updateBookingStatus(bId, status)
-                                Toast.makeText(context, "تم تحديث حالة وجبة العميل ✅", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "تم تحديث حالة طلب المطعم ✅", Toast.LENGTH_SHORT).show()
                             }
                         )
                     }
@@ -159,11 +220,12 @@ fun RestaurantDashboard(
                             reviews = uiState.reviews,
                             themeColors = themeColors,
                             onReplySubmit = { revId, reply ->
-                                Toast.makeText(context, "تم الرد على تقييم المطعم بنجاح ✅", Toast.LENGTH_SHORT).show()
+                                restaurantViewModel.replyToReview(revId, reply)
                             }
                         )
                     }
                     4 -> {
+                        val baseStore = account.rawStore ?: viewModel.stores.value.find { it.id == account.id }
                         TabProfileEdit(
                             name = account.name,
                             phone = account.phone,
@@ -172,16 +234,43 @@ fun RestaurantDashboard(
                             workingHours = account.workingHours,
                             photoUrl = account.logoImage,
                             coverUrl = account.coverImage,
-                            isAvailable = true,
-                            rating = account.rating.toDouble(),
-                            reviewCount = account.numReviews,
+                            isAvailable = baseStore?.isActive ?: account.isActive,
+                            rating = liveStats.averageRating,
+                            reviewCount = liveStats.totalReviewsCount,
                             themeColors = themeColors,
-                            onSaveProfile = { name, phone, city, desc, hours, available ->
-                                Toast.makeText(context, "تم تحديث بيانات المطعم بنجاح ✅", Toast.LENGTH_SHORT).show()
+                            onChangePhoto = { newUrl ->
+                                viewModel.updateEntityImages("stores", account.id, profileImg = newUrl, coverImg = "")
+                            },
+                            onChangeCover = { newUrl ->
+                                viewModel.updateEntityImages("stores", account.id, profileImg = "", coverImg = newUrl)
+                            },
+                            onSaveProfile = { name, _, city, desc, hours, available ->
+                                val currentStore = baseStore ?: com.serviseyem.data.StoreEntity(
+                                    id = account.id,
+                                    sectionId = "restaurants",
+                                    name = account.name,
+                                    phone = account.phone,
+                                    cityId = account.cityId
+                                )
+                                viewModel.updateStoreEntity(
+                                    currentStore.copy(
+                                        name = name,
+                                        localNeighborhood = city,
+                                        description = desc,
+                                        workingHours = hours,
+                                        isActive = available
+                                    )
+                                )
                             },
                             onChangePassword = { oldP, newP ->
-                                Toast.makeText(context, "تم تغيير كلمة المرور بنجاح 🔑", Toast.LENGTH_SHORT).show()
+                                viewModel.changeEntityPassword("stores", account.id, oldP, newP) { _, _ -> }
                             }
+                        )
+                    }
+                    5 -> {
+                        TabStatisticsGrowth(
+                            stats = liveStats,
+                            themeColors = themeColors
                         )
                     }
                 }

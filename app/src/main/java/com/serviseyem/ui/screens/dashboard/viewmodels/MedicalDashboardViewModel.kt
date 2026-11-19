@@ -126,7 +126,7 @@ class MedicalDashboardViewModel @Inject constructor(
         }
     }
 
-    fun addMedicalService(title: String, priceYer: Double, description: String = "") {
+    fun addMedicalService(title: String, priceYer: Double, description: String = "", imageUrl: String = "") {
         viewModelScope.launch {
             if (title.isBlank()) return@launch
             val service = ProductItemEntity(
@@ -134,12 +134,54 @@ class MedicalDashboardViewModel @Inject constructor(
                 title = title,
                 priceYer = priceYer,
                 description = description,
+                imageUrl = imageUrl,
                 category = "MEDICAL"
             )
             productsRepository.addProduct(service).onSuccess {
                 _eventFlow.emit(DashboardEvent.ShowToast("تمت إضافة الخدمة الطبية 💊"))
             }.onFailure { e ->
                 _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل إضافة الخدمة"))
+            }
+        }
+    }
+
+    fun updateMedicalService(service: ProductItemEntity) {
+        viewModelScope.launch {
+            productsRepository.updateProduct(service).onSuccess {
+                _eventFlow.emit(DashboardEvent.ShowToast("تم تحديث الخدمة الطبية ✅"))
+            }.onFailure { e ->
+                _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل تحديث الخدمة"))
+            }
+        }
+    }
+
+    fun deleteMedicalService(id: String) {
+        viewModelScope.launch {
+            productsRepository.deleteProduct(id).onSuccess {
+                _eventFlow.emit(DashboardEvent.ShowToast("تم حذف الخدمة الطبية 🗑️"))
+            }.onFailure { e ->
+                _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل حذف الخدمة"))
+            }
+        }
+    }
+
+    fun toggleMedicalServiceAvailability(service: ProductItemEntity) {
+        viewModelScope.launch {
+            val next = !service.isAvailable
+            productsRepository.updateProduct(service.copy(isAvailable = next)).onSuccess {
+                _eventFlow.emit(DashboardEvent.ShowToast(if (next) "الخدمة متاحة الآن ✅" else "تم إيقاف الخدمة مؤقتاً ⏸️"))
+            }.onFailure { e ->
+                _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل تحديث حالة الخدمة"))
+            }
+        }
+    }
+
+    fun replyToReview(reviewId: String, replyText: String) {
+        viewModelScope.launch {
+            ratingsRepository.replyToRating(reviewId, replyText).onSuccess {
+                _eventFlow.emit(DashboardEvent.ShowToast("تم إرسال الرد على التقييم بنجاح 💬"))
+            }.onFailure { e ->
+                _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل إرسال الرد"))
             }
         }
     }

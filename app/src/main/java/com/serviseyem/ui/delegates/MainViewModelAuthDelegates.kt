@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.serviseyem.data.*
 import com.serviseyem.data.models.*
 import com.serviseyem.utils.*
+import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 fun MainViewModel.applyFilters() {
     homeViewModel.applyFilters()
@@ -498,9 +500,191 @@ fun MainViewModel.updateEntityImages(collection: String, id: String, profileImg:
         updates["coverImage"] = coverImg
     }
     if (updates.isNotEmpty()) {
+        when (collection) {
+            "providers" -> {
+                homeViewModel._providers.value = homeViewModel._providers.value.map { p ->
+                    if (p.id == id) p.copy(
+                        profileImage = if (profileImg.isNotBlank()) profileImg else p.profileImage,
+                        coverImage = if (coverImg.isNotBlank()) coverImg else p.coverImage
+                    ) else p
+                }
+                if (selectedProvider?.id == id) {
+                    selectedProvider = selectedProvider?.copy(
+                        profileImage = if (profileImg.isNotBlank()) profileImg else selectedProvider?.profileImage ?: "",
+                        coverImage = if (coverImg.isNotBlank()) coverImg else selectedProvider?.coverImage ?: ""
+                    )
+                }
+            }
+            "stores" -> {
+                adminViewModel.appState._stores.value = adminViewModel.appState._stores.value.map { s ->
+                    if (s.id == id) s.copy(
+                        logoImage = if (profileImg.isNotBlank()) profileImg else s.logoImage,
+                        coverImage = if (coverImg.isNotBlank()) coverImg else s.coverImage
+                    ) else s
+                }
+                if (selectedStore?.id == id) {
+                    selectedStore = selectedStore?.copy(
+                        logoImage = if (profileImg.isNotBlank()) profileImg else selectedStore?.logoImage ?: "",
+                        coverImage = if (coverImg.isNotBlank()) coverImg else selectedStore?.coverImage ?: ""
+                    )
+                }
+            }
+            "properties" -> {
+                val extraImg = coverImg.ifBlank { profileImg }
+                if (extraImg.isNotBlank()) {
+                    adminViewModel.appState._properties.value = adminViewModel.appState._properties.value.map { prop ->
+                        if (prop.id == id) {
+                            val nextImgs = (listOf(extraImg) + prop.images.filter { it != extraImg }).take(12)
+                            prop.copy(images = nextImgs)
+                        } else prop
+                    }
+                    selectedProperty?.takeIf { it.id == id }?.let { prop ->
+                        val nextImgs = (listOf(extraImg) + prop.images.filter { it != extraImg }).take(12)
+                        selectedProperty = prop.copy(images = nextImgs)
+                    }
+                    updates["images"] = adminViewModel.appState._properties.value.find { it.id == id }?.images ?: listOf(extraImg)
+                }
+            }
+        }
+        homeViewModel.applyFilters()
         viewModelScope.launch { adminViewModel.crud.updateFields(collection, id, updates) }
         triggerNotification("📸 تم تحديث الصور بنجاح")
     }
+}
+
+fun MainViewModel.changeEntityPassword(
+    collection: String,
+    entityId: String,
+    oldPassword: String,
+    newPassword: String,
+    onResult: (Boolean, String) -> Unit
+) {
+    val cleanId = entityId.trim()
+    val cleanOld = oldPassword.trim()
+    val cleanNew = newPassword.trim()
+    if (cleanId.isBlank()) {
+        onResult(false, "معرف الحساب غير صالح")
+        return
+    }
+    if (cleanNew.length < 6) {
+        onResult(false, "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل")
+        return
+    }
+    viewModelScope.launch {
+        try {
+            val doc = db.collection(collection).document(cleanId).get().await()
+            val storedHash = (doc.getString("passwordHash") ?: doc.getString("password") ?: "").trim()
+            if (storedHash.isNotEmpty()) {
+                val isValid = if (cleanOld.isEmpty()) false else {
+                    PasswordHasher.verifyPassword(cleanOld, storedHash) || cleanOld == storedHash
+                }
+                if (!isValid) {
+                    triggerNotification("❌ كلمة المرور الحالية غير صحيحة")
+                    onResult(false, "كلمة المرور الحالية غير صحيحة")
+                    return@launch
+                }
+            }
+            val newHash = PasswordHasher.hashPassword(cleanNew)
+            adminViewModel.crud.updateFields(
+                collection,
+                cleanId,
+                mapOf("passwordHash" to newHash, "password" to "")
+            )
+            when (collection) {
+                "providers" -> {
+                    homeViewModel._providers.value = homeViewModel._providers.value.map {
+                        if (it.id == cleanId) it.copy(passwordHash = newHash) else it
+                    }
+                    if (selectedProvider?.id == cleanId) {
+                        selectedProvider = selectedProvider?.copy(passwordHash = newHash)
+                    }
+                }
+                "stores" -> {
+                    adminViewModel.appState._stores.value = adminViewModel.appState._stores.value.map {
+                        if (it.id == cleanId) it.copy(passwordHash = newHash) else it
+                    }
+                    if (selectedStore?.id == cleanId) {
+                        selectedStore = selectedStore?.copy(passwordHash = newHash)
+                    }
+                }
+                "properties" -> {
+                    adminViewModel.appState._properties.value = adminViewModel.appState._properties.value.map {
+                        if (it.id == cleanId) it.copy(passwordHash = newHash) else it
+                    }
+                    if (selectedProperty?.id == cleanId) {
+                        selectedProperty = selectedProperty?.copy(passwordHash = newHash)
+                    }
+                }
+            }
+            triggerNotification("🔒 تم تحديث كلمة المرور بنجاح")
+            onResult(true, "تم تحديث كلمة المرور بنجاح")
+        } catch (e: Exception) {
+            triggerNotification("⚠️ تعذر تحديث كلمة المرور")
+            onResult(false, e.localizedMessage ?: "تعذر تحديث كلمة المرور")
+        }
+    }
+}
+
+fun MainViewModel.incrementEntityViews(collection: String, entityId: String) {
+    val cleanId = entityId.trim()
+    val cleanCol = collection.trim()
+    if (cleanId.isBlank() || cleanCol.isBlank()) return
+    viewModelScope.launch {
+        try {
+            db.collection(cleanCol).document(cleanId)
+                .update("viewsCount", FieldValue.increment(1L))
+                .await()
+        } catch (_: Exception) {
+            // Silently ignore permission/offline errors on analytics increment
+        }
+    }
+}
+
+fun MainViewModel.findOwnedBusinessDestination(): Pair<String, (() -> Unit)>? {
+    val rawPhone = currentUserPhone.value.trim()
+    val normPhone = rawPhone.filter { it.isDigit() }.takeLast(9)
+    val uid = currentUserId.value.trim()
+    if (normPhone.length < 7 && (uid.isBlank() || uid == "guest")) return null
+
+    fun matchesPhoneOrId(phone: String?, id: String?, ownerId: String? = null): Boolean {
+        val pNorm = (phone ?: "").filter { it.isDigit() }.takeLast(9)
+        if (normPhone.length >= 7 && pNorm == normPhone) return true
+        if (uid.isNotBlank() && uid != "guest" && (id == uid || ownerId == uid)) return true
+        return false
+    }
+
+    val ownedProv = providers.value.firstOrNull { !it.isDeleted && matchesPhoneOrId(it.phone, it.id) }
+    if (ownedProv != null) {
+        val isMed = ownedProv.categoryId.contains("medical", ignoreCase = true) ||
+            ownedProv.categoryId.contains("clinic", ignoreCase = true) ||
+            ownedProv.categoryId.contains("hospital", ignoreCase = true) ||
+            ownedProv.categoryId.contains("pharmacy", ignoreCase = true) ||
+            ownedProv.categoryId.contains("lab", ignoreCase = true)
+        val route = if (isMed) AppScreens.MEDICAL_DASHBOARD else AppScreens.PROVIDER_DASHBOARD
+        return route to { selectedProvider = ownedProv }
+    }
+
+    val ownedStore = stores.value.firstOrNull { !it.isDeleted && matchesPhoneOrId(it.phone, it.id, it.ownerId) }
+    if (ownedStore != null) {
+        val route = when (ownedStore.sectionId.lowercase()) {
+            "restaurants", "restaurant" -> AppScreens.RESTAURANT_DASHBOARD
+            "medical" -> AppScreens.MEDICAL_DASHBOARD
+            else -> AppScreens.STORE_DASHBOARD
+        }
+        return route to { selectedStore = ownedStore }
+    }
+
+    val ownedProp = properties.value.firstOrNull { !it.isDeleted && matchesPhoneOrId(it.phone, it.id, it.ownerId) }
+    if (ownedProp != null) {
+        return AppScreens.PROPERTY_DASHBOARD to { selectedProperty = ownedProp }
+    }
+
+    val ownedJob = jobs.value.firstOrNull { !it.isDeleted && matchesPhoneOrId(it.phone, it.id) }
+    if (ownedJob != null) {
+        return AppScreens.JOB_POSTER_DASHBOARD to { selectedJob = ownedJob }
+    }
+
+    return null
 }
 
 fun MainViewModel.acceptRequestOffer(

@@ -5,6 +5,14 @@ import com.serviseyem.data.PropertyEntity
 import kotlinx.coroutines.launch
 
 fun MainViewModel.updatePropertyEntity(property: PropertyEntity) {
+    val updatedList = adminViewModel.appState._properties.value.toMutableList()
+    val idx = updatedList.indexOfFirst { it.id == property.id }
+    if (idx >= 0) updatedList[idx] = property else updatedList.add(0, property)
+    adminViewModel.appState._properties.value = updatedList
+    if (selectedProperty?.id == property.id) {
+        selectedProperty = property
+    }
+    homeViewModel.applyFilters()
     viewModelScope.launch { adminViewModel.crud.saveEntity("properties", property.id, property) }
     triggerNotification("✅ تم تحديث بيانات العقار بنجاح")
 }

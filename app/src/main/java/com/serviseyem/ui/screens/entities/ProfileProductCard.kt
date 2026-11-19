@@ -155,7 +155,7 @@ fun ProfileProductCard(
                     Surface(
                         shape = CircleShape,
                         color = themeColors.accent,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         IconButton(
                             onClick = onAddToCartClick,
@@ -163,9 +163,9 @@ fun ProfileProductCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
-                                contentDescription = "إضافة سريعة",
+                                contentDescription = "طلب الصنف",
                                 tint = Color.Black,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }

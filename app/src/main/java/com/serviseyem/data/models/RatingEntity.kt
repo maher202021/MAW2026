@@ -37,7 +37,9 @@ data class RatingEntity(
             authorPhone = userPhone,
             rating = rating.toDouble(),
             comment = comment,
-            dateTimestamp = timestamp
+            dateTimestamp = timestamp,
+            reply = reply,
+            replyTimestamp = replyTimestamp
         )
     }
 }

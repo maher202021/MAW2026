@@ -8,6 +8,7 @@ import com.serviseyem.data.repositories.IProductsRepository
 import com.serviseyem.data.repositories.IRatingsRepository
 import com.serviseyem.domain.entities.ProductItemEntity
 import com.serviseyem.ui.screens.dashboard.DashboardEvent
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -97,5 +98,40 @@ class RestaurantDashboardViewModel(
                 _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل حذف الوجبة"))
             }
         }
+    }
+
+    fun updateMeal(meal: ProductItemEntity) {
+        viewModelScope.launch {
+            productsRepository.updateProduct(meal).onSuccess {
+                _eventFlow.emit(DashboardEvent.ShowToast("تم تحديث الوجبة بنجاح 🍽️"))
+            }.onFailure { e ->
+                _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل تحديث الوجبة"))
+            }
+        }
+    }
+
+    fun toggleMealAvailability(meal: ProductItemEntity) {
+        viewModelScope.launch {
+            val next = !meal.isAvailable
+            productsRepository.updateProduct(meal.copy(isAvailable = next)).onSuccess {
+                _eventFlow.emit(DashboardEvent.ShowToast(if (next) "الوجبة متاحة للطلب ✅" else "تم إيقاف الوجبة مؤقتاً ⏸️"))
+            }.onFailure { e ->
+                _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل تحديث حالة الوجبة"))
+            }
+        }
+    }
+
+    fun replyToReview(reviewId: String, replyText: String) {
+        viewModelScope.launch {
+            ratingsRepository.replyToRating(reviewId, replyText).onSuccess {
+                _eventFlow.emit(DashboardEvent.ShowToast("تم إرسال الرد على التقييم بنجاح 💬"))
+            }.onFailure { e ->
+                _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل إرسال الرد"))
+            }
+        }
+    }
+
+    fun dispose() {
+        viewModelScope.cancel()
     }
 }

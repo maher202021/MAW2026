@@ -121,13 +121,13 @@ fun TabOffersCoupons(
                                 }
                                 IconButton(
                                     onClick = { itemToDelete = offer },
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Delete,
                                         contentDescription = "حذف العرض",
                                         tint = Color(0xFFEF4444),
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }

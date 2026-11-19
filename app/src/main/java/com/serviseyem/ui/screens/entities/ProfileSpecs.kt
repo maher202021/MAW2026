@@ -80,8 +80,8 @@ fun StoreSpecificSpecsView(store: StoreEntity?, products: List<ProductEntity>, t
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("🛍️ تفاصيل المتجر وسياسة التوصيل", fontWeight = FontWeight.Bold, color = Color(0xFF34D399), fontSize = 13.sp)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                SpecBadge("أوقات الدوام:", store?.workingHours ?: "9:00 ص - 10:00 م", Icons.Default.AccountBox)
-                SpecBadge("عدد المنتجات:", "${products.count { it.storeId == store?.id }} صنف", Icons.Default.ShoppingCart)
+                SpecBadge("أوقات الدوام:", store?.workingHours?.takeIf { it.isNotBlank() } ?: "9:00 ص - 10:00 م", Icons.Default.AccountBox)
+                SpecBadge("عدد المنتجات:", "${products.count { it.storeId == store?.id || it.ownerId == store?.id }} صنف", Icons.Default.ShoppingCart)
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 SpecBadge("طرق الدفع:", "محافظ إلكترونية + نقد", Icons.Default.Star)
@@ -102,12 +102,12 @@ fun RestaurantSpecificSpecsView(store: StoreEntity?, products: List<ProductEntit
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("🍽️ خدمات المطعم والضيافة", fontWeight = FontWeight.Bold, color = Color(0xFFFBBF24), fontSize = 13.sp)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                SpecBadge("أوقات الوجبات:", "فطور - غداء - عشاء", Icons.Default.Favorite)
-                SpecBadge("خدمة التوصيل:", "سريع لجميع الأحياء 🛵", Icons.Default.Send)
+                SpecBadge("أوقات العمل:", store?.workingHours?.takeIf { it.isNotBlank() } ?: "فطور - غداء - عشاء", Icons.Default.Favorite)
+                SpecBadge("الأصناف المتاحة:", "${products.count { it.storeId == store?.id || it.ownerId == store?.id }} صنف", Icons.Default.Send)
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                SpecBadge("جلسات عائلية:", "متوفرة وقسم خاص 👨‍👩‍👧", Icons.Default.Home)
-                SpecBadge("حجز مسبق:", "متاح عبر التطبيق 📱", Icons.Default.DateRange)
+                SpecBadge("خدمة التوصيل:", "سريع لجميع الأحياء 🛵", Icons.Default.Home)
+                SpecBadge("حجز مسبق:", if (store?.isActive != false) "متاح عبر التطبيق 📱" else "مغلق مؤقتاً", Icons.Default.DateRange)
             }
         }
     }
@@ -150,8 +150,8 @@ fun RealEstateSpecificSpecsView(property: PropertyEntity?, themeColors: VisualTh
                 SpecBadge("السعر:", "${property?.price?.toInt() ?: 0} ${property?.currency ?: "YER"}", Icons.Default.Star)
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                SpecBadge("تصنيف العقار:", property?.propertyType?.takeIf { it.isNotEmpty() } ?: "شقة سكنية", Icons.Default.LocationOn)
-                SpecBadge("المعاينة:", "متاحة بالتنسيق المباشر 🚶‍♂️", Icons.Default.CheckCircle)
+                SpecBadge("المساحة والغرف:", "${property?.areaSqm?.toInt() ?: 120} م² • ${property?.rooms ?: 3} غرف", Icons.Default.LocationOn)
+                SpecBadge("التصنيف:", property?.propertyType?.takeIf { it.isNotEmpty() } ?: "شقة سكنية", Icons.Default.CheckCircle)
             }
         }
     }

@@ -172,19 +172,55 @@ fun AppNavigator(
                     )
                 }
                 AppScreens.ADMIN_PANEL -> AdminPanelLayout(viewModel = viewModel, themeColors = themeColors)
-                AppScreens.OWNER_PANEL, AppScreens.PRODUCTS_MGMT_VIEW, AppScreens.PRICE_MGMT_VIEW, AppScreens.OFFERS_MGMT_VIEW, AppScreens.GALLERY_MGMT_VIEW -> OwnerDashboardScreen(
-                    account = UnifiedBusinessAccount(id = "owner_1", name = "المالك", description = "منصة اليمن"),
-                    viewModel = viewModel,
-                    themeColors = themeColors,
-                    onNavigateTab = {},
-                    onBackClick = { viewModel.navigateToScreen(AppScreens.USER_BROWSE) }
-                )
+                AppScreens.OWNER_PANEL, AppScreens.PRODUCTS_MGMT_VIEW, AppScreens.PRICE_MGMT_VIEW, AppScreens.OFFERS_MGMT_VIEW, AppScreens.GALLERY_MGMT_VIEW -> {
+                    val ownedDest = remember(
+                        currentScreen,
+                        currentUserId,
+                        viewModel.currentUserPhone.collectAsState().value,
+                        providers,
+                        viewModel.stores.collectAsState().value,
+                        viewModel.properties.collectAsState().value,
+                        viewModel.jobs.collectAsState().value
+                    ) {
+                        viewModel.findOwnedBusinessDestination()
+                    }
+                    if (ownedDest != null) {
+                        val (route, prepareSelection) = ownedDest
+                        LaunchedEffect(currentScreen, route) {
+                            prepareSelection()
+                            viewModel.selectedDashboardInitialTab = when (currentScreen) {
+                                AppScreens.PRODUCTS_MGMT_VIEW, AppScreens.PRICE_MGMT_VIEW -> when (route) {
+                                    AppScreens.PROVIDER_DASHBOARD, AppScreens.MEDICAL_DASHBOARD -> 2
+                                    else -> 0
+                                }
+                                AppScreens.OFFERS_MGMT_VIEW -> 2
+                                AppScreens.GALLERY_MGMT_VIEW -> if (route == AppScreens.PROVIDER_DASHBOARD) 3 else 0
+                                else -> 0
+                            }
+                            viewModel.navigateToScreen(route)
+                        }
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = themeColors.accent)
+                        }
+                    } else {
+                        com.serviseyem.ui.screens.dashboard.ClientPersonalAccountDashboard(
+                            viewModel = viewModel,
+                            themeColors = themeColors
+                        )
+                    }
+                }
                 AppScreens.STATUS_VIEW -> StatusScreen(viewModel = viewModel, themeColors = themeColors)
                 AppScreens.CATEGORIES_VIEW -> CategoriesScreen(viewModel = viewModel, themeColors = themeColors, onCategoryClick = { cat -> viewModel.selectCategory(cat); viewModel.navigateToScreen(AppScreens.USER_BROWSE) })
                 AppScreens.STORES_VIEW -> StoresScreen(
-                    viewModel = viewModel, 
-                    themeColors = themeColors, 
-                    onStoreClick = {}, 
+                    viewModel = viewModel,
+                    themeColors = themeColors,
+                    onStoreClick = { store ->
+                        viewModel.selectedStore = store
+                        viewModel.selectedProvider = null
+                        viewModel.selectedProperty = null
+                        viewModel.selectedJob = null
+                        viewModel.navigateToScreen(AppScreens.STORE_DETAILS)
+                    },
                     onChatClick = { store ->
                         viewModel.openDirectChat(
                             targetUserId = store.id,
@@ -193,13 +229,25 @@ fun AppNavigator(
                             relatedEntityId = store.id,
                             relatedEntityType = "STORE"
                         )
-                    }, 
-                    onRequestServiceClick = { viewModel.navigateToScreen(AppScreens.QUICK_SERVICE_REQUEST) }
+                    },
+                    onRequestServiceClick = { store ->
+                        viewModel.selectedStore = store
+                        viewModel.selectedProvider = null
+                        viewModel.selectedProperty = null
+                        viewModel.selectedJob = null
+                        viewModel.navigateToScreen(AppScreens.CREATE_BOOKING)
+                    }
                 )
                 AppScreens.MEDICAL_VIEW -> MedicalCentersScreen(
-                    viewModel = viewModel, 
-                    themeColors = themeColors, 
-                    onMedicalCenterClick = {}, 
+                    viewModel = viewModel,
+                    themeColors = themeColors,
+                    onMedicalCenterClick = { med ->
+                        viewModel.selectedProvider = med
+                        viewModel.selectedStore = null
+                        viewModel.selectedProperty = null
+                        viewModel.selectedJob = null
+                        viewModel.navigateToScreen(AppScreens.PROVIDER_DETAILS)
+                    },
                     onChatClick = { med ->
                         viewModel.openDirectChat(
                             targetUserId = med.id,
@@ -208,13 +256,25 @@ fun AppNavigator(
                             relatedEntityId = med.id,
                             relatedEntityType = "MEDICAL"
                         )
-                    }, 
-                    onBookAppointmentClick = { viewModel.navigateToScreen(AppScreens.QUICK_SERVICE_REQUEST) }
+                    },
+                    onBookAppointmentClick = { med ->
+                        viewModel.selectedProvider = med
+                        viewModel.selectedStore = null
+                        viewModel.selectedProperty = null
+                        viewModel.selectedJob = null
+                        viewModel.navigateToScreen(AppScreens.CREATE_BOOKING)
+                    }
                 )
                 AppScreens.RESTAURANTS_VIEW -> RestaurantsScreen(
-                    viewModel = viewModel, 
-                    themeColors = themeColors, 
-                    onRestaurantClick = {}, 
+                    viewModel = viewModel,
+                    themeColors = themeColors,
+                    onRestaurantClick = { rest ->
+                        viewModel.selectedStore = rest
+                        viewModel.selectedProvider = null
+                        viewModel.selectedProperty = null
+                        viewModel.selectedJob = null
+                        viewModel.navigateToScreen(AppScreens.STORE_DETAILS)
+                    },
                     onChatClick = { rest ->
                         viewModel.openDirectChat(
                             targetUserId = rest.id,
@@ -223,13 +283,25 @@ fun AppNavigator(
                             relatedEntityId = rest.id,
                             relatedEntityType = "RESTAURANT"
                         )
-                    }, 
-                    onOrderMealClick = { viewModel.navigateToScreen(AppScreens.QUICK_SERVICE_REQUEST) }
+                    },
+                    onOrderMealClick = { rest ->
+                        viewModel.selectedStore = rest
+                        viewModel.selectedProvider = null
+                        viewModel.selectedProperty = null
+                        viewModel.selectedJob = null
+                        viewModel.navigateToScreen(AppScreens.CREATE_BOOKING)
+                    }
                 )
                 AppScreens.PROPERTIES_VIEW -> PropertiesScreen(
-                    viewModel = viewModel, 
-                    themeColors = themeColors, 
-                    onPropertyClick = {}, 
+                    viewModel = viewModel,
+                    themeColors = themeColors,
+                    onPropertyClick = { prop ->
+                        viewModel.selectedProperty = prop
+                        viewModel.selectedProvider = null
+                        viewModel.selectedStore = null
+                        viewModel.selectedJob = null
+                        viewModel.navigateToScreen(AppScreens.PROPERTY_DETAILS)
+                    },
                     onChatClick = { prop ->
                         viewModel.openDirectChat(
                             targetUserId = prop.id.ifBlank { prop.phone },
@@ -238,8 +310,14 @@ fun AppNavigator(
                             relatedEntityId = prop.id,
                             relatedEntityType = "PROPERTY"
                         )
-                    }, 
-                    onRequestInspectionClick = { viewModel.navigateToScreen(AppScreens.QUICK_SERVICE_REQUEST) }
+                    },
+                    onRequestInspectionClick = { prop ->
+                        viewModel.selectedProperty = prop
+                        viewModel.selectedProvider = null
+                        viewModel.selectedStore = null
+                        viewModel.selectedJob = null
+                        viewModel.navigateToScreen(AppScreens.CREATE_BOOKING)
+                    }
                 )
                 AppScreens.CHAT_LIST -> ChatListScreen(
                     currentUserId = currentUserId,
@@ -443,7 +521,9 @@ fun AppNavigator(
                     )
                 }
                 "MEDICAL_DASHBOARD" -> {
-                    val sId = viewModel.selectedStore?.id ?: viewModel.currentUserId.value
+                    val sId = viewModel.selectedStore?.id
+                        ?: viewModel.selectedProvider?.id
+                        ?: viewModel.currentUserId.value
                     com.serviseyem.ui.screens.dashboard.UnifiedBusinessProfileDashboard(
                         accountType = "MEDICAL",
                         providerId = sId,

@@ -2697,6 +2697,7 @@ fun toggleProviderRecommendation(providerId: String) {
 
 fun updateProviderEntity(provider: ProviderEntity) {
         mainViewModel.homeViewModel._providers.value = mainViewModel.homeViewModel._providers.value.map { item -> if (item.id == provider.id) provider else item }
+        mainViewModel.applyFilters()
         db.collection("providers").document(provider.id).set(provider)
         mainViewModel.triggerNotification("💾 تم تحديث بيانات مقدم الخدمة ${provider.name} بنجاح")
     }
@@ -2819,6 +2820,7 @@ fun addBanner(title: String, url: String, redirect: String, type: String, size: 
 fun placeOrder(order: com.serviseyem.data.OrderEntity) {
         val targetId = db.collection("orders").document().id
         val finalOrder = order.copy(id = targetId)
+        _orders.value = _orders.value + finalOrder
         db.collection("orders").document(targetId).set(finalOrder).addOnSuccessListener {
             mainViewModel.triggerNotification("🛍️ تم تسجيل طلبك بنجاح! رقم الطلب: ${targetId.take(6)}")
         }

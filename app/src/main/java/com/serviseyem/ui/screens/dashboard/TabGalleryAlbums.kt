@@ -89,12 +89,12 @@ fun TabGalleryAlbums(
                                 onClick = { itemToDelete = item },
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
-                                    .padding(4.dp)
-                                    .size(28.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(Color.Black.copy(alpha = 0.6f))
+                                    .padding(2.dp)
+                                    .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.Black.copy(alpha = 0.55f))
                             ) {
-                                Text(text = "🗑️", fontSize = 12.sp)
+                                Text(text = "🗑️", fontSize = 14.sp)
                             }
                         }
                     }

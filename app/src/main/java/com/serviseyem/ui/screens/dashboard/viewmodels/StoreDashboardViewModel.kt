@@ -8,6 +8,7 @@ import com.serviseyem.data.repositories.IProductsRepository
 import com.serviseyem.data.repositories.IRatingsRepository
 import com.serviseyem.domain.entities.ProductItemEntity
 import com.serviseyem.ui.screens.dashboard.DashboardEvent
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -98,5 +99,40 @@ class StoreDashboardViewModel(
                 _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل حذف المنتج"))
             }
         }
+    }
+
+    fun updateProduct(product: ProductItemEntity) {
+        viewModelScope.launch {
+            productsRepository.updateProduct(product).onSuccess {
+                _eventFlow.emit(DashboardEvent.ShowToast("تم تحديث المنتج بنجاح ✅"))
+            }.onFailure { e ->
+                _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل تحديث المنتج"))
+            }
+        }
+    }
+
+    fun toggleProductAvailability(product: ProductItemEntity) {
+        viewModelScope.launch {
+            val next = !product.isAvailable
+            productsRepository.updateProduct(product.copy(isAvailable = next)).onSuccess {
+                _eventFlow.emit(DashboardEvent.ShowToast(if (next) "المنتج متاح الآن ✅" else "تم إيقاف توفر المنتج ⏸️"))
+            }.onFailure { e ->
+                _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل تحديث حالة المنتج"))
+            }
+        }
+    }
+
+    fun replyToReview(reviewId: String, replyText: String) {
+        viewModelScope.launch {
+            ratingsRepository.replyToRating(reviewId, replyText).onSuccess {
+                _eventFlow.emit(DashboardEvent.ShowToast("تم إرسال الرد على التقييم بنجاح 💬"))
+            }.onFailure { e ->
+                _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل إرسال الرد"))
+            }
+        }
+    }
+
+    fun dispose() {
+        viewModelScope.cancel()
     }
 }

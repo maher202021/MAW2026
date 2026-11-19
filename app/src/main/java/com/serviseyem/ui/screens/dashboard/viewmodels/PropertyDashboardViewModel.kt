@@ -8,6 +8,7 @@ import com.serviseyem.data.repositories.IProductsRepository
 import com.serviseyem.data.repositories.IRatingsRepository
 import com.serviseyem.domain.entities.ProductItemEntity
 import com.serviseyem.ui.screens.dashboard.DashboardEvent
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -94,5 +95,40 @@ class PropertyDashboardViewModel(
                 _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل حذف العقار"))
             }
         }
+    }
+
+    fun updatePropertyItem(item: ProductItemEntity) {
+        viewModelScope.launch {
+            productsRepository.updateProduct(item).onSuccess {
+                _eventFlow.emit(DashboardEvent.ShowToast("تم تحديث بيانات الوحدة العقارية 🏠"))
+            }.onFailure { e ->
+                _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل تحديث العقار"))
+            }
+        }
+    }
+
+    fun togglePropertyAvailability(item: ProductItemEntity) {
+        viewModelScope.launch {
+            val next = !item.isAvailable
+            productsRepository.updateProduct(item.copy(isAvailable = next)).onSuccess {
+                _eventFlow.emit(DashboardEvent.ShowToast(if (next) "العقار متاح الآن 🏠" else "تم تعليق العقار مؤقتاً ⏸️"))
+            }.onFailure { e ->
+                _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل تحديث الحالة"))
+            }
+        }
+    }
+
+    fun replyToReview(reviewId: String, replyText: String) {
+        viewModelScope.launch {
+            ratingsRepository.replyToRating(reviewId, replyText).onSuccess {
+                _eventFlow.emit(DashboardEvent.ShowToast("تم إرسال الرد على التقييم بنجاح 💬"))
+            }.onFailure { e ->
+                _eventFlow.emit(DashboardEvent.ShowToast(e.localizedMessage ?: "فشل إرسال الرد"))
+            }
+        }
+    }
+
+    fun dispose() {
+        viewModelScope.cancel()
     }
 }

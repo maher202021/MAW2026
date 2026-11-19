@@ -36,6 +36,7 @@ fun ProfileHeader(
     completedRevenue: Double,
     themeColors: VisualThemePalette,
     workingHours: String = "9:00 ص - 10:00 م",
+    promoBannerText: String? = null,
     onMapClick: () -> Unit = {}
 ) {
     Card(
@@ -222,34 +223,36 @@ fun ProfileHeader(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF)),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                            modifier = Modifier.heightIn(min = 44.dp)
+                            modifier = Modifier.heightIn(min = 48.dp)
                         ) {
                             Text("🗺️ الخريطة", fontSize = 10.5.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
 
-                // شريط عروض وتخفيضات متحرك
-                Surface(
-                    color = Color(0xFF7C2D12).copy(alpha = 0.35f),
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, Color(0xFFEA580C).copy(alpha = 0.45f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                // شريط عروض وتخفيضات ديناميكي
+                if (!promoBannerText.isNullOrBlank()) {
+                    Surface(
+                        color = Color(0xFF7C2D12).copy(alpha = 0.35f),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, Color(0xFFEA580C).copy(alpha = 0.45f)),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("🔥", fontSize = 13.sp)
-                        Text(
-                            text = "عروض وتخفيضات حصرية خاصة متوفرة الآن لدى هذا المحل!",
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFDBA74)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text("🔥", fontSize = 13.sp)
+                            Text(
+                                text = promoBannerText,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFDBA74)
+                            )
+                        }
                     }
                 }
 

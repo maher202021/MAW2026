@@ -46,8 +46,31 @@ fun MedicalDashboard(
     val doctors by medicalViewModel.doctors.collectAsState()
     val allBookings by viewModel.bookings.collectAsState()
 
-    val medicalBookings = remember(allBookings, account) {
-        allBookings.filter { b -> b.providerId == account.id || b.providerPhone == account.phone }
+    val medicalBookings = remember(allBookings, account.id, account.phone) {
+        allBookings.filter { b ->
+            b.providerId == account.id || (account.phone.isNotBlank() && b.providerPhone == account.phone)
+        }
+    }
+
+    val liveStats = remember(uiState.stats, medicalBookings, uiState.products, uiState.reviews, account.rating, account.numReviews) {
+        val activeCount = medicalBookings.count {
+            it.status in listOf("PENDING", "ACCEPTED", "APPROVED", "IN_PROGRESS")
+        }
+        val completedCount = medicalBookings.count {
+            it.status in listOf("COMPLETED", "PAID", "CLOSED")
+        }
+        val revenue = medicalBookings.filter {
+            it.status in listOf("COMPLETED", "PAID", "CLOSED")
+        }.sumOf { it.totalAmount }
+        val avgRating = if (uiState.reviews.isNotEmpty()) uiState.reviews.map { it.rating }.average() else account.rating.toDouble()
+        uiState.stats.copy(
+            activeBookingsCount = maxOf(uiState.stats.activeBookingsCount, activeCount),
+            completedBookingsCount = maxOf(uiState.stats.completedBookingsCount, completedCount),
+            totalRevenueYer = maxOf(uiState.stats.totalRevenueYer, revenue),
+            averageRating = avgRating,
+            totalReviewsCount = maxOf(uiState.reviews.size, account.numReviews),
+            totalProductsCount = uiState.products.size
+        )
     }
 
     var showAddDoctorDialog by remember { mutableStateOf(false) }
@@ -60,8 +83,17 @@ fun MedicalDashboard(
         "الحجوزات الطبية 📅",
         "الخدمات الطبية 💊",
         "تقييمات المرضى ⭐",
-        "الملف التعريفي 📝"
+        "الملف التعريفي 📝",
+        "الإحصائيات 📊"
     )
+
+    LaunchedEffect(Unit) {
+        val requestedTab = viewModel.selectedDashboardInitialTab
+        if (requestedTab in tabs.indices) {
+            activeTab = requestedTab
+            viewModel.selectedDashboardInitialTab = 0
+        }
+    }
 
     LaunchedEffect(medicalViewModel) {
         medicalViewModel.eventFlow.collect { event ->
@@ -84,6 +116,25 @@ fun MedicalDashboard(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = themeColors.textPrimary)
+                    }
+                },
+                actions = {
+                    TextButton(
+                        onClick = {
+                            if (account.rawProvider != null) {
+                                viewModel.selectedProvider = account.rawProvider
+                                viewModel.selectedStore = null
+                            } else {
+                                viewModel.selectedStore = account.rawStore ?: viewModel.stores.value.find { it.id == account.id }
+                                viewModel.selectedProvider = null
+                            }
+                            viewModel.selectedProperty = null
+                            viewModel.selectedJob = null
+                            viewModel.navigateToScreen(AppScreens.DYNAMIC_PROFILE)
+                        },
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) {
+                        Text("معاينة 👁️", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = themeColors.surface)
@@ -138,7 +189,8 @@ fun MedicalDashboard(
                                 Button(
                                     onClick = { showAddDoctorDialog = true },
                                     colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
-                                    shape = RoundedCornerShape(8.dp)
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.heightIn(min = 48.dp)
                                 ) {
                                     Text("إضافة طبيب 🩺", fontSize = 12.sp, color = Color.Black, fontWeight = FontWeight.Bold)
                                 }
@@ -176,7 +228,10 @@ fun MedicalDashboard(
                                                         Text(text = "أوقات الدوام: ${doc.workingHours}", fontSize = 11.sp, color = themeColors.textSecondary)
                                                     }
                                                 }
-                                                IconButton(onClick = { medicalViewModel.deleteDoctor(doc.id) }) {
+                                                IconButton(
+                                                    onClick = { medicalViewModel.deleteDoctor(doc.id) },
+                                                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                                ) {
                                                     Text("🗑️", fontSize = 16.sp)
                                                 }
                                             }
@@ -191,7 +246,7 @@ fun MedicalDashboard(
                             bookings = medicalBookings,
                             themeColors = themeColors,
                             onAcceptBooking = { bId -> viewModel.updateBookingStatus(bId, "APPROVED") },
-                            onRejectBooking = { bId, reason -> viewModel.updateBookingStatus(bId, "REJECTED") },
+                            onRejectBooking = { bId, reason -> viewModel.updateBookingStatus(bId, "REJECTED", reason) },
                             onStartProgress = { bId -> viewModel.updateBookingStatus(bId, "IN_PROGRESS") },
                             onCompleteBooking = { bId -> viewModel.updateBookingStatus(bId, "COMPLETED") },
                             onChatWithClient = { phone ->
@@ -200,7 +255,12 @@ fun MedicalDashboard(
                                     targetType = "MEDICAL",
                                     targetName = account.name,
                                     targetPhone = phone,
-                                    onCreated = {}
+                                    onCreated = { channel ->
+                                        channel?.id?.let { chId ->
+                                            viewModel.targetChatChannelId = chId
+                                        }
+                                        viewModel.navigateToScreen(AppScreens.CHAT_DIRECT)
+                                    }
                                 )
                             }
                         )
@@ -212,9 +272,17 @@ fun MedicalDashboard(
                             addButtonLabel = "إضافة خدمة طبية 💊",
                             themeColors = themeColors,
                             onAddProduct = { title, price, desc, img ->
-                                medicalViewModel.addMedicalService(title, price, desc)
+                                medicalViewModel.addMedicalService(title, price, desc, img)
                             },
-                            onDeleteProduct = { id -> }
+                            onDeleteProduct = { id ->
+                                medicalViewModel.deleteMedicalService(id)
+                            },
+                            onEditProduct = { updated ->
+                                medicalViewModel.updateMedicalService(updated)
+                            },
+                            onToggleAvailability = { service ->
+                                medicalViewModel.toggleMedicalServiceAvailability(service)
+                            }
                         )
                     }
                     3 -> {
@@ -222,11 +290,14 @@ fun MedicalDashboard(
                             reviews = uiState.reviews,
                             themeColors = themeColors,
                             onReplySubmit = { revId, reply ->
-                                Toast.makeText(context, "تم الرد على تقييم المريض بنجاح ✅", Toast.LENGTH_SHORT).show()
+                                medicalViewModel.replyToReview(revId, reply)
                             }
                         )
                     }
                     4 -> {
+                        val isProviderBacked = account.rawProvider != null && account.rawStore == null
+                        val collection = if (isProviderBacked) "providers" else "stores"
+                        val isAvail = if (isProviderBacked) account.rawProvider?.isAvailable ?: true else account.rawStore?.isActive ?: true
                         TabProfileEdit(
                             name = account.name,
                             phone = account.phone,
@@ -235,16 +306,58 @@ fun MedicalDashboard(
                             workingHours = account.workingHours,
                             photoUrl = account.logoImage,
                             coverUrl = account.coverImage,
-                            isAvailable = true,
-                            rating = account.rating.toDouble(),
-                            reviewCount = account.numReviews,
+                            isAvailable = isAvail,
+                            rating = liveStats.averageRating,
+                            reviewCount = liveStats.totalReviewsCount,
                             themeColors = themeColors,
-                            onSaveProfile = { name, phone, city, desc, hours, available ->
-                                Toast.makeText(context, "تم تحديث بيانات المركز بنجاح ✅", Toast.LENGTH_SHORT).show()
+                            onChangePhoto = { newUrl ->
+                                viewModel.updateEntityImages(collection, account.id, profileImg = newUrl, coverImg = "")
+                            },
+                            onChangeCover = { newUrl ->
+                                viewModel.updateEntityImages(collection, account.id, profileImg = "", coverImg = newUrl)
+                            },
+                            onSaveProfile = { name, _, city, desc, hours, available ->
+                                if (isProviderBacked) {
+                                    val baseProv = account.rawProvider!!
+                                    viewModel.updateProviderEntity(
+                                        baseProv.copy(
+                                            name = name,
+                                            localNeighborhood = city,
+                                            area = city,
+                                            profession = desc,
+                                            specialization = desc,
+                                            isAvailable = available
+                                        )
+                                    )
+                                } else {
+                                    val currentStore = account.rawStore ?: viewModel.stores.value.find { it.id == account.id }
+                                        ?: com.serviseyem.data.StoreEntity(
+                                            id = account.id,
+                                            sectionId = "medical",
+                                            name = account.name,
+                                            phone = account.phone,
+                                            cityId = account.cityId
+                                        )
+                                    viewModel.updateStoreEntity(
+                                        currentStore.copy(
+                                            name = name,
+                                            localNeighborhood = city,
+                                            description = desc,
+                                            workingHours = hours,
+                                            isActive = available
+                                        )
+                                    )
+                                }
                             },
                             onChangePassword = { oldP, newP ->
-                                Toast.makeText(context, "تم تغيير كلمة المرور بنجاح 🔑", Toast.LENGTH_SHORT).show()
+                                viewModel.changeEntityPassword(collection, account.id, oldP, newP) { _, _ -> }
                             }
+                        )
+                    }
+                    5 -> {
+                        TabStatisticsGrowth(
+                            stats = liveStats,
+                            themeColors = themeColors
                         )
                     }
                 }

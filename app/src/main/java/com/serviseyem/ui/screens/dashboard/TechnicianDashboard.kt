@@ -42,13 +42,51 @@ fun TechnicianDashboard(
         )
     }
 
+    DisposableEffect(techViewModel) {
+        onDispose { techViewModel.dispose() }
+    }
+
     val uiState by techViewModel.uiState.collectAsState()
     val allBookings by viewModel.bookings.collectAsState()
 
-    val providerBookings = remember(allBookings, account) {
+    val providerBookings = remember(allBookings, account.id, account.phone) {
         allBookings.filter { b ->
-            b.providerId == account.id || b.providerPhone == account.phone
+            b.providerId == account.id || (account.phone.isNotBlank() && b.providerPhone == account.phone)
         }
+    }
+
+    val liveStats = remember(uiState.stats, providerBookings, uiState.products, uiState.reviews, account.rating, account.numReviews) {
+        val activeCount = providerBookings.count {
+            it.status in listOf(
+                com.serviseyem.utils.BookingStatus.PENDING.code,
+                com.serviseyem.utils.BookingStatus.ACCEPTED.code,
+                "APPROVED",
+                com.serviseyem.utils.BookingStatus.IN_PROGRESS.code
+            )
+        }
+        val completedCount = providerBookings.count {
+            it.status in listOf(
+                com.serviseyem.utils.BookingStatus.COMPLETED.code,
+                com.serviseyem.utils.BookingStatus.PAID.code,
+                com.serviseyem.utils.BookingStatus.CLOSED.code
+            )
+        }
+        val revenue = providerBookings.filter {
+            it.status in listOf(
+                com.serviseyem.utils.BookingStatus.COMPLETED.code,
+                com.serviseyem.utils.BookingStatus.PAID.code,
+                com.serviseyem.utils.BookingStatus.CLOSED.code
+            )
+        }.sumOf { it.totalAmount }
+        val avgRating = if (uiState.reviews.isNotEmpty()) uiState.reviews.map { it.rating }.average() else account.rating.toDouble()
+        uiState.stats.copy(
+            activeBookingsCount = maxOf(uiState.stats.activeBookingsCount, activeCount),
+            completedBookingsCount = maxOf(uiState.stats.completedBookingsCount, completedCount),
+            totalRevenueYer = maxOf(uiState.stats.totalRevenueYer, revenue),
+            averageRating = avgRating,
+            totalReviewsCount = maxOf(uiState.reviews.size, account.numReviews),
+            totalProductsCount = uiState.products.size
+        )
     }
 
     val tabs = listOf(
@@ -56,8 +94,18 @@ fun TechnicianDashboard(
         "حجوزاتي الحالية 📋",
         "خدماتي وأسعاري 🛠️",
         "معرض الأعمال 📸",
-        "الملف الشخصي 👤"
+        "التقييمات والآراء ⭐",
+        "الملف الشخصي 👤",
+        "الإحصائيات 📊"
     )
+
+    LaunchedEffect(Unit) {
+        val requestedTab = viewModel.selectedDashboardInitialTab
+        if (requestedTab in tabs.indices) {
+            activeTab = requestedTab
+            viewModel.selectedDashboardInitialTab = 0
+        }
+    }
 
     LaunchedEffect(techViewModel) {
         techViewModel.eventFlow.collect { event ->
@@ -80,6 +128,20 @@ fun TechnicianDashboard(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = themeColors.textPrimary)
+                    }
+                },
+                actions = {
+                    TextButton(
+                        onClick = {
+                            viewModel.selectedProvider = account.rawProvider ?: viewModel.providers.value.find { it.id == account.id }
+                            viewModel.selectedStore = null
+                            viewModel.selectedProperty = null
+                            viewModel.selectedJob = null
+                            viewModel.navigateToScreen(AppScreens.DYNAMIC_PROFILE)
+                        },
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) {
+                        Text("معاينة 👁️", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = themeColors.surface)
@@ -127,7 +189,7 @@ fun TechnicianDashboard(
                                 Toast.makeText(context, "تم قبول طلب الحجز وإشعار العميل ✅", Toast.LENGTH_SHORT).show()
                             },
                             onRejectBooking = { bId, reason ->
-                                viewModel.updateBookingStatus(bId, com.serviseyem.utils.BookingStatus.REJECTED.code)
+                                viewModel.updateBookingStatus(bId, com.serviseyem.utils.BookingStatus.REJECTED.code, reason)
                                 Toast.makeText(context, "تم رفض الطلب وإرسال السبب للعميل ❌", Toast.LENGTH_SHORT).show()
                             },
                             onStartProgress = { bId -> viewModel.updateBookingStatus(bId, com.serviseyem.utils.BookingStatus.IN_PROGRESS.code) },
@@ -150,16 +212,22 @@ fun TechnicianDashboard(
                     }
                     1 -> {
                         TabBookingsOrders(
-                            bookings = providerBookings.filter { it.status in listOf("APPROVED", "IN_PROGRESS") },
+                            bookings = providerBookings.filter {
+                                it.status in listOf(
+                                    com.serviseyem.utils.BookingStatus.ACCEPTED.code,
+                                    "APPROVED",
+                                    com.serviseyem.utils.BookingStatus.IN_PROGRESS.code
+                                )
+                            },
                             themeColors = themeColors,
-                            onAcceptBooking = { bId -> viewModel.updateBookingStatus(bId, "APPROVED") },
-                            onRejectBooking = { bId, reason -> viewModel.updateBookingStatus(bId, "REJECTED") },
+                            onAcceptBooking = { bId -> viewModel.updateBookingStatus(bId, com.serviseyem.utils.BookingStatus.ACCEPTED.code) },
+                            onRejectBooking = { bId, reason -> viewModel.updateBookingStatus(bId, com.serviseyem.utils.BookingStatus.REJECTED.code, reason) },
                             onStartProgress = { bId ->
-                                viewModel.updateBookingStatus(bId, "IN_PROGRESS")
+                                viewModel.updateBookingStatus(bId, com.serviseyem.utils.BookingStatus.IN_PROGRESS.code)
                                 Toast.makeText(context, "تم بدء تنفيذ الخدمة ⚙️", Toast.LENGTH_SHORT).show()
                             },
                             onCompleteBooking = { bId ->
-                                viewModel.updateBookingStatus(bId, "COMPLETED")
+                                viewModel.updateBookingStatus(bId, com.serviseyem.utils.BookingStatus.COMPLETED.code)
                                 Toast.makeText(context, "تم إكمال الخدمة بنجاح 🏁", Toast.LENGTH_SHORT).show()
                             },
                             onChatWithClient = { phone ->
@@ -189,6 +257,12 @@ fun TechnicianDashboard(
                             },
                             onDeleteProduct = { id ->
                                 techViewModel.deleteProduct(id)
+                            },
+                            onEditProduct = { updated ->
+                                techViewModel.updateProduct(updated)
+                            },
+                            onToggleAvailability = { item ->
+                                techViewModel.toggleProductAvailability(item)
                             }
                         )
                     }
@@ -199,12 +273,22 @@ fun TechnicianDashboard(
                             onAddPhoto = { img ->
                                 techViewModel.saveGalleryAlbum(context, img)
                             },
-                            onDeletePhoto = { id -> 
+                            onDeletePhoto = { id ->
                                 techViewModel.deleteGalleryAlbum(id)
                             }
                         )
                     }
                     4 -> {
+                        TabReviewsFeedback(
+                            reviews = uiState.reviews,
+                            themeColors = themeColors,
+                            onReplySubmit = { revId, reply ->
+                                techViewModel.replyToReview(revId, reply)
+                            }
+                        )
+                    }
+                    5 -> {
+                        val baseProv = account.rawProvider ?: viewModel.providers.value.find { it.id == account.id }
                         TabProfileEdit(
                             name = account.name,
                             phone = account.phone,
@@ -213,16 +297,43 @@ fun TechnicianDashboard(
                             workingHours = account.workingHours,
                             photoUrl = account.logoImage,
                             coverUrl = account.coverImage,
-                            isAvailable = true,
-                            rating = account.rating.toDouble(),
-                            reviewCount = account.numReviews,
+                            isAvailable = baseProv?.isAvailable ?: account.isActive,
+                            rating = liveStats.averageRating,
+                            reviewCount = liveStats.totalReviewsCount,
                             themeColors = themeColors,
-                            onSaveProfile = { name, phone, city, desc, hours, available ->
-                                Toast.makeText(context, "تم تحديث بيانات ملفك الشخصي ✅", Toast.LENGTH_SHORT).show()
+                            onChangePhoto = { newUrl ->
+                                viewModel.updateEntityImages("providers", account.id, profileImg = newUrl, coverImg = "")
+                            },
+                            onChangeCover = { newUrl ->
+                                viewModel.updateEntityImages("providers", account.id, profileImg = "", coverImg = newUrl)
+                            },
+                            onSaveProfile = { name, _, city, desc, _, available ->
+                                val currentProv = baseProv ?: com.serviseyem.data.ProviderEntity(
+                                    id = account.id,
+                                    name = account.name,
+                                    phone = account.phone,
+                                    cityId = account.cityId
+                                )
+                                viewModel.updateProviderEntity(
+                                    currentProv.copy(
+                                        name = name,
+                                        localNeighborhood = city,
+                                        area = city,
+                                        profession = desc,
+                                        specialization = desc,
+                                        isAvailable = available
+                                    )
+                                )
                             },
                             onChangePassword = { oldP, newP ->
-                                Toast.makeText(context, "تم تغيير كلمة المرور بنجاح 🔑", Toast.LENGTH_SHORT).show()
+                                viewModel.changeEntityPassword("providers", account.id, oldP, newP) { _, _ -> }
                             }
+                        )
+                    }
+                    6 -> {
+                        TabStatisticsGrowth(
+                            stats = liveStats,
+                            themeColors = themeColors
                         )
                     }
                 }

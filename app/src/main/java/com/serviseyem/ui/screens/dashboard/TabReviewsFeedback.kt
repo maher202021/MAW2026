@@ -47,11 +47,16 @@ fun TabReviewsFeedback(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(reviews, key = { it.id }) { rev ->
+                    val formattedDate = if (rev.dateTimestamp > 0L) {
+                        java.text.SimpleDateFormat("yyyy/MM/dd", java.util.Locale.getDefault())
+                            .format(java.util.Date(rev.dateTimestamp))
+                    } else ""
                     UnifiedReviewsSection(
                         userName = rev.authorName.ifBlank { "عميل" },
                         rating = rev.rating,
                         comment = rev.comment,
-                        ownerReply = "",
+                        dateString = formattedDate,
+                        ownerReply = rev.reply,
                         themeColors = themeColors,
                         onReplySubmit = { replyText ->
                             onReplySubmit(rev.id, replyText)

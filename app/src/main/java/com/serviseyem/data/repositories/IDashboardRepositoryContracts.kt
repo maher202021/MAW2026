@@ -35,6 +35,7 @@ interface IProductsRepository {
 interface IRatingsRepository {
     fun getTargetRatings(targetId: String): Flow<List<RatingReviewEntity>>
     suspend fun addRating(rating: RatingReviewEntity): Result<String>
+    suspend fun replyToRating(ratingId: String, replyText: String): Result<Unit>
 }
 
 interface IGalleryRepository {

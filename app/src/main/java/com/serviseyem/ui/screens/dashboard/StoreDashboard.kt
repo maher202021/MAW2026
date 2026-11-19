@@ -40,11 +40,38 @@ fun StoreDashboard(
         )
     }
 
+    DisposableEffect(storeViewModel) {
+        onDispose { storeViewModel.dispose() }
+    }
+
     val uiState by storeViewModel.uiState.collectAsState()
     val allBookings by viewModel.bookings.collectAsState()
 
-    val storeOrders = remember(allBookings, account) {
-        allBookings.filter { b -> b.providerId == account.id || b.providerPhone == account.phone }
+    val storeOrders = remember(allBookings, account.id, account.phone) {
+        allBookings.filter { b ->
+            b.providerId == account.id || (account.phone.isNotBlank() && b.providerPhone == account.phone)
+        }
+    }
+
+    val liveStats = remember(uiState.stats, storeOrders, uiState.products, uiState.reviews, account.rating, account.numReviews) {
+        val activeCount = storeOrders.count {
+            it.status in listOf("PENDING", "ACCEPTED", "APPROVED", "IN_PROGRESS", "IN_PREPARATION", "READY")
+        }
+        val completedCount = storeOrders.count {
+            it.status in listOf("COMPLETED", "DELIVERED", "PAID", "CLOSED")
+        }
+        val revenue = storeOrders.filter {
+            it.status in listOf("COMPLETED", "DELIVERED", "PAID", "CLOSED")
+        }.sumOf { it.totalAmount }
+        val avgRating = if (uiState.reviews.isNotEmpty()) uiState.reviews.map { it.rating }.average() else account.rating.toDouble()
+        uiState.stats.copy(
+            activeBookingsCount = maxOf(uiState.stats.activeBookingsCount, activeCount),
+            completedBookingsCount = maxOf(uiState.stats.completedBookingsCount, completedCount),
+            totalRevenueYer = maxOf(uiState.stats.totalRevenueYer, revenue),
+            averageRating = avgRating,
+            totalReviewsCount = maxOf(uiState.reviews.size, account.numReviews),
+            totalProductsCount = uiState.products.size
+        )
     }
 
     val tabs = listOf(
@@ -52,8 +79,17 @@ fun StoreDashboard(
         "طلبات العملاء 🛍️",
         "العروض والكوبونات 🏷️",
         "التقييمات والآراء ⭐",
-        "الملف التجاري 📝"
+        "الملف التجاري 📝",
+        "الإحصائيات 📊"
     )
+
+    LaunchedEffect(Unit) {
+        val requestedTab = viewModel.selectedDashboardInitialTab
+        if (requestedTab in tabs.indices) {
+            activeTab = requestedTab
+            viewModel.selectedDashboardInitialTab = 0
+        }
+    }
 
     LaunchedEffect(storeViewModel) {
         storeViewModel.eventFlow.collect { event ->
@@ -76,6 +112,20 @@ fun StoreDashboard(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = themeColors.textPrimary)
+                    }
+                },
+                actions = {
+                    TextButton(
+                        onClick = {
+                            viewModel.selectedStore = account.rawStore ?: viewModel.stores.value.find { it.id == account.id }
+                            viewModel.selectedProvider = null
+                            viewModel.selectedProperty = null
+                            viewModel.selectedJob = null
+                            viewModel.navigateToScreen(AppScreens.DYNAMIC_PROFILE)
+                        },
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) {
+                        Text("معاينة 👁️", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = themeColors.surface)
@@ -125,6 +175,12 @@ fun StoreDashboard(
                             },
                             onDeleteProduct = { id ->
                                 storeViewModel.deleteProduct(id)
+                            },
+                            onEditProduct = { updated ->
+                                storeViewModel.updateProduct(updated)
+                            },
+                            onToggleAvailability = { item ->
+                                storeViewModel.toggleProductAvailability(item)
                             }
                         )
                     }
@@ -133,7 +189,7 @@ fun StoreDashboard(
                             bookings = storeOrders,
                             themeColors = themeColors,
                             onAcceptBooking = { bId -> viewModel.updateBookingStatus(bId, "IN_PREPARATION") },
-                            onRejectBooking = { bId, reason -> viewModel.updateBookingStatus(bId, "REJECTED") },
+                            onRejectBooking = { bId, reason -> viewModel.updateBookingStatus(bId, "REJECTED", reason) },
                             onStartProgress = { bId -> viewModel.updateBookingStatus(bId, "READY") },
                             onCompleteBooking = { bId -> viewModel.updateBookingStatus(bId, "DELIVERED") },
                             onChatWithClient = { phone ->
@@ -152,7 +208,7 @@ fun StoreDashboard(
                             },
                             onUpdateOrderStatus = { bId, status ->
                                 viewModel.updateBookingStatus(bId, status)
-                                Toast.makeText(context, "تم تحديث حالة الطلب إلى $status ✅", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "تم تحديث حالة الطلب بنجاح ✅", Toast.LENGTH_SHORT).show()
                             }
                         )
                     }
@@ -164,11 +220,12 @@ fun StoreDashboard(
                             reviews = uiState.reviews,
                             themeColors = themeColors,
                             onReplySubmit = { revId, reply ->
-                                Toast.makeText(context, "تم إرسال الرد للعميل بنجاح ✅", Toast.LENGTH_SHORT).show()
+                                storeViewModel.replyToReview(revId, reply)
                             }
                         )
                     }
                     4 -> {
+                        val baseStore = account.rawStore ?: viewModel.stores.value.find { it.id == account.id }
                         TabProfileEdit(
                             name = account.name,
                             phone = account.phone,
@@ -177,16 +234,43 @@ fun StoreDashboard(
                             workingHours = account.workingHours,
                             photoUrl = account.logoImage,
                             coverUrl = account.coverImage,
-                            isAvailable = true,
-                            rating = account.rating.toDouble(),
-                            reviewCount = account.numReviews,
+                            isAvailable = baseStore?.isActive ?: account.isActive,
+                            rating = liveStats.averageRating,
+                            reviewCount = liveStats.totalReviewsCount,
                             themeColors = themeColors,
-                            onSaveProfile = { name, phone, city, desc, hours, available ->
-                                Toast.makeText(context, "تم حفظ بيانات المتجر بنجاح ✅", Toast.LENGTH_SHORT).show()
+                            onChangePhoto = { newUrl ->
+                                viewModel.updateEntityImages("stores", account.id, profileImg = newUrl, coverImg = "")
+                            },
+                            onChangeCover = { newUrl ->
+                                viewModel.updateEntityImages("stores", account.id, profileImg = "", coverImg = newUrl)
+                            },
+                            onSaveProfile = { name, _, city, desc, hours, available ->
+                                val currentStore = baseStore ?: com.serviseyem.data.StoreEntity(
+                                    id = account.id,
+                                    sectionId = "stores",
+                                    name = account.name,
+                                    phone = account.phone,
+                                    cityId = account.cityId
+                                )
+                                viewModel.updateStoreEntity(
+                                    currentStore.copy(
+                                        name = name,
+                                        localNeighborhood = city,
+                                        description = desc,
+                                        workingHours = hours,
+                                        isActive = available
+                                    )
+                                )
                             },
                             onChangePassword = { oldP, newP ->
-                                Toast.makeText(context, "تم تحديث كلمة المرور بنجاح 🔑", Toast.LENGTH_SHORT).show()
+                                viewModel.changeEntityPassword("stores", account.id, oldP, newP) { _, _ -> }
                             }
+                        )
+                    }
+                    5 -> {
+                        TabStatisticsGrowth(
+                            stats = liveStats,
+                            themeColors = themeColors
                         )
                     }
                 }

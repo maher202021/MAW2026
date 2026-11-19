@@ -34,23 +34,33 @@ fun UnifiedBusinessProfileDashboard(
     val properties by viewModel.properties.collectAsState()
 
     val cleanId = providerId.trim().replace(" ", "").replace("+", "")
-    
-    val activeProvider = remember(providers, providerId, cleanId, viewModel.selectedProvider) {
-        viewModel.selectedProvider ?: providers.find { it.id == providerId || it.phone.trim().replace(" ", "").replace("+", "") == cleanId }
+    val targetProvId = viewModel.selectedProvider?.id?.takeIf { it.isNotBlank() } ?: providerId
+    val targetStoreId = viewModel.selectedStore?.id?.takeIf { it.isNotBlank() } ?: providerId
+    val targetPropId = viewModel.selectedProperty?.id?.takeIf { it.isNotBlank() } ?: providerId
+
+    val activeProvider = remember(providers, targetProvId, cleanId, viewModel.selectedProvider) {
+        providers.find {
+            it.id == targetProvId ||
+                (cleanId.isNotBlank() && it.phone.trim().replace(" ", "").replace("+", "") == cleanId)
+        } ?: viewModel.selectedProvider
     }
-    val activeStore = remember(stores, providerId, cleanId, viewModel.selectedStore) {
-        viewModel.selectedStore ?: stores.find { s ->
-            s.id == providerId || s.ownerId == providerId || 
-            s.phone.trim().replace(" ", "").replace("+", "") == cleanId || 
-            s.ownerId.trim().replace(" ", "").replace("+", "") == cleanId 
-        }
+    val activeStore = remember(stores, targetStoreId, cleanId, viewModel.selectedStore) {
+        stores.find { s ->
+            s.id == targetStoreId || s.ownerId == targetStoreId ||
+                (cleanId.isNotBlank() && (
+                    s.phone.trim().replace(" ", "").replace("+", "") == cleanId ||
+                        s.ownerId.trim().replace(" ", "").replace("+", "") == cleanId
+                    ))
+        } ?: viewModel.selectedStore
     }
-    val activeProperty = remember(properties, providerId, cleanId, viewModel.selectedProperty) {
-        viewModel.selectedProperty ?: properties.find { p ->
-            p.id == providerId || 
-            p.phone.trim().replace(" ", "").replace("+", "") == cleanId || 
-            p.ownerId.trim().replace(" ", "").replace("+", "") == cleanId 
-        }
+    val activeProperty = remember(properties, targetPropId, cleanId, viewModel.selectedProperty) {
+        properties.find { p ->
+            p.id == targetPropId ||
+                (cleanId.isNotBlank() && (
+                    p.phone.trim().replace(" ", "").replace("+", "") == cleanId ||
+                        p.ownerId.trim().replace(" ", "").replace("+", "") == cleanId
+                    ))
+        } ?: viewModel.selectedProperty
     }
 
     when (accountType) {
@@ -66,14 +76,20 @@ fun UnifiedBusinessProfileDashboard(
             RestaurantDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.goBack() })
         }
         "MEDICAL" -> {
-            val store = activeStore ?: StoreEntity(
-                id = providerId.ifBlank { "med_center" },
-                name = "مركز طبي / عيادة",
-                phone = viewModel.currentUserPhone.value.ifBlank { "777000000" },
-                sectionId = "medical",
-                cityId = "صنعاء"
-            )
-            val acc = UnifiedBusinessAccount.fromStore(store, "medical")
+            val acc = when {
+                activeStore != null -> UnifiedBusinessAccount.fromStore(activeStore, "medical")
+                activeProvider != null -> UnifiedBusinessAccount.fromProvider(activeProvider).copy(businessType = com.serviseyem.data.BusinessType.MEDICAL)
+                else -> UnifiedBusinessAccount.fromStore(
+                    StoreEntity(
+                        id = providerId.ifBlank { "med_center" },
+                        name = "مركز طبي / عيادة",
+                        phone = viewModel.currentUserPhone.value.ifBlank { "777000000" },
+                        sectionId = "medical",
+                        cityId = "صنعاء"
+                    ),
+                    "medical"
+                )
+            }
             MedicalDashboard(account = acc, viewModel = viewModel, themeColors = themeColors, onBackClick = { viewModel.goBack() })
         }
         "STORE" -> {
