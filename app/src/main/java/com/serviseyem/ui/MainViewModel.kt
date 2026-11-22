@@ -184,10 +184,19 @@ class MainViewModel @Inject constructor(
     val jobs get() = adminViewModel.jobs
     val _jobApplications get() = adminViewModel._jobApplications
     val jobApplications get() = adminViewModel.jobApplications
+    val _jobSeekers get() = appState._jobSeekers
+    val jobSeekers get() = appState.jobSeekers
     val _settings get() = settingsViewModel._settings
     val settings get() = settingsViewModel.settings
     val _cardSettings get() = settingsViewModel._cardSettings
     val cardSettings get() = settingsViewModel.cardSettings
+    val quickServiceConfig get() = appState.quickServiceConfig
+    val paymentSystemConfig get() = appState.paymentSystemConfig
+    val autoRoutingConfig get() = appState.autoRoutingConfig
+    val registrationFormsConfig get() = appState.registrationFormsConfig
+    val platformHomeSections get() = appState.platformHomeSections
+    val adminPermissionsMatrix get() = appState.adminPermissionsMatrix
+    val rolePermissionsMap get() = appState.rolePermissionsMap
     val _colorScheme get() = settingsViewModel._colorScheme
     val colorScheme get() = settingsViewModel.colorScheme
     val _personalColors get() = settingsViewModel._personalColors
@@ -598,7 +607,8 @@ class MainViewModel @Inject constructor(
         val name: String,
         val provider: com.serviseyem.data.ProviderEntity? = null,
         val store: com.serviseyem.data.StoreEntity? = null,
-        val property: com.serviseyem.data.PropertyEntity? = null
+        val property: com.serviseyem.data.PropertyEntity? = null,
+        val job: com.serviseyem.data.JobEntity? = null
     )
 
     /**

@@ -63,6 +63,29 @@ fun ProviderCard(
     val coverImg = provider.coverImage.ifBlank { "" }
     val avatarImg = provider.profileImage.ifBlank { "" }
 
+    val cardSettings by viewModel.cardSettings.collectAsState()
+    val cardCornerDp = cardSettings.cornerRadius.coerceIn(4, 32).dp
+    val coverHeightDp = settingsState.coverHeight.coerceIn(0, 220).dp
+    val avatarSizeDp = settingsState.avatarSize.coerceIn(36, 92).dp
+    val innerPadDp = settingsState.cardPadding.coerceIn(4, 24).dp
+    val avatarShape = when (cardSettings.imageShape.lowercase()) {
+        "square" -> RoundedCornerShape(8.dp)
+        "rounded" -> RoundedCornerShape(14.dp)
+        else -> CircleShape
+    }
+    val resolvedCardBg = remember(settingsState.cardBackgroundHex, cardSettings.backgroundColor) {
+        try {
+            val hex = if (settingsState.cardBackgroundHex != "#162A2D" && settingsState.cardBackgroundHex.isNotBlank()) {
+                settingsState.cardBackgroundHex
+            } else {
+                cardSettings.backgroundColor.ifBlank { "#0F172A" }
+            }
+            Color(android.graphics.Color.parseColor(hex))
+        } catch (_: Exception) {
+            Color(0xFF0F172A)
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -78,101 +101,105 @@ fun ProviderCard(
                     onTap = { showDetailsDialog = true }
                 )
             },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+        shape = RoundedCornerShape(cardCornerDp),
+        colors = CardDefaults.cardColors(containerColor = resolvedCardBg),
         border = BorderStroke(1.dp, Color(0xFF334155)),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // 1. Cover / Illustration Section
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(95.dp)
-                    .background(Color(0xFF1E293B))
-            ) {
-                if (coverImg.isNotBlank()) {
-                    SmartAsyncImage(
-                        model = coverImg,
-                        contentDescription = provider.name,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
+            if (coverHeightDp > 0.dp) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(coverHeightDp)
+                        .background(Color(0xFF1E293B))
+                ) {
+                    if (coverImg.isNotBlank()) {
+                        SmartAsyncImage(
+                            model = coverImg,
+                            contentDescription = provider.name,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFF1E293B), resolvedCardBg)
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Handyman,
+                                contentDescription = null,
+                                tint = Color(0xFF38BDF8).copy(alpha = 0.6f),
+                                modifier = Modifier.size(38.dp)
+                            )
+                        }
+                    }
+
+                    // Subtle dark gradient overlay
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
-                                    listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+                                    colors = listOf(Color.Transparent, resolvedCardBg.copy(alpha = 0.85f)),
+                                    startY = 30f
                                 )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Handyman,
-                            contentDescription = null,
-                            tint = Color(0xFF38BDF8).copy(alpha = 0.6f),
-                            modifier = Modifier.size(38.dp)
-                        )
-                    }
-                }
-
-                // Subtle dark gradient overlay
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color(0xFF0F172A).copy(alpha = 0.85f)),
-                                startY = 30f
                             )
-                        )
-                )
+                    )
 
-                // Badges in Header (Rating on left, Verified on right)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Rating Badge (⭐ 5.0 in capsule with gold star)
-                    Surface(
-                        color = Color(0xFF1E293B).copy(alpha = 0.95f),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, Color(0xFF334155)),
-                        shadowElevation = 2.dp,
-                        modifier = Modifier.clickable { showReviewsListDialog = true }
+                    // Badges in Header (Rating on left, Verified on right)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(String.format("%.1f", provider.rating), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            Icon(Icons.Default.Star, contentDescription = "Rating", tint = Color(0xFFF59E0B), modifier = Modifier.size(13.dp))
-                        }
-                    }
-
-                    // Verified Badge (موثق ✓ in capsule)
-                    if (isVerified || provider.isVip) {
+                        // Rating Badge (⭐ 5.0 in capsule with gold star)
                         Surface(
                             color = Color(0xFF1E293B).copy(alpha = 0.95f),
                             shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, Color(0xFF334155))
+                            border = BorderStroke(1.dp, Color(0xFF334155)),
+                            shadowElevation = 2.dp,
+                            modifier = Modifier.clickable { showReviewsListDialog = true }
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Text(
-                                    text = if (provider.isVip) "VIP موثق" else "موثق ✓",
-                                    fontSize = 10.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF10B981)
-                                )
+                                Text(String.format("%.1f", provider.rating), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Icon(Icons.Default.Star, contentDescription = "Rating", tint = Color(0xFFF59E0B), modifier = Modifier.size(13.dp))
+                            }
+                        }
+
+                        // Verified / VIP Badge
+                        val showVipNow = provider.isVip && settingsState.showVipBadge
+                        val showVerNow = isVerified && settingsState.showVerifiedBadge
+                        if (showVipNow || showVerNow) {
+                            Surface(
+                                color = Color(0xFF1E293B).copy(alpha = 0.95f),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, Color(0xFF334155))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = if (showVipNow) "VIP موثق" else "موثق ✓",
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (showVipNow) Color(0xFFFBBF24) else Color(0xFF10B981)
+                                    )
+                                }
                             }
                         }
                     }
@@ -183,7 +210,7 @@ fun ProviderCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .padding(horizontal = innerPadDp, vertical = 4.dp)
             ) {
                 // Header with Overlapping Avatar
                 Row(
@@ -192,12 +219,12 @@ fun ProviderCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .offset(y = (-20).dp)
-                            .size(54.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF0F172A))
-                            .border(2.dp, Color(0xFF2563EB), CircleShape)
-                            .shadow(6.dp, CircleShape),
+                            .offset(y = if (coverHeightDp > 0.dp) (-20).dp else 0.dp)
+                            .size(avatarSizeDp)
+                            .clip(avatarShape)
+                            .background(resolvedCardBg)
+                            .border(2.dp, Color(0xFF2563EB), avatarShape)
+                            .shadow(6.dp, avatarShape),
                         contentAlignment = Alignment.Center
                     ) {
                         if (avatarImg.isNotBlank()) {
@@ -233,7 +260,7 @@ fun ProviderCard(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f, fill = false)
                             )
-                            if (isVerified) {
+                            if (isVerified && settingsState.showVerifiedBadge) {
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
@@ -259,7 +286,7 @@ fun ProviderCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = (-10).dp),
+                        .offset(y = if (coverHeightDp > 0.dp) (-10).dp else 0.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -304,11 +331,11 @@ fun ProviderCard(
                     }
                 }
 
-                // 3. Action Buttons Row: [★] [حجز 📅] [التفاصيل 📋] [محادثة 💬] (Screenshot Layout)
+                // 3. Action Buttons Row (Controlled by Admin CARD_CUSTOMIZER)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = (-4).dp)
+                        .offset(y = if (coverHeightDp > 0.dp) (-4).dp else 2.dp)
                         .padding(bottom = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -326,61 +353,87 @@ fun ProviderCard(
                         }
                     }
 
-                    // زر حجز الموعد (Deep Emerald 📅)
-                    Button(
-                        onClick = {
-                            if (currentUserIdState.isEmpty()) {
-                                showGuestRegisterDialogForBooking = true
-                            } else {
-                                showBookingDialog = true
+                    if (settingsState.showCallButton && provider.phone.isNotBlank()) {
+                        Surface(
+                            onClick = {
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${provider.phone}")))
+                                } catch (_: Exception) {
+                                    Toast.makeText(context, "تعذر فتح تطبيق الاتصال", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFF10B981).copy(alpha = 0.16f),
+                            border = BorderStroke(1.dp, Color(0xFF10B981)),
+                            modifier = Modifier.sizeIn(minWidth = 44.dp, minHeight = 44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Call, contentDescription = "اتصال", tint = Color(0xFF10B981), modifier = Modifier.size(18.dp))
                             }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f).heightIn(min = 44.dp),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text("📅", fontSize = 11.sp)
-                            Text("حجز", color = Color.White, fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, softWrap = true, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                         }
                     }
 
-                    // زر التفاصيل الكاملة (Tinted Dark-Slate 📋)
-                    Button(
-                        onClick = { showDetailsDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f).heightIn(min = 44.dp),
-                        border = BorderStroke(0.8.dp, Color(0xFF334155)),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    // زر حجز الموعد
+                    if (settingsState.showBookButton) {
+                        Button(
+                            onClick = {
+                                if (currentUserIdState.isEmpty()) {
+                                    showGuestRegisterDialogForBooking = true
+                                } else {
+                                    showBookingDialog = true
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f).heightIn(min = 44.dp),
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                         ) {
-                            Text("📋", fontSize = 11.sp)
-                            Text("التفاصيل", color = Color.White, fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, softWrap = true, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text("📅", fontSize = 11.sp)
+                                Text("حجز", color = Color.White, fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, softWrap = true, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            }
                         }
                     }
 
-                    // زر محادثة فورية (Rich Blue 💬)
-                    Button(
-                        onClick = { onChatOpen(provider.id) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f).heightIn(min = 44.dp),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    // زر التفاصيل الكاملة
+                    if (settingsState.showDetailsButton) {
+                        Button(
+                            onClick = { showDetailsDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f).heightIn(min = 44.dp),
+                            border = BorderStroke(0.8.dp, Color(0xFF334155)),
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                         ) {
-                            Text("💬", fontSize = 11.sp)
-                            Text("محادثة", color = Color.White, fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, softWrap = true, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text("📋", fontSize = 11.sp)
+                                Text("التفاصيل", color = Color.White, fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, softWrap = true, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            }
+                        }
+                    }
+
+                    // زر محادثة فورية
+                    if (settingsState.showWhatsappButton) {
+                        Button(
+                            onClick = { onChatOpen(provider.id) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f).heightIn(min = 44.dp),
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text("💬", fontSize = 11.sp)
+                                Text("محادثة", color = Color.White, fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, softWrap = true, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            }
                         }
                     }
                 }

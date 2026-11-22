@@ -6,6 +6,7 @@ import android.webkit.WebView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import com.serviseyem.data.ProviderEntity
 import com.serviseyem.data.StoreEntity
 import com.serviseyem.ui.MainViewModel
@@ -310,9 +311,12 @@ internal fun MapScreenDialogsHost(
     }
 
     if (state.isMoreLayersSheetOpen) {
+        val settingsVal = viewModel.settings.collectAsState().value
+        val disabledSet = settingsVal.disabledMapLayers.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
         com.serviseyem.ui.screens.map.components.MoreLayersSheet(
             state = state,
             onDismiss = { state.isMoreLayersSheetOpen = false },
+            disabledLayerIds = disabledSet,
             themeColors = themeColors
         )
     }

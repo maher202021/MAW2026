@@ -69,6 +69,17 @@ internal class JoinRequestModerationDelegate(
                 SetOptions.merge()
             )
 
+            val resolvedDescription = request.description.ifBlank {
+                requestDoc.getString("description") ?: ""
+            }.trim()
+            val resolvedHours = request.workingHours.ifBlank {
+                requestDoc.getString("workingHours") ?: ""
+            }.trim()
+            val resolvedOwnerName = request.ownerName.ifBlank {
+                requestDoc.getString("ownerName") ?: resolvedName
+            }.trim()
+            val resolvedProfileImg = requestDoc.getString("profileImage") ?: requestDoc.getString("logoImage") ?: ""
+
             // Create Entity in appropriate collection
             when (resolvedRole) {
                 "PROVIDER" -> {
@@ -81,8 +92,10 @@ internal class JoinRequestModerationDelegate(
                         "password" to "",
                         "passwordHash" to passwordHash,
                         "categoryId" to resolvedCategory,
+                        "specialization" to resolvedDescription.ifBlank { request.specialization },
                         "area" to resolvedArea,
                         "localNeighborhood" to resolvedNeighborhood,
+                        "profileImage" to resolvedProfileImg,
                         "isAvailable" to true,
                         "subscriptionStatus" to "APPROVED",
                         "rating" to 5.0f,
@@ -102,7 +115,10 @@ internal class JoinRequestModerationDelegate(
                         "id" to reqId,
                         "ownerId" to ownerId,
                         "name" to (requestDoc.getString("businessName")?.takeIf { it.isNotBlank() } ?: resolvedName),
-                        "ownerName" to resolvedName,
+                        "ownerName" to resolvedOwnerName,
+                        "description" to resolvedDescription.ifBlank { request.specialization },
+                        "workingHours" to resolvedHours,
+                        "logoImage" to resolvedProfileImg,
                         "phone" to cleanPhone,
                         "password" to "",
                         "passwordHash" to passwordHash,
@@ -125,7 +141,8 @@ internal class JoinRequestModerationDelegate(
                         "id" to reqId,
                         "ownerId" to ownerId,
                         "title" to (requestDoc.getString("propertyTitle")?.takeIf { it.isNotBlank() } ?: resolvedName),
-                        "ownerName" to resolvedName,
+                        "ownerName" to resolvedOwnerName,
+                        "description" to resolvedDescription.ifBlank { request.specialization },
                         "phone" to cleanPhone,
                         "password" to "",
                         "passwordHash" to passwordHash,
@@ -151,10 +168,14 @@ internal class JoinRequestModerationDelegate(
                         "title" to jobTitle,
                         "jobTitle" to jobTitle,
                         "companyName" to (requestDoc.getString("companyName")?.takeIf { it.isNotBlank() } ?: resolvedName),
+                        "managerName" to resolvedOwnerName,
+                        "description" to resolvedDescription,
                         "salary" to salaryRange,
                         "salaryRange" to salaryRange,
                         "requirements" to requirements,
                         "phone" to cleanPhone,
+                        "password" to "",
+                        "passwordHash" to passwordHash,
                         "city" to resolvedArea,
                         "cityId" to resolvedArea,
                         "address" to resolvedNeighborhood,
@@ -163,6 +184,27 @@ internal class JoinRequestModerationDelegate(
                         "createdAt" to now
                     )
                     batch.set(jobRef, jobData, SetOptions.merge())
+                }
+                "JOB_SEEKER" -> {
+                    val seekerRef = firestore.collection("job_seekers").document(cleanPhone.ifBlank { reqId })
+                    val seekerData = mapOf(
+                        "id" to reqId,
+                        "ownerId" to ownerId,
+                        "name" to resolvedName,
+                        "phone" to cleanPhone,
+                        "password" to "",
+                        "passwordHash" to passwordHash,
+                        "profession" to resolvedCategory.ifBlank { request.customCategoryName.ifBlank { "باحث عن عمل" } },
+                        "city" to resolvedArea,
+                        "area" to resolvedNeighborhood,
+                        "description" to resolvedDescription,
+                        "experienceYears" to (request.experienceYears.ifBlank { requestDoc.getString("experienceYears") ?: "" }),
+                        "status" to "APPROVED",
+                        "approvalStatus" to "APPROVED",
+                        "isApproved" to true,
+                        "createdAt" to now
+                    )
+                    batch.set(seekerRef, seekerData, SetOptions.merge())
                 }
             }
 

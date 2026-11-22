@@ -62,7 +62,7 @@ fun MedicalCentersScreen(
     val currentUserId by viewModel.currentUserId.collectAsState()
     val adminRole by viewModel.adminRole.collectAsState()
     val isAdminUser = adminRole == "ADMIN" || adminRole == "SUPER_ADMIN" || adminRole == "MAIN_ADMIN" || adminRole == "OWNER"
-    val isLoggedIn = currentUserId.isNotBlank() && currentUserId != "guest"
+    val isLoggedIn = !isGuestSessionId(currentUserId)
 
     var showCreateMedicalDialog by remember { mutableStateOf(false) }
 

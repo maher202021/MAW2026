@@ -28,6 +28,7 @@ private fun AdminPanelLayoutContent(viewModel: MainViewModel, themeColors: Visua
     val reports by viewModel.reports.collectAsState()
     val adminRole by viewModel.adminRole.collectAsState()
     val supervisorPermissions by viewModel.supervisorPermissions.collectAsState()
+    val adminPermissionsMatrix by viewModel.adminPermissionsMatrix.collectAsState()
     val categories by viewModel.categories.collectAsState()
     val activatedProviders by viewModel.providers.collectAsState()
     val deletedList by viewModel.deletedProviders.collectAsState()
@@ -84,6 +85,7 @@ private fun AdminPanelLayoutContent(viewModel: MainViewModel, themeColors: Visua
             AdminNavigationTabsBar(
                 adminRole = adminRole,
                 supervisorPermissions = supervisorPermissions,
+                adminPermissionsMatrix = adminPermissionsMatrix,
                 themeColors = themeColors,
                 state = state
             )

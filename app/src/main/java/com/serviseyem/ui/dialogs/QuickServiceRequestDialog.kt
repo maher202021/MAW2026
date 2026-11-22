@@ -57,6 +57,7 @@ fun QuickServiceRequestScreen(
     val currentUserName by viewModel.currentUserName.collectAsState()
     val currentUserId by viewModel.currentUserId.collectAsState()
     val settingsState by viewModel.settings.collectAsState()
+    val quickCfg by viewModel.quickServiceConfig.collectAsState()
 
     // Wizard Step State (1, 2, 3)
     var currentStep by remember { mutableIntStateOf(1) }
@@ -166,7 +167,7 @@ fun QuickServiceRequestScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "⚡ اطلب خدمتك الآن (المزاد العكسي)",
+                                text = "⚡ ${quickCfg.quickServiceTitle.ifBlank { "اطلب خدمتك الآن (المزاد العكسي)" }}",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFEF4444)
@@ -219,18 +220,66 @@ fun QuickServiceRequestScreen(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                when (currentStep) {
-                    1 -> {
-                        // Step 1: Category & Specialty Selection
-                        Step1CategorySection(
-                            selectedSection = selectedSection,
-                            onSectionSelect = { selectedSection = it },
-                            selectedSpecialty = selectedSpecialty,
-                            onSpecialtySelect = { selectedSpecialty = it },
-                            specialtiesList = currentSpecialties,
-                            themeColors = themeColors
-                        )
+                if (!quickCfg.isQuickServiceActive) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                            border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.6f)),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(18.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text("⏸️ خدمة الطلب السريع متوقفة مؤقتاً", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFFEF4444), textAlign = TextAlign.Center)
+                                Text(
+                                    text = "تم إيقاف استقبال الطلبات الفورية مؤقتاً من لوحة تحكم الإدارة. يمكنك تصفح الأقسام أو المحاولة لاحقاً.",
+                                    fontSize = 12.sp,
+                                    color = Color.LightGray,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
                     }
+                } else {
+                    when (currentStep) {
+                        1 -> {
+                            // Step 1: Category & Specialty Selection
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                Surface(
+                                    color = Color(0xFF1E293B),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, themeColors.accent.copy(alpha = 0.25f)),
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(quickCfg.quickServiceDescription, fontSize = 11.sp, color = Color.LightGray)
+                                        Text(
+                                            text = "📡 نطاق البحث: ${quickCfg.broadcastRadiusKm} كم • ⏱️ مهلة الاستجابة: ${quickCfg.defaultResponseWindowMinutes} د" +
+                                                (if (quickCfg.allowAudioRecording) " • 🎙️ صوت" else "") +
+                                                (if (quickCfg.allowImageUpload) " • 📷 صور" else "") +
+                                                (if (quickCfg.allowLiveLocation) " • 📍 موقع مباشر" else ""),
+                                            fontSize = 10.sp,
+                                            color = themeColors.accent,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                                Step1CategorySection(
+                                    selectedSection = selectedSection,
+                                    onSectionSelect = { selectedSection = it },
+                                    selectedSpecialty = selectedSpecialty,
+                                    onSpecialtySelect = { selectedSpecialty = it },
+                                    specialtiesList = currentSpecialties,
+                                    themeColors = themeColors
+                                )
+                            }
+                        }
                     2 -> {
                         // Step 2: Location & Details
                         Step2LocationAndDetails(
@@ -268,6 +317,7 @@ fun QuickServiceRequestScreen(
                             urgencyTime = urgencyTime,
                             themeColors = themeColors
                         )
+                    }
                     }
                 }
             }
@@ -364,7 +414,7 @@ fun QuickServiceRequestScreen(
                                 }
                             }
                         },
-                        enabled = !isSubmitting,
+                        enabled = !isSubmitting && quickCfg.isQuickServiceActive,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (currentStep == 3) Color(0xFF10B981) else Color(0xFFEF4444)
                         ),

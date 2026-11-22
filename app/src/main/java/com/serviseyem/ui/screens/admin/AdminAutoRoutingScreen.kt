@@ -83,9 +83,13 @@ fun AdminAutoRoutingScreenContent(
                     isMedicalRoutingEnabled = doc.getBoolean("isMedicalRoutingEnabled") ?: true
                     isDeliveryRoutingEnabled = doc.getBoolean("isDeliveryRoutingEnabled") ?: true
                     storesCriteria = doc.getString("storesCriteria") ?: "الأقرب جغرافياً (GPS)"
+                    storesRadiusKm = doc.getString("storesRadiusKm") ?: "15"
+                    mallsCriteria = doc.getString("mallsCriteria") ?: "الأقرب داخل نفس المدينة"
                     restaurantsCriteria = doc.getString("restaurantsCriteria") ?: "أقرب مطعم مع أسرع تحضير"
+                    restaurantsRadiusKm = doc.getString("restaurantsRadiusKm") ?: "10"
                     medicalCriteria = doc.getString("medicalCriteria") ?: "أقرب طوارئ وتوفر التخصص"
                     deliveryCriteria = doc.getString("deliveryCriteria") ?: "إسناد تلقائي لأقرب مندوب شاغر"
+                    deliveryMaxRadiusKm = doc.getString("deliveryMaxRadiusKm") ?: "25"
                 }
             }
     }
@@ -290,12 +294,17 @@ fun AdminAutoRoutingScreenContent(
                 val config = mapOf(
                     "isGeneralAutoRoutingEnabled" to isGeneralAutoRoutingEnabled,
                     "isStoresRoutingEnabled" to isStoresRoutingEnabled,
+                    "storesCriteria" to storesCriteria,
                     "storesRadiusKm" to storesRadiusKm,
                     "isMallsRoutingEnabled" to isMallsRoutingEnabled,
+                    "mallsCriteria" to mallsCriteria,
                     "isRestaurantsRoutingEnabled" to isRestaurantsRoutingEnabled,
+                    "restaurantsCriteria" to restaurantsCriteria,
                     "restaurantsRadiusKm" to restaurantsRadiusKm,
                     "isMedicalRoutingEnabled" to isMedicalRoutingEnabled,
+                    "medicalCriteria" to medicalCriteria,
                     "isDeliveryRoutingEnabled" to isDeliveryRoutingEnabled,
+                    "deliveryCriteria" to deliveryCriteria,
                     "deliveryMaxRadiusKm" to deliveryMaxRadiusKm,
                     "updatedAt" to System.currentTimeMillis()
                 )

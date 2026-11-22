@@ -2,16 +2,20 @@
 <network-security-config>
     <base-config cleartextTrafficPermitted="false" />
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">mt0.google.com</domain>
-        <domain includeSubdomains="true">mt1.google.com</domain>
-        <domain includeSubdomains="true">mt2.google.com</domain>
-        <domain includeSubdomains="true">mt3.google.com</domain>
-        <domain includeSubdomains="true">google.com</domain>
         <domain includeSubdomains="true">tile.openstreetmap.org</domain>
         <domain includeSubdomains="true">openstreetmap.org</domain>
         <domain includeSubdomains="true">openstreetmap.fr</domain>
+        <domain includeSubdomains="true">tile.opentopomap.org</domain>
         <domain includeSubdomains="true">arcgisonline.com</domain>
+        <domain includeSubdomains="true">arcgis.com</domain>
         <domain includeSubdomains="true">cartocdn.com</domain>
+        <domain includeSubdomains="true">maps.eox.at</domain>
+        <domain includeSubdomains="true">gibs.earthdata.nasa.gov</domain>
+        <domain includeSubdomains="true">view.eumetsat.int</domain>
+        <domain includeSubdomains="true">sentinel-hub.com</domain>
+        <domain includeSubdomains="true">rainviewer.com</domain>
+        <domain includeSubdomains="true">earthquake.usgs.gov</domain>
+        <domain includeSubdomains="true">project-osrm.org</domain>
         <domain includeSubdomains="true">firebasestorage.googleapis.com</domain>
         <domain includeSubdomains="true">firestore.googleapis.com</domain>
         <domain includeSubdomains="true">identitytoolkit.googleapis.com</domain>

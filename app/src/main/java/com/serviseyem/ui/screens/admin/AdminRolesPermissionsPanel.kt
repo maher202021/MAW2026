@@ -32,12 +32,20 @@ fun AdminRolesPermissionsPanel(
     themeColors: VisualThemePalette,
     permsViewModel: AdminPermissionsViewModel = viewModel()
 ) {
+    val rolePermsMap by viewModel.rolePermissionsMap.collectAsState()
     val selectedRole by permsViewModel.selectedRole.collectAsState()
     val searchQuery by permsViewModel.searchQuery.collectAsState()
     val selectedLevelFilter by permsViewModel.selectedLevelFilter.collectAsState()
     val selectedCategoryFilter by permsViewModel.selectedCategoryFilter.collectAsState()
     val expandedCategories by permsViewModel.expandedCategories.collectAsState()
     val activePermissions by permsViewModel.activePermissions.collectAsState()
+
+    androidx.compose.runtime.LaunchedEffect(selectedRole, rolePermsMap) {
+        val savedForRole = rolePermsMap[selectedRole]
+        if (!savedForRole.isNullOrEmpty()) {
+            permsViewModel.setPermissions(savedForRole.toSet())
+        }
+    }
 
     Column(
         modifier = Modifier

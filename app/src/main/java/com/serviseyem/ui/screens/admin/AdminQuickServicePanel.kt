@@ -109,10 +109,7 @@ fun AdminQuickServicePanel(
                 Switch(
                     checked = isQuickServiceActive,
                     onCheckedChange = { isQuickServiceActive = it },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = themeColors.accent,
-                        checkedTrackColor = themeColors.primary
-                    )
+                    colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors)
                 )
             }
 
@@ -153,7 +150,7 @@ fun AdminQuickServicePanel(
                 Switch(
                     checked = allowAudioRecording,
                     onCheckedChange = { allowAudioRecording = it },
-                    colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent)
+                    colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors)
                 )
             }
 
@@ -166,7 +163,7 @@ fun AdminQuickServicePanel(
                 Switch(
                     checked = allowImageUpload,
                     onCheckedChange = { allowImageUpload = it },
-                    colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent)
+                    colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors)
                 )
             }
 
@@ -179,7 +176,7 @@ fun AdminQuickServicePanel(
                 Switch(
                     checked = allowLiveLocation,
                     onCheckedChange = { allowLiveLocation = it },
-                    colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent)
+                    colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors)
                 )
             }
 

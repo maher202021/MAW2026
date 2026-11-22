@@ -331,7 +331,15 @@ fun PasswordResetWaitingScreen(
                                             ?: "اليمن"
                                         viewModel.setUserSessionDetails(context, resolvedName, cleanPhone, provArea)
                                         viewModel.setJoinRequestPhone(context, cleanPhone)
-                                        val resolvedAccountId = match?.provider?.id ?: match?.store?.id ?: match?.property?.id ?: ""
+                                        val resolvedAccountId = match?.provider?.id
+                                            ?: match?.store?.id
+                                            ?: match?.property?.id
+                                            ?: match?.job?.id
+                                            ?: "usr_$cleanPhone"
+
+                                        if (resolvedAccountId.isNotBlank()) {
+                                            viewModel._currentUserId.value = resolvedAccountId
+                                        }
 
                                         sp.edit()
                                             .putBoolean("is_account_logged_in", true)
@@ -349,40 +357,64 @@ fun PasswordResetWaitingScreen(
                                         viewModel.setPasswordRecoveryWaitingPhone("")
 
                                         if (viewModel.adminRole.value !in listOf("OWNER", "ADMIN", "SUPERVISOR")) {
-                                            viewModel.authViewModel.setAdminRole(when (resolvedType) {
+                                            viewModel.authViewModel.setAdminRole(when (resolvedType.uppercase()) {
                                                 "PROVIDER" -> "PROVIDER"
                                                 "STORE", "RESTAURANT", "MEDICAL" -> "STORE_OWNER"
+                                                "PROPERTY" -> "PROPERTY_OWNER"
+                                                "JOB" -> "JOB_POSTER"
                                                 else -> "GUEST"
                                             })
                                         }
 
-                                        val targetDest = if (match?.provider != null) {
-                                            if (match.provider.isDeleted) viewModel.restoreProvider(match.provider.id)
-                                            viewModel.selectedProvider = match.provider
-                                            viewModel.selectedStore = null
-                                            viewModel.selectedProperty = null
-                                            viewModel.selectedJob = null
-                                            AppScreens.DYNAMIC_PROFILE
-                                        } else if (match?.store != null) {
-                                            if (match.store.isDeleted) viewModel.restoreStore(match.store.id)
-                                            viewModel.selectedStore = match.store
-                                            viewModel.selectedProvider = null
-                                            viewModel.selectedProperty = null
-                                            viewModel.selectedJob = null
-                                            AppScreens.DYNAMIC_PROFILE
-                                        } else if (match?.property != null) {
-                                            if (match.property.isDeleted) viewModel.restoreProperty(match.property.id)
-                                            viewModel.selectedProperty = match.property
-                                            viewModel.selectedProvider = null
-                                            viewModel.selectedStore = null
-                                            viewModel.selectedJob = null
-                                            AppScreens.DYNAMIC_PROFILE
-                                        } else {
-                                            viewModel.selectedProvider = null
-                                            viewModel.selectedStore = null
-                                            viewModel.selectedProperty = null
-                                            viewModel.selectedJob = null
-                                            AppScreens.USER_BROWSE
+                                        val targetDest = when {
+                                            match?.provider != null -> {
+                                                if (match.provider.isDeleted) viewModel.restoreProvider(match.provider.id)
+                                                viewModel.selectedProvider = match.provider
+                                                viewModel.selectedStore = null
+                                                viewModel.selectedProperty = null
+                                                viewModel.selectedJob = null
+                                                val pCat = match.provider.categoryId
+                                                val isMed = pCat.contains("medical", ignoreCase = true) ||
+                                                    pCat.contains("clinic", ignoreCase = true) ||
+                                                    pCat.contains("pharmacy", ignoreCase = true) ||
+                                                    match.provider.profession.contains("طب", ignoreCase = true)
+                                                if (isMed) AppScreens.MEDICAL_DASHBOARD else AppScreens.PROVIDER_DASHBOARD
+                                            }
+                                            match?.store != null -> {
+                                                if (match.store.isDeleted) viewModel.restoreStore(match.store.id)
+                                                viewModel.selectedStore = match.store
+                                                viewModel.selectedProvider = null
+                                                viewModel.selectedProperty = null
+                                                viewModel.selectedJob = null
+                                                when (match.store.sectionId.lowercase()) {
+                                                    "restaurants", "restaurant" -> AppScreens.RESTAURANT_DASHBOARD
+                                                    "medical" -> AppScreens.MEDICAL_DASHBOARD
+                                                    else -> AppScreens.STORE_DASHBOARD
+                                                }
+                                            }
+                                            match?.property != null -> {
+                                                if (match.property.isDeleted) viewModel.restoreProperty(match.property.id)
+                                                viewModel.selectedProperty = match.property
+                                                viewModel.selectedProvider = null
+                                                viewModel.selectedStore = null
+                                                viewModel.selectedJob = null
+                                                AppScreens.PROPERTY_DASHBOARD
+                                            }
+                                            match?.job != null -> {
+                                                if (match.job.isDeleted) viewModel.restoreJob(match.job.id)
+                                                viewModel.selectedJob = match.job
+                                                viewModel.selectedProvider = null
+                                                viewModel.selectedStore = null
+                                                viewModel.selectedProperty = null
+                                                AppScreens.JOB_POSTER_DASHBOARD
+                                            }
+                                            else -> {
+                                                viewModel.selectedProvider = null
+                                                viewModel.selectedStore = null
+                                                viewModel.selectedProperty = null
+                                                viewModel.selectedJob = null
+                                                "CLIENT_DASHBOARD"
+                                            }
                                         }
                                         viewModel.navigateAndRemoveScreens(
                                             targetScreen = targetDest,
@@ -400,11 +432,33 @@ fun PasswordResetWaitingScreen(
                             enabled = !isSubmittingLogin
                         ) {
                             Text(
-                                text = if (isSubmittingLogin) "جاري الدخول..." else "تسجيل الدخول ومتابعة ملفي الشخصي 🔓",
+                                text = if (isSubmittingLogin) "جاري الدخول..." else "تسجيل الدخول ومتابعة لوحة الحساب 🔓",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
+                        }
+                        if (newPassword.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    enteredPassword = newPassword
+                                    passwordError = null
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, themeColors.accent),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                enabled = !isSubmittingLogin
+                            ) {
+                                Text(
+                                    text = "تعبئة كلمة المرور تلقائياً ⚡",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = themeColors.accent
+                                )
+                            }
                         }
                     } else {
                         // Pending State
@@ -495,7 +549,7 @@ fun PasswordResetWaitingScreen(
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                             shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f).height(42.dp)
+                            modifier = Modifier.weight(1f).height(48.dp)
                         ) {
                             Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -505,8 +559,13 @@ fun PasswordResetWaitingScreen(
                         // Telegram
                         Button(
                             onClick = {
+                                val rawTg = settingsState.telegramUrl.trim()
+                                    .removePrefix("https://t.me/")
+                                    .removePrefix("http://t.me/")
+                                    .removePrefix("@")
+                                    .ifBlank { "yamandelil" }
                                 runCatching {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/yemenservices_support"))
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/$rawTg"))
                                     context.startActivity(intent)
                                 }.onFailure {
                                     Toast.makeText(context, "❌ تعذر فتح تطبيق تيليجرام على جهازك", Toast.LENGTH_SHORT).show()
@@ -514,7 +573,7 @@ fun PasswordResetWaitingScreen(
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0EA5E9)),
                             shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f).height(42.dp)
+                            modifier = Modifier.weight(1f).height(48.dp)
                         ) {
                             Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -528,7 +587,7 @@ fun PasswordResetWaitingScreen(
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = themeColors.primary),
                             shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f).height(42.dp)
+                            modifier = Modifier.weight(1f).height(48.dp)
                         ) {
                             Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -542,7 +601,7 @@ fun PasswordResetWaitingScreen(
             OutlinedButton(
                 onClick = onBackClick,
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().height(46.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
                 border = BorderStroke(1.dp, Color.Gray)
             ) {
                 Text("العودة إلى الصفحة الرئيسية 🏠", fontSize = 12.sp, color = Color.White)

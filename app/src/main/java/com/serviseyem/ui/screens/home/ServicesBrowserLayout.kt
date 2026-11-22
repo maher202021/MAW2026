@@ -130,15 +130,25 @@ fun ServicesBrowserLayout(
         }
     }
 
-    val activeTabs = remember(settingsState) {
+    val platformSections by viewModel.platformHomeSections.collectAsState()
+
+    val activeTabs = remember(settingsState, platformSections) {
         val list = mutableListOf("الرئيسية")
-        if (settingsState.isStoresEnabled) list.add("المحلات والمتاجر")
-        list.add("المطاعم والكافيهات")
-        list.add("المراكز الطبية")
-        if (settingsState.isPropertiesEnabled) list.add("العقارات")
-        list.add("إعلانات الوظائف")
-        list.add("المفضلة")
-        list.toList()
+        platformSections
+            .filter { it.isVisible && it.routeKey != "SERVICES_HOME" }
+            .sortedBy { it.order }
+            .forEach { sec ->
+                when (sec.routeKey) {
+                    "STORES" -> if (settingsState.isStoresEnabled) list.add("المحلات والمتاجر")
+                    "RESTAURANTS" -> list.add("المطاعم والكافيهات")
+                    "MEDICAL" -> list.add("المراكز الطبية")
+                    "PROPERTIES" -> if (settingsState.isPropertiesEnabled) list.add("العقارات")
+                    "JOBS" -> list.add("إعلانات الوظائف")
+                    "FAVORITES" -> list.add("المفضلة")
+                    else -> if (!sec.isBuiltIn) list.add("CUSTOM_${sec.id}")
+                }
+            }
+        list.distinct()
     }
 
     val activeTabBg = AppBackground
@@ -381,33 +391,91 @@ fun ServicesBrowserLayout(
                     val onClick: () -> Unit
                 )
 
-                val allCategoryItems = remember {
-                    listOf(
-                        CategoryGridItem("المتاجر", "🏪", BespokePremiumSystem.StoresGradient) {
-                            viewModel.setActiveBrowserTab("المحلات والمتاجر")
-                        },
-                        CategoryGridItem("المطاعم", "🍔", BespokePremiumSystem.FoodGradient) {
-                            viewModel.setActiveBrowserTab("المطاعم والكافيهات")
-                        },
-                        CategoryGridItem("المراكز الطبية", "🏥", BespokePremiumSystem.MedicalGradient) {
-                            viewModel.setActiveBrowserTab("المراكز الطبية")
-                        },
-                        CategoryGridItem("العقارات", "🏠", BespokePremiumSystem.EstateGradient) {
-                            viewModel.setActiveBrowserTab("العقارات")
-                        },
-                        CategoryGridItem("الوظائف", "💼", BespokePremiumSystem.JobsGradient) {
-                            viewModel.setActiveBrowserTab("إعلانات الوظائف")
-                        },
-                        CategoryGridItem("الفنيون", "🛠️", BespokePremiumSystem.ServicesGradient) {
-                            viewModel.setActiveBrowserTab("الفنيون")
-                        },
-                        CategoryGridItem("خدمات منزلية", "🧹", androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF007A4D), Color(0xFF00838F)))) {
-                            viewModel.setActiveBrowserTab("خدمات منزلية")
-                        },
-                        CategoryGridItem("نقل وتوصيل", "🚗", androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF007A4D), Color(0xFF0284C7)))) {
-                            viewModel.setActiveBrowserTab("نقل وتوصيل")
+                val allCategoryItems = remember(platformSections, settingsState.isStoresEnabled, settingsState.isPropertiesEnabled) {
+                    val items = mutableListOf<CategoryGridItem>()
+                    val visibleOrdered = platformSections
+                        .filter { it.isVisible && it.routeKey != "FAVORITES" && it.routeKey != "SERVICES_HOME" }
+                        .sortedBy { it.order }
+
+                    visibleOrdered.forEach { sec ->
+                        when (sec.routeKey) {
+                            "STORES" -> if (settingsState.isStoresEnabled) {
+                                items.add(CategoryGridItem(sec.titleAr.ifBlank { "المتاجر" }, sec.emoji.ifBlank { "🏪" }, BespokePremiumSystem.StoresGradient) {
+                                    viewModel.setActiveBrowserTab("المحلات والمتاجر")
+                                })
+                            }
+                            "COMMERCIAL_CENTERS" -> if (settingsState.isStoresEnabled) {
+                                items.add(CategoryGridItem(sec.titleAr.ifBlank { "المراكز التجارية" }, sec.emoji.ifBlank { "🏬" }, BespokePremiumSystem.StoresGradient) {
+                                    viewModel.setActiveBrowserTab("المحلات والمتاجر")
+                                })
+                            }
+                            "RESTAURANTS" -> {
+                                items.add(CategoryGridItem(sec.titleAr.ifBlank { "المطاعم" }, sec.emoji.ifBlank { "🍔" }, BespokePremiumSystem.FoodGradient) {
+                                    viewModel.setActiveBrowserTab("المطاعم والكافيهات")
+                                })
+                            }
+                            "MEDICAL" -> {
+                                items.add(CategoryGridItem(sec.titleAr.ifBlank { "المراكز الطبية" }, sec.emoji.ifBlank { "🏥" }, BespokePremiumSystem.MedicalGradient) {
+                                    viewModel.setActiveBrowserTab("المراكز الطبية")
+                                })
+                            }
+                            "PROPERTIES" -> if (settingsState.isPropertiesEnabled) {
+                                items.add(CategoryGridItem(sec.titleAr.ifBlank { "العقارات" }, sec.emoji.ifBlank { "🏠" }, BespokePremiumSystem.EstateGradient) {
+                                    viewModel.setActiveBrowserTab("العقارات")
+                                })
+                            }
+                            "JOBS" -> {
+                                items.add(CategoryGridItem(sec.titleAr.ifBlank { "الوظائف" }, sec.emoji.ifBlank { "💼" }, BespokePremiumSystem.JobsGradient) {
+                                    viewModel.setActiveBrowserTab("إعلانات الوظائف")
+                                })
+                            }
+                            "TECHNICIANS", "SERVICES" -> {
+                                items.add(CategoryGridItem(sec.titleAr.ifBlank { "الفنيون" }, sec.emoji.ifBlank { "🛠️" }, BespokePremiumSystem.ServicesGradient) {
+                                    viewModel.setActiveBrowserTab("الفنيون")
+                                })
+                            }
+                            "HOME_SERVICES" -> {
+                                items.add(CategoryGridItem(sec.titleAr.ifBlank { "خدمات منزلية" }, sec.emoji.ifBlank { "🧹" }, androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF007A4D), Color(0xFF00838F)))) {
+                                    viewModel.setActiveBrowserTab("خدمات منزلية")
+                                })
+                            }
+                            "DELIVERY" -> {
+                                items.add(CategoryGridItem(sec.titleAr.ifBlank { "نقل وتوصيل" }, sec.emoji.ifBlank { "🚗" }, androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF007A4D), Color(0xFF0284C7)))) {
+                                    viewModel.setActiveBrowserTab("نقل وتوصيل")
+                                })
+                            }
+                            else -> {
+                                val grad = when (sec.sectionType) {
+                                    "DELIVERY" -> androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF0284C7), Color(0xFF0D9488)))
+                                    "WALLET" -> androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFFF59E0B), Color(0xFFD97706)))
+                                    else -> BespokePremiumSystem.ServicesGradient
+                                }
+                                items.add(CategoryGridItem(sec.titleAr, sec.emoji.ifBlank { "✨" }, grad) {
+                                    viewModel.setActiveBrowserTab("CUSTOM_${sec.id}")
+                                })
+                            }
                         }
-                    )
+                    }
+
+                    // Ensure Technicians/Home Services/Delivery remain available if default built-ins didn't list them separately
+                    if (visibleOrdered.any { it.routeKey == "SERVICES_HOME" || it.id == "tab_services" } || platformSections.any { it.routeKey == "SERVICES_HOME" && it.isVisible }) {
+                        if (items.none { it.title.contains("الفني") }) {
+                            items.add(CategoryGridItem("الفنيون", "🛠️", BespokePremiumSystem.ServicesGradient) {
+                                viewModel.setActiveBrowserTab("الفنيون")
+                            })
+                        }
+                        if (items.none { it.title.contains("منزل") }) {
+                            items.add(CategoryGridItem("خدمات منزلية", "🧹", androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF007A4D), Color(0xFF00838F)))) {
+                                viewModel.setActiveBrowserTab("خدمات منزلية")
+                            })
+                        }
+                        if (items.none { it.title.contains("توصيل") }) {
+                            items.add(CategoryGridItem("نقل وتوصيل", "🚗", androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF007A4D), Color(0xFF0284C7)))) {
+                                viewModel.setActiveBrowserTab("نقل وتوصيل")
+                            })
+                        }
+                    }
+                    items
                 }
 
                 BoxWithConstraints(
@@ -713,32 +781,118 @@ fun ServicesBrowserLayout(
                         )
                     }
                     else -> {
-                        val effectiveDisplayProviders = if (searchQuery.isBlank() && 
-                            (selectedCategory.isNullOrBlank() || selectedCategory == "ALL" || selectedCategory == "الكل")) {
-                            allProviders
-                        } else {
-                            filteredProviders
-                        }
+                        val customSec = if (activeTabName.startsWith("CUSTOM_")) {
+                            platformSections.find { "CUSTOM_${it.id}" == activeTabName }
+                        } else null
 
-                        ServicesBrowserMainContent(
-                            viewModel = viewModel,
-                            themeColors = themeColors,
-                            displayProviders = effectiveDisplayProviders,
-                            displayStores = filteredStores,
-                            displayProperties = filteredProperties,
-                            isProvidersLoading = isProvidersLoading,
-                            categories = categories,
-                            selectedCategoryId = selectedCategory,
-                            onCategorySelected = { viewModel.selectCategory(it ?: "") },
-                            providersLimit = providersLimit,
-                            onLoadMore = { providersLimit += 10 },
-                            onStoreClick = { 
-                                viewModel.selectedStore = it
-                                viewModel.navigateTo("STORE_DETAILS")
-                            },
-                            onPropertyClick = { selectedPropertyForDetails = it },
-                            onChatOpen = onChatOpen
-                        )
+                        if (customSec != null) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Surface(
+                                    color = Color(0xFF0F172A),
+                                    shape = RoundedCornerShape(16.dp),
+                                    border = BorderStroke(1.dp, themeColors.accent.copy(alpha = 0.5f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                "${customSec.emoji} ${customSec.titleAr}",
+                                                color = themeColors.accent,
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            TextButton(onClick = { viewModel.setActiveBrowserTab("الرئيسية") }) {
+                                                Text("↩ الرئيسية", color = Color.White, fontSize = 11.sp)
+                                            }
+                                        }
+                                        if (customSec.subtitleAr.isNotBlank()) {
+                                            Text(customSec.subtitleAr, color = Color.LightGray, fontSize = 12.sp)
+                                        }
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                            if (customSec.linkToMap && settingsState.isMapFeatureEnabled) {
+                                                OutlinedButton(
+                                                    onClick = { viewModel.navigateToScreen(AppScreens.MAP_VIEW) },
+                                                    modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                                                ) {
+                                                    Text("الخريطة 🗺️", fontSize = 11.sp, color = Color.White)
+                                                }
+                                            }
+                                            if (customSec.enableBookings) {
+                                                Button(
+                                                    onClick = {
+                                                        viewModel.setTargetRegistrationType("provider")
+                                                        viewModel.navigateTo(AppScreens.REGISTER_FORM)
+                                                    },
+                                                    colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
+                                                    modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                                                ) {
+                                                    Text("انضمام للقسم ➕", fontSize = 11.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                val sectionProviders = allProviders.filter {
+                                    it.profession.contains(customSec.titleAr, ignoreCase = true) ||
+                                        it.specialization.contains(customSec.titleAr, ignoreCase = true) ||
+                                        it.customCategoryName.contains(customSec.titleAr, ignoreCase = true) ||
+                                        it.categoryId.contains(customSec.titleAr, ignoreCase = true)
+                                }
+                                ServicesBrowserMainContent(
+                                    viewModel = viewModel,
+                                    themeColors = themeColors,
+                                    displayProviders = sectionProviders.ifEmpty { allProviders.take(6) },
+                                    displayStores = filteredStores,
+                                    displayProperties = filteredProperties,
+                                    isProvidersLoading = isProvidersLoading,
+                                    categories = categories,
+                                    selectedCategoryId = selectedCategory,
+                                    onCategorySelected = { viewModel.selectCategory(it ?: "") },
+                                    providersLimit = providersLimit,
+                                    onLoadMore = { providersLimit += 10 },
+                                    onStoreClick = {
+                                        viewModel.selectedStore = it
+                                        viewModel.navigateTo("STORE_DETAILS")
+                                    },
+                                    onPropertyClick = { selectedPropertyForDetails = it },
+                                    onChatOpen = onChatOpen
+                                )
+                            }
+                        } else {
+                            val effectiveDisplayProviders = if (searchQuery.isBlank() &&
+                                (selectedCategory.isNullOrBlank() || selectedCategory == "ALL" || selectedCategory == "الكل")) {
+                                allProviders
+                            } else {
+                                filteredProviders
+                            }
+
+                            ServicesBrowserMainContent(
+                                viewModel = viewModel,
+                                themeColors = themeColors,
+                                displayProviders = effectiveDisplayProviders,
+                                displayStores = filteredStores,
+                                displayProperties = filteredProperties,
+                                isProvidersLoading = isProvidersLoading,
+                                categories = categories,
+                                selectedCategoryId = selectedCategory,
+                                onCategorySelected = { viewModel.selectCategory(it ?: "") },
+                                providersLimit = providersLimit,
+                                onLoadMore = { providersLimit += 10 },
+                                onStoreClick = {
+                                    viewModel.selectedStore = it
+                                    viewModel.navigateTo("STORE_DETAILS")
+                                },
+                                onPropertyClick = { selectedPropertyForDetails = it },
+                                onChatOpen = onChatOpen
+                            )
+                        }
                     }
                 }
             }

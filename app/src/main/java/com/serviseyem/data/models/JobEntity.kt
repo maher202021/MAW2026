@@ -24,7 +24,9 @@ data class JobEntity(
     val isVip: Boolean = false,
     val isChatDisabled: Boolean = false,
     val isBlocked: Boolean = false,
-    val blockReason: String = ""
+    val blockReason: String = "",
+    val ownerId: String = "",
+    val passwordHash: String = ""
 )
 
 @Keep

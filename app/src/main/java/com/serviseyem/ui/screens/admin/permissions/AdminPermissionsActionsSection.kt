@@ -26,7 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.serviseyem.data.models.PermissionCategory
-import com.serviseyem.ui.MainViewModel
+import com.serviseyem.ui.*
 import com.serviseyem.utils.VisualThemePalette
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -292,7 +292,7 @@ fun AdminPermissionsSaveBar(
             }
             Button(
                 onClick = {
-                    viewModel.settingsViewModel.saveCustomPermissionsMatrixToFirestore(activePermissions.toList())
+                    viewModel.saveCustomPermissionsMatrixToFirestore(activePermissions.toList(), selectedRole)
                     viewModel.triggerNotification("✅ تم حفظ ومزامنة مصفوفة الـ 538 صلاحية للدور $selectedRole بنجاح!")
                     Toast.makeText(
                         context,

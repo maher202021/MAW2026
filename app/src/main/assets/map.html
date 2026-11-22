@@ -409,7 +409,7 @@
         var isPickMode = false;
         var failedTileCount = 0;
         var loadedTileCount = 0;
-        var currentLayerKey = 'google_hybrid';
+        var currentLayerKey = 'esri_world_imagery';
         var userMarker = null;
         var userLat = 15.3694;
         var userLng = 44.1910;
@@ -493,28 +493,19 @@
         }
 
         var tileProviders = {
-            'google_hybrid': createResilientTileLayer(
-                'https://mt1.google.com/vt/lyrs=y&hl=ar&x={x}&y={y}&z={z}',
-                { maxZoom: 22, attribution: 'Google' },
-                'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-            ),
-            'google_streets': createResilientTileLayer(
-                'https://mt1.google.com/vt/lyrs=m&hl=ar&x={x}&y={y}&z={z}',
-                { maxZoom: 22, attribution: 'Google' },
-                'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-            ),
             'imagery': createResilientTileLayer(
                 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                 { maxZoom: 22, maxNativeZoom: 19, attribution: 'Esri World Imagery' },
-                'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+                'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg'
             ),
             'osm_ar': createResilientTileLayer(
                 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                { maxZoom: 22, attribution: 'OSM' }
+                { maxZoom: 22, attribution: 'OSM' },
+                'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
             ),
             'navigation': createResilientTileLayer(
-                'https://mt1.google.com/vt/lyrs=m&hl=ar&x={x}&y={y}&z={z}',
-                { maxZoom: 22, attribution: 'Navigation' },
+                'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+                { maxZoom: 22, attribution: 'Carto Voyager Navigation' },
                 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
             ),
             'nasa_gibs': L.tileLayer(getNasaGibsTileUrl(), {
@@ -531,7 +522,7 @@
             'esri_world_imagery': createResilientTileLayer(
                 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                 { maxZoom: 22, maxNativeZoom: 19, attribution: 'Esri World Imagery (High-Res 100% Free)' },
-                'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
             ),
             'esri_wayback': createResilientTileLayer(
                 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -640,8 +631,8 @@
                     minZoom: 4
                 });
 
-                // Default to Arabic Hybrid (Satellite + Arabic Labels)
-                switchLayer('google_hybrid');
+                // Default to Esri World Imagery (free high-res satellite)
+                switchLayer('esri_world_imagery');
 
                 markerClusterGroup = L.markerClusterGroup({ maxClusterRadius: 35, spiderfyOnMaxZoom: true });
                 map.addLayer(markerClusterGroup);
@@ -869,11 +860,11 @@
             if (!map) return;
             isLabelsOverlayActive = !isLabelsOverlayActive;
             if (!arabicLabelsOverlayLayer) {
-                arabicLabelsOverlayLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=h&hl=ar&x={x}&y={y}&z={z}', {
+                arabicLabelsOverlayLayer = L.tileLayer('https://a.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png', {
                     maxZoom: 22,
                     opacity: 0.95,
                     zIndex: 450,
-                    attribution: 'Arabic Labels Overlay'
+                    attribution: 'Carto Labels Overlay'
                 });
             }
             if (isLabelsOverlayActive) {
@@ -1039,13 +1030,13 @@
             if (key === 'sentinel2') {
                 toggleSentinel2HubLayer(true);
             } else if (key === 'rainviewer') {
-                switchLayer('google_hybrid');
+                switchLayer('esri_world_imagery');
                 toggleRainViewerLayer(true);
             } else if (key === 'eumet') {
-                switchLayer('google_hybrid');
+                switchLayer('esri_world_imagery');
                 setEumet(true, lastEumetLayerName);
             } else if (key === 'nasa') {
-                switchLayer('google_hybrid');
+                switchLayer('esri_world_imagery');
                 toggleNasaGibsLayer(true);
             } else if (key === 'esri') {
                 toggleEsriWorldImageryLayer(true);
@@ -1056,7 +1047,7 @@
             } else if (key === 'eox') {
                 toggleEoxCloudlessLayer(true);
             } else {
-                switchLayer('google_hybrid');
+                switchLayer('esri_world_imagery');
             }
         }
 
@@ -1195,11 +1186,10 @@
                 currentTileLayer = null;
             }
 
-            // Mapping legacy keys to new Arabic ones
+            // Mapping legacy keys to open-source equivalents
             var targetKey = key;
-            if (key === 'google_satellite' || key === 'hybrid') targetKey = 'google_hybrid';
-            if (key === 'streets') targetKey = 'google_streets';
-            if (key === 'osm' || key === 'osm_offline') targetKey = 'osm_ar';
+            if (key === 'google_satellite' || key === 'google_hybrid' || key === 'hybrid' || key === 'satellite') targetKey = 'esri_world_imagery';
+            if (key === 'google_streets' || key === 'streets' || key === 'osm' || key === 'osm_offline') targetKey = 'osm_ar';
 
             failedTileCount = 0;
             loadedTileCount = 0;
@@ -1208,9 +1198,9 @@
                 bindTileStatusListeners(tileProviders[targetKey]);
                 currentTileLayer = tileProviders[targetKey].addTo(map);
             } else {
-                currentLayerKey = 'google_hybrid';
-                bindTileStatusListeners(tileProviders['google_hybrid']);
-                currentTileLayer = tileProviders['google_hybrid'].addTo(map);
+                currentLayerKey = 'esri_world_imagery';
+                bindTileStatusListeners(tileProviders['esri_world_imagery']);
+                currentTileLayer = tileProviders['esri_world_imagery'].addTo(map);
             }
         }
 
@@ -1488,6 +1478,36 @@
                 map.removeLayer(earthquakeLayerGroup);
                 earthquakeLayerGroup = null;
             }
+        };
+
+        window.applyAdminMapConfig = function(cfgJson) {
+            try {
+                var cfg = (typeof cfgJson === 'string') ? JSON.parse(cfgJson) : cfgJson;
+                if (!cfg) return;
+                var satDropdown = document.getElementById('satelliteDropdown');
+                var satBtn = satDropdown ? satDropdown.querySelector('.sat-dropdown-btn') : null;
+                var measureBtn = document.getElementById('measureBtn');
+                var measureHud = document.getElementById('measure-hud');
+                if (satBtn && typeof cfg.showSatMenu === 'boolean') {
+                    satBtn.style.display = cfg.showSatMenu ? 'flex' : 'none';
+                }
+                if (measureBtn && typeof cfg.showMeasureTool === 'boolean') {
+                    measureBtn.style.display = cfg.showMeasureTool ? 'flex' : 'none';
+                    if (!cfg.showMeasureTool && isMeasureMode) {
+                        isMeasureMode = false;
+                        if (measureHud) measureHud.classList.remove('visible');
+                    }
+                }
+                if (satDropdown && typeof cfg.showSatMenu === 'boolean' && typeof cfg.showMeasureTool === 'boolean') {
+                    satDropdown.style.display = (!cfg.showSatMenu && !cfg.showMeasureTool) ? 'none' : 'block';
+                }
+                if (map && typeof cfg.maxZoom === 'number' && cfg.maxZoom >= 10 && cfg.maxZoom <= 22) {
+                    map.setMaxZoom(cfg.maxZoom);
+                    if (map.getZoom() > cfg.maxZoom) {
+                        map.setZoom(cfg.maxZoom);
+                    }
+                }
+            } catch (e) {}
         };
 
         window.onload = initMap;

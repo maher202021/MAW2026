@@ -39,7 +39,7 @@ import com.serviseyem.ui.viewmodels.InstantRequestViewModel
 fun UrgentRequestDetailsScreen(
     requestId: String,
     viewModel: MainViewModel,
-    instantViewModel: InstantRequestViewModel = viewModel(),
+    instantViewModel: InstantRequestViewModel = viewModel.instantRequestViewModel,
     themeColors: VisualThemePalette? = null,
     onNavigateBack: () -> Unit = {},
     onNavigateToOfferSelection: (offerId: String) -> Unit = {},

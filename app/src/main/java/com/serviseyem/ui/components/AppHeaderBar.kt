@@ -316,18 +316,25 @@ fun AppHeaderBar(
                 .wrapContentHeight(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. الخرائط (خريطة)
-            val isMap = currentScreen == AppScreens.MAP_VIEW
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                Luxury3DNavIcon(
-                    emojiIcon = settingsState.topMapsIcon.ifEmpty { "🗺️" },
-                    vectorIcon = Icons.Default.Place,
-                    label = if (isEn) "Maps" else "الخرائط",
-                    isSelected = isMap,
-                    iconSizeDp = 32,
-                    iconStyle = settingsState.topNavIconStyle,
-                    onClick = { viewModel.navigateToScreen(AppScreens.MAP_VIEW) }
+            // 1. الخرائط (خريطة) — تخضع لقرار الأدمن بتفعيل الخرائط وإظهارها للزوار
+            val canShowMapNav = isAdminUser || (
+                settingsState.isMapsIconVisible &&
+                    settingsState.isMapFeatureEnabled &&
+                    (settingsState.showMapToVisitors || cleanUserId != "guest")
                 )
+            if (canShowMapNav) {
+                val isMap = currentScreen == AppScreens.MAP_VIEW
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Luxury3DNavIcon(
+                        emojiIcon = settingsState.topMapsIcon.ifEmpty { "🗺️" },
+                        vectorIcon = Icons.Default.Place,
+                        label = if (isEn) "Maps" else "الخرائط",
+                        isSelected = isMap,
+                        iconSizeDp = 32,
+                        iconStyle = settingsState.topNavIconStyle,
+                        onClick = { viewModel.navigateToScreen(AppScreens.MAP_VIEW) }
+                    )
+                }
             }
 
             // 2. الانضمام (شخص)

@@ -181,6 +181,7 @@ fun AdminPaymentPanel(
                         }
                         Switch(
                             checked = systemEnabled,
+                            colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors),
                             onCheckedChange = {
                                 systemEnabled = it
                                 savePaymentConfig(newSystemEnabled = it)
@@ -215,6 +216,7 @@ fun AdminPaymentPanel(
                         subtitle = "حساب العربون والعمولات تلقائياً",
                         icon = Icons.Default.DateRange,
                         checked = linkBookings,
+                        themeColors = themeColors,
                         onCheckedChange = {
                             linkBookings = it
                             savePaymentConfig(newLinkBookings = it)
@@ -226,6 +228,7 @@ fun AdminPaymentPanel(
                         subtitle = "الدفع عبر المحافظ الإلكترونية",
                         icon = Icons.Default.ShoppingCart,
                         checked = linkStores,
+                        themeColors = themeColors,
                         onCheckedChange = {
                             linkStores = it
                             savePaymentConfig(newLinkStores = it)
@@ -237,6 +240,7 @@ fun AdminPaymentPanel(
                         subtitle = "تسوية الفواتير والتوصيل",
                         icon = Icons.Default.ShoppingCart,
                         checked = linkRestaurants,
+                        themeColors = themeColors,
                         onCheckedChange = {
                             linkRestaurants = it
                             savePaymentConfig(newLinkRestaurants = it)
@@ -248,6 +252,7 @@ fun AdminPaymentPanel(
                         subtitle = "رسوم المعاينة والاستشارات",
                         icon = Icons.Default.Info,
                         checked = linkMedical,
+                        themeColors = themeColors,
                         onCheckedChange = {
                             linkMedical = it
                             savePaymentConfig(newLinkMedical = it)
@@ -259,6 +264,7 @@ fun AdminPaymentPanel(
                         subtitle = "عربون حجز المعاينة أو الإيجار",
                         icon = Icons.Default.Home,
                         checked = linkProperties,
+                        themeColors = themeColors,
                         onCheckedChange = {
                             linkProperties = it
                             savePaymentConfig(newLinkProperties = it)
@@ -270,6 +276,7 @@ fun AdminPaymentPanel(
                         subtitle = "رسوم التقديم أو توثيق الحسابات",
                         icon = Icons.Default.Person,
                         checked = linkJobs,
+                        themeColors = themeColors,
                         onCheckedChange = {
                             linkJobs = it
                             savePaymentConfig(newLinkJobs = it)
@@ -349,6 +356,7 @@ fun AdminPaymentPanel(
 
                                 Switch(
                                     checked = gateway.isEnabled,
+                                    colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors),
                                     onCheckedChange = { checked ->
                                         val updated = gateway.copy(isEnabled = checked)
                                         gatewayIntegration.saveGateway(context, updated)
@@ -544,6 +552,7 @@ fun PaymentSectorToggleRow(
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     checked: Boolean,
+    themeColors: VisualThemePalette? = null,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
@@ -571,7 +580,12 @@ fun PaymentSectorToggleRow(
         }
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
+            colors = if (themeColors != null) {
+                com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors)
+            } else {
+                SwitchDefaults.colors()
+            }
         )
     }
 }

@@ -1,16 +1,15 @@
 package com.serviseyem.ui.screens.register.forms
 
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.serviseyem.ui.MainViewModel
+import com.serviseyem.ui.helpers.AppPreferenceHelper
 import com.serviseyem.ui.submitJoinForm
-import com.serviseyem.ui.setJoinRequestPhone
 import com.serviseyem.utils.VisualThemePalette
 
 /**
- * 👨‍💼 JobSeekerForm
- * استمارة المتقدم للوظائف (باحث عن عمل)
- * الحقول المعتمدة: الاسم الثلاثي، الهاتف، كلمة المرور، التأكيد، المجال المطلوب، سنوات الخبرة، المدينة، الحي، المؤهل العلمي، نبذة، رابط السيرة الذاتية
+ * JobSeekerForm - استمارة المتقدم للوظائف (باحث عن عمل)
  */
 @Composable
 fun JobSeekerForm(
@@ -19,20 +18,31 @@ fun JobSeekerForm(
     onSuccess: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
+    val formsConfig by viewModel.registrationFormsConfig.collectAsState()
+    var isSubmitting by remember { mutableStateOf(false) }
+    var submissionError by remember { mutableStateOf<String?>(null) }
 
     UnifiedRegistrationForm(
         role = "JOB_SEEKER",
         themeColors = themeColors,
+        modifier = modifier,
+        formsConfig = formsConfig,
+        isSubmittingExternal = isSubmitting,
+        externalError = submissionError,
+        onClearExternalError = { submissionError = null },
         onRegistrationSuccess = { data ->
-            val fullName = (data["fullName"] as? String) ?: ""
-            val phone = (data["phone"] as? String) ?: ""
-            val password = (data["password"] as? String) ?: ""
-            val city = (data["city"] as? String) ?: "صنعاء"
-            val address = (data["address"] as? String) ?: ""
-            val craftType = (data["craftType"] as? String) ?: "باحث عن عمل"
+            val fullName = (data["fullName"] ?: "").trim()
+            val cleanPhone = AppPreferenceHelper.normalizePhoneNumber(data["phone"] ?: "")
+            val password = data["password"] ?: ""
+            val city = (data["city"] ?: "صنعاء").ifBlank { "صنعاء" }
+            val address = (data["address"] ?: "").trim()
+            val craftType = (data["specialization"] ?: data["craftType"] ?: "").trim().ifBlank { "باحث عن عمل" }
+            val description = (data["description"] ?: "").trim()
+            val experienceYears = (data["experienceYears"] ?: "").trim()
 
-            val cleanPhone = phone.trim().replace(" ", "").replace("+", "")
+            isSubmitting = true
+            submissionError = null
 
             viewModel.submitJoinForm(
                 context = context,
@@ -41,16 +51,24 @@ fun JobSeekerForm(
                 catId = "JOB_SEEKER",
                 area = city,
                 neighborhood = address,
-                photoPath = (data["imageUri"] as? String) ?: "",
-                idCardPath = (data["idCardUri"] as? String) ?: "",
+                photoPath = data["imageUri"] ?: "",
+                idCardPath = data["idCardUri"] ?: "",
                 gpsCoords = "",
                 customCategoryName = craftType,
-                password = password
+                password = password,
+                ownerName = fullName,
+                description = description,
+                experienceYears = experienceYears,
+                onResult = { ok, msg ->
+                    isSubmitting = false
+                    if (ok) {
+                        RegistrationDraftManager(context).clearDraft("JOB_SEEKER")
+                        onSuccess()
+                    } else {
+                        submissionError = msg
+                    }
+                }
             )
-
-            viewModel.setJoinRequestPhone(context, cleanPhone)
-            viewModel.triggerNotification("✅ تم إرسال طلب التقديم للوظيفة بنجاح، جاري المراجعة من الإدارة")
-            onSuccess()
         }
     )
 }

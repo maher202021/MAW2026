@@ -1,7 +1,6 @@
 @file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 package com.serviseyem.ui.screens.register
-import com.serviseyem.ui.*
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,16 +10,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import com.serviseyem.data.ChatChannelEntity
+import com.serviseyem.ui.*
 import com.serviseyem.ui.MainViewModel
 import com.serviseyem.ui.screens.register.status.*
 import com.serviseyem.utils.VisualThemePalette
-import kotlinx.coroutines.launch
 
 /**
- * 📊 JoinRequestStatusScreen - الشاشة الموحدة لمتابعة حالة طلب الانضمام أو الدخول للوحات التحكم
- * تعتمد على UseCase و Router و StateFlow النظيف
+ * JoinRequestStatusScreen - الشاشة الموحدة لمتابعة حالة طلب الانضمام أو الدخول للوحات التحكم
  */
 @Composable
 fun JoinRequestStatusScreen(
@@ -37,16 +33,16 @@ fun JoinRequestStatusScreen(
     val pendingProviders by viewModel.pendingProviders.collectAsState()
     val providers by viewModel.providers.collectAsState()
     val notifications by viewModel.notifications.collectAsState()
-    val bookings by viewModel.bookings.collectAsState()
     val stores by viewModel.stores.collectAsState()
     val properties by viewModel.properties.collectAsState()
     val categories by viewModel.categories.collectAsState()
     val jobs by viewModel.jobs.collectAsState()
     val registeredUsersList by viewModel.registeredUsersList.collectAsState()
+    val jobSeekers by viewModel.jobSeekers.collectAsState()
 
-    var activeChatChannel by remember { mutableStateOf<ChatChannelEntity?>(null) }
-
-    val currentStatus = remember(joinPhone, pendingProviders, providers, stores, properties, categories, notifications, jobs, registeredUsersList) {
+    val currentStatus = remember(
+        joinPhone, pendingProviders, providers, stores, properties, categories, notifications, jobs, registeredUsersList, jobSeekers
+    ) {
         useCase.determineStatus(
             joinPhone = joinPhone,
             pendingProviders = pendingProviders,
@@ -56,15 +52,17 @@ fun JoinRequestStatusScreen(
             categories = categories,
             notifications = notifications,
             jobs = jobs,
-            registeredUsersList = registeredUsersList
+            registeredUsersList = registeredUsersList,
+            jobSeekers = jobSeekers
         )
     }
 
     // Active Dashboards Routing
-    if (currentStatus is JoinStatus.ActiveStore || 
-        currentStatus is JoinStatus.ActiveProperty || 
-        currentStatus is JoinStatus.ApprovedTechnician || 
-        currentStatus is JoinStatus.ActiveJobPoster || 
+    if (currentStatus is JoinStatus.ActiveStore ||
+        currentStatus is JoinStatus.ActiveProperty ||
+        currentStatus is JoinStatus.ApprovedTechnician ||
+        currentStatus is JoinStatus.ActiveJobPoster ||
+        currentStatus is JoinStatus.ActiveJobSeeker ||
         currentStatus is JoinStatus.ActiveClient
     ) {
         JoinStatusRouter.RouteToDashboard(
@@ -74,7 +72,7 @@ fun JoinRequestStatusScreen(
             context = context,
             scope = scope,
             snackbarHostState = snackbarHostState,
-            onOpenChat = { activeChatChannel = it }
+            onOpenChat = { channel -> viewModel.openChatChannel(channel) }
         )
         return
     }
@@ -95,7 +93,7 @@ fun JoinRequestStatusScreen(
             when (currentStatus) {
                 is JoinStatus.Rejected -> {
                     RejectedView(
-                        reason = currentStatus.reason ?: "تم رفض الطلب لعدم استيفاء الشروط الخاصة بالخدمة.",
+                        reason = currentStatus.reason,
                         onReapply = { viewModel.cancelOrResetJoinRequest(context) },
                         themeColors = themeColors
                     )
@@ -106,16 +104,16 @@ fun JoinRequestStatusScreen(
                     val ownerName = store.ownerName.ifBlank { "غير محدد" }
                     val phone = store.phone.ifBlank { "غير محدد" }
                     val city = store.cityId.ifBlank { "صنعاء" }
-                    val neighborhood = store.localNeighborhood
-                    
+                    val neighborhood = store.localNeighborhood.ifBlank { "غير محدد" }
+
                     PendingApprovalView(
                         title = "🏪 طلب انضمام المتجر / المحل قيد المراجعة",
-                        message = "تم استلام طلب انضمام المتجر '${storeName}' وهو قيد المراجعة والاعتماد التجاري حالياً.",
+                        message = "تم استلام طلب انضمام المتجر '$storeName' وهو قيد المراجعة والاعتماد التجاري حالياً.",
                         detailsList = listOf(
                             "اسم المتجر / المحل" to storeName,
                             "اسم المالك / المسؤول" to ownerName,
                             "رقم الهاتف" to phone,
-                            "المنطقة والحي" to "$city - $neighborhood"
+                            "المدينة والحي" to "$city - $neighborhood"
                         ),
                         onCancelRequest = { viewModel.cancelOrResetJoinRequest(context) },
                         themeColors = themeColors
@@ -127,16 +125,16 @@ fun JoinRequestStatusScreen(
                     val ownerName = store.ownerName.ifBlank { "غير محدد" }
                     val phone = store.phone.ifBlank { "غير محدد" }
                     val city = store.cityId.ifBlank { "صنعاء" }
-                    val neighborhood = store.localNeighborhood
-                    
+                    val neighborhood = store.localNeighborhood.ifBlank { "غير محدد" }
+
                     PendingApprovalView(
                         title = "🍽️ طلب انضمام المطعم / الكافيه قيد المراجعة",
-                        message = "تم استلام طلب انضمام المطعم '${storeName}' وجاري مراجعته والتحقق من القوائم والبيانات من قِبل إدارة التطبيق.",
+                        message = "تم استلام طلب انضمام المطعم '$storeName' وجاري مراجعته والاعتماد من قِبل إدارة التطبيق.",
                         detailsList = listOf(
                             "اسم المطعم / الكافيه" to storeName,
                             "اسم المالك / المدير" to ownerName,
                             "رقم الهاتف" to phone,
-                            "المنطقة والحي" to "$city - $neighborhood"
+                            "المدينة والحي" to "$city - $neighborhood"
                         ),
                         onCancelRequest = { viewModel.cancelOrResetJoinRequest(context) },
                         themeColors = themeColors
@@ -148,16 +146,16 @@ fun JoinRequestStatusScreen(
                     val ownerName = store.ownerName.ifBlank { "غير محدد" }
                     val phone = store.phone.ifBlank { "غير محدد" }
                     val city = store.cityId.ifBlank { "صنعاء" }
-                    val neighborhood = store.localNeighborhood
-                    
+                    val neighborhood = store.localNeighborhood.ifBlank { "غير محدد" }
+
                     PendingApprovalView(
                         title = "🏥 طلب انضمام المركز الطبي / العيادة قيد المراجعة",
-                        message = "تم استلام طلب انضمام '${storeName}' وجاري مراجعة التراخيص والاعتماد الطبي من قِبل إدارة التطبيق.",
+                        message = "تم استلام طلب انضمام '$storeName' وجاري مراجعة البيانات والاعتماد الطبي من قِبل إدارة التطبيق.",
                         detailsList = listOf(
                             "اسم المركز / العيادة" to storeName,
-                            "اسم المسؤول / الطبيب" to ownerName,
+                            "اسم المسؤول / المدير" to ownerName,
                             "رقم الهاتف" to phone,
-                            "المنطقة والحي" to "$city - $neighborhood"
+                            "المدينة والحي" to "$city - $neighborhood"
                         ),
                         onCancelRequest = { viewModel.cancelOrResetJoinRequest(context) },
                         themeColors = themeColors
@@ -182,22 +180,38 @@ fun JoinRequestStatusScreen(
                         themeColors = themeColors
                     )
                 }
+                is JoinStatus.PendingJobSeeker -> {
+                    val pending = currentStatus.provider
+                    val name = pending.name.ifBlank { "متقدم للوظائف" }
+                    val phone = pending.phone.ifBlank { "غير محدد" }
+                    val area = pending.area.ifBlank { "صنعاء" }
+                    val spec = pending.specialization.ifBlank { pending.customCategoryName }.ifBlank { "غير محدد" }
+                    PendingApprovalView(
+                        title = "👨‍💼 طلب التقديم للوظائف قيد المراجعة",
+                        message = "تم استلام طلبك كباحث عن عمل بنجاح وجاري مراجعته من الإدارة.",
+                        detailsList = listOf(
+                            "الاسم الثلاثي" to name,
+                            "المجال المطلوب" to spec,
+                            "رقم التواصل" to phone,
+                            "المدينة" to area
+                        ),
+                        onCancelRequest = { viewModel.cancelOrResetJoinRequest(context) },
+                        themeColors = themeColors
+                    )
+                }
                 is JoinStatus.PendingProperty -> {
                     val prop = currentStatus.property
-                    val title = prop.title.ifBlank { "عقار جديد" }
-                    val price = prop.price
-                    val currency = prop.currency.ifBlank { "ريال يمني" }
+                    val title = prop.title.ifBlank { "عقار / مكتب عقاري" }
                     val phone = prop.phone.ifBlank { "غير محدد" }
                     val city = prop.cityId.ifBlank { "صنعاء" }
-                    val neighborhood = prop.localNeighborhood
+                    val neighborhood = prop.localNeighborhood.ifBlank { "غير محدد" }
                     PendingApprovalView(
-                        title = "🏢 طلب إدراج العقار قيد المراجعة",
+                        title = "🏢 طلب المكتب العقاري / العقار قيد المراجعة",
                         message = "تم استلام بيانات العقار/المكتب '$title' وهو قيد المراجعة والاعتماد.",
                         detailsList = listOf(
-                            "عنوان العقار" to title,
-                            "السعر" to if (price > 0) "$price $currency" else "حسب الاتفاق",
+                            "اسم المكتب / العقار" to title,
                             "رقم التواصل" to phone,
-                            "المنطقة والحي" to "$city - $neighborhood"
+                            "المدينة والحي" to "$city - $neighborhood"
                         ),
                         onCancelRequest = { viewModel.cancelOrResetJoinRequest(context) },
                         themeColors = themeColors
@@ -208,16 +222,16 @@ fun JoinRequestStatusScreen(
                     val name = pending.name.ifBlank { "فني جديد" }
                     val phone = pending.phone.ifBlank { "غير محدد" }
                     val area = pending.area.ifBlank { "صنعاء" }
-                    val neighborhood = pending.localNeighborhood
-                    val profession = pending.profession.ifBlank { pending.specialization }.ifBlank { "مهنة فنية" }
+                    val neighborhood = pending.localNeighborhood.ifBlank { "غير محدد" }
+                    val profession = pending.specialization.ifBlank { pending.customCategoryName }.ifBlank { "مهنة فنية" }
                     PendingApprovalView(
                         title = "🔧 طلب الانضمام كفني / مهني قيد المراجعة",
-                        message = "تم استلام بياناتك بنجاح وجاري مراجعة المؤهلات وتفعيل ملفك المهني في الدليل.",
+                        message = "تم استلام بياناتك بنجاح وجاري مراجعة طلبك وتفعيل ملفك المهني في الدليل.",
                         detailsList = listOf(
                             "الاسم" to name,
                             "المهنة / التخصص" to profession,
                             "رقم التواصل" to phone,
-                            "المنطقة والحي" to "$area - $neighborhood"
+                            "المدينة والحي" to "$area - $neighborhood"
                         ),
                         onCancelRequest = { viewModel.cancelOrResetJoinRequest(context) },
                         themeColors = themeColors
@@ -230,9 +244,9 @@ fun JoinRequestStatusScreen(
                     val res = (userMap["residence"] as? String)?.ifBlank { "صنعاء" } ?: "صنعاء"
                     PendingApprovalView(
                         title = "👤 طلب تسجيل حساب العميل قيد المراجعة",
-                        message = "تم استلام بيانات تسجيلك كعميل وجاري تفعيل حسابك للاستفادة من كافة خدمات التطبيق والعروض.",
+                        message = "تم استلام بيانات تسجيلك كعميل وجاري تفعيل حسابك من قِبل الإدارة.",
                         detailsList = listOf(
-                            "الاسم الكامل" to name,
+                            "الاسم الثلاثي" to name,
                             "رقم الهاتف" to phone,
                             "المدينة / المحافظة" to res
                         ),
@@ -244,7 +258,7 @@ fun JoinRequestStatusScreen(
                     PendingApprovalView(
                         title = "⏳ طلب الانضمام قيد المراجعة والتدقيق",
                         message = "طلبك قيد المراجعة الإدارية. سيصلك إشعار فور الاعتماد وتفعيل حسابك.",
-                        detailsList = listOf("رقم الهاتف المسجل" to (currentStatus.phone ?: "غير محدد")),
+                        detailsList = listOf("رقم الهاتف المسجل" to currentStatus.phone.ifBlank { "غير محدد" }),
                         onCancelRequest = { viewModel.cancelOrResetJoinRequest(context) },
                         themeColors = themeColors
                     )

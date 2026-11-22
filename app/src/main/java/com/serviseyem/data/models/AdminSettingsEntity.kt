@@ -11,14 +11,6 @@ data class AdminSettingsEntity(
     val footerMessage: String = "777644",
     val footerBgColorHex: String = "#115E59",
     val footerItemsOrder: String = "INFO,BOOKINGS,TEXT,LANG,ADMIN",
-    val showInfoIcon: Boolean = true,
-    val showBookingsIcon: Boolean = true,
-    val showLangIcon: Boolean = true,
-    val showAdminIcon: Boolean = true,
-    val showFooterText: Boolean = true,
-    val infoIconType: String = "INFO",
-    val adminIconType: String = "LOCK",
-    val langIconType: String = "GLOBE",
     val activeThemeId: String = "EMERALD_YEMEN",
     val customPrimaryHex: String = "#059669",
     val customSecondaryHex: String = "#115E59",
@@ -27,7 +19,6 @@ data class AdminSettingsEntity(
     val isMaintenanceActive: Boolean = false,
     val hidePromoFooter: Boolean = false,
     val assistantHidden: Boolean = false,
-    val showLoyaltyBanner: Boolean = false,
     val assistantSize: Int = 56,
     val chatHidden: Boolean = false,
     val chatSize: Int = 56,
@@ -38,19 +29,13 @@ data class AdminSettingsEntity(
     val supportWhatsapp: String = "777644",
     val supportEmail: String = "",
     val adminUsername: String = "",
-    val ownerEmail: String = "",
     @Deprecated("Use SecureAdminStorage / ownerPasswordHash instead")
     @get:com.google.firebase.firestore.Exclude
     val ownerPassword: String = "",
-
-    // Notifications control
-    val isNotificationsEnabled: Boolean = true,
-
     // Chat service states and controls
     val disableChatAll: Boolean = false,
     val disableChatProviders: Boolean = false,
     val disableChatUsers: Boolean = false,
-    val disableChatSupervisors: Boolean = false,
     val chatDisabledAnnouncement: String = AdminSettingsDefaults.CHAT_DISABLED_ANNOUNCEMENT,
     val allowChatUserToProvider: Boolean = true,
     val allowChatProviderToAdmin: Boolean = true,
@@ -67,103 +52,45 @@ data class AdminSettingsEntity(
     val allowTextToSpeechBookingForm: Boolean = true,
     val approveChatsBeforeProvider: Boolean = false,
     val bookingRouting: String = "BOTH",
-
     // Layout and registration customization
     val activeFontFamily: String = "CAIRO",
-    val registrationRequirements: String = AdminSettingsDefaults.REGISTRATION_REQUIREMENTS,
-    val maxWorkPhotos: Int = 5,
-    val showWorkPhotos: Boolean = true,
-    val bypassVisitorRegistration: Boolean = true,
-    val disableChatFirewall: Boolean = false,
-    val disableBookingFirewall: Boolean = true,
-
-    // Floating position percentages and offsets
-    val assistantPositionX: Float = 0.85f,
-    val assistantPositionY: Float = 0.70f,
-    val chatPositionX: Float = 0.85f,
-    val chatPositionY: Float = 0.82f,
-    val chatXOffset: Int = 20,
-    val chatYOffset: Int = 80,
-    val assistantXOffset: Int = 20,
-    val assistantYOffset: Int = 140,
-
     // Map feature switches
     val isMapFeatureEnabled: Boolean = true,
-    val mapProvider: String = "MAPLIBRE",
+    val mapProvider: String = "LEAFLET_OSM",
+    val defaultMapBaseLayer: String = "esri_world_imagery",
+    val showMapToVisitors: Boolean = true,
+    val showProvidersOnMap: Boolean = true,
+    val showStoresOnMap: Boolean = true,
+    val showRestaurantsOnMap: Boolean = true,
+    val showMedicalOnMap: Boolean = true,
+    val showPropertiesOnMap: Boolean = true,
+    val mapLayersOrder: String = com.serviseyem.data.models.MapLayersCatalog.DEFAULT_ORDER_CSV,
     val mapDefaultZoom: Float = 14f,
-    val mapMaxDistanceKm: Int = 20,
-    val mapPrecisionDigits: Int = 1,
-
     // Assistant controls
     val isAssistantEnabled: Boolean = true,
     val isAssistantIconVisible: Boolean = true,
-
-    // Card dimensions & styles
-    val coverHeight: Int = 0,
-    val avatarSize: Int = 50,
-    val avatarShape: String = "CIRCLE",
     val cardBackgroundHex: String = "#1E293B",
     val providerNameColorHex: String = "#FFFFFF",
     val ratingColorHex: String = "#F59E0B",
     val locationColorHex: String = "#94A3B8",
-    val previewPriceColorHex: String = "#10B981",
-
-    // Badges switches
-    val showUserIdInsteadOfNameInChat: Boolean = false,
-    val requirePaymentProofImage: Boolean = true,
-    val enableBookingPaymentStep: Boolean = true,
-    val showVipBadge: Boolean = true,
-    val showVerifiedBadge: Boolean = true,
-    val showRecommendedBadge: Boolean = true,
     val vipBadgeColorHex: String = "#D97706",
     val verifiedBadgeColorHex: String = "#3B82F6",
     val recommendedBadgeColorHex: String = "#10B981",
-
     // Buttons switches and colors
     val showCallButton: Boolean = true,
     val showVoiceCallButton: Boolean = false,
-    val showInstantChatButton: Boolean = true,
-    val showReviewButton: Boolean = true,
-    val showReportButton: Boolean = true,
     val showWhatsappButton: Boolean = true,
-    val showDetailsButton: Boolean = true,
     val showBookButton: Boolean = true,
-    val callButtonColorHex: String = "#10B981",
-    val whatsappButtonColorHex: String = "#25D366",
-    val detailsButtonColorHex: String = "#3B82F6",
-    val bookButtonColorHex: String = "#F59E0B",
-    val buttonsOrder: String = "CALL,WHATSAPP,DETAILS,BOOK",
-
-    // Information rows switches and order
-    val showDistance: Boolean = true,
-    val showPreviewPrice: Boolean = true,
-    val showAvailability: Boolean = true,
-    val showReviewsCount: Boolean = true,
-    val infoRowsOrder: String = "NAME,RATING,DISTANCE,LOCATION,PRICE,AVAILABILITY",
-
     // Padding & Spacing
     val elementSpacing: Int = 8,
     val cardPadding: Int = 12,
-    val cardMarginHorizontal: Int = 0,
-    val cardMarginVertical: Int = 4,
-
-    // Click press effect scale
-    val enableScaleAnimation: Boolean = true,
-    val clickScaleRatio: Float = 0.95f,
-
     // Admin customizable booking labels and terms
     val bookingTerms: String = AdminSettingsDefaults.BOOKING_TERMS,
     val bookingLabelName: String = "الاسم الثنائي/الثلاثي للعميل كامل",
     val bookingLabelPhone: String = "رقم الهاتف اليمني (أرقام فقط)",
     val bookingLabelArea: String = "منطقة السكن والحي بالتفصيل (مثل: صنعاء-شارع الستين)",
     val bookingLabelService: String = "نوع الخدمة المطلوبة بالتفصيل",
-
-    // About App customization fields
-    val aboutCoverType: String = "IMAGE",
-    val aboutCoverContent: String = AdminSettingsDefaults.ABOUT_COVER_URL,
-    val aboutCoverBase64: String = "",
     val aboutCustomInfo: String = AdminSettingsDefaults.ABOUT_CUSTOM_INFO,
-
     // Main screen Banner configuration
     val bannerEnabled: Boolean = false,
     val bannerType: String = "TEXT",
@@ -173,24 +100,7 @@ data class AdminSettingsEntity(
     val bannerDurationSeconds: Int = 10,
     val bannerDisplayStyle: String = "SLIDE",
     val appDownloadUrl: String = "https://example.com/download_app",
-    val allowSendImages: Boolean = true,
-    val allowSendVideos: Boolean = true,
-    val maxImagesPerChat: Int = 5,
-    val maxVideosPerChat: Int = 2,
-    val showRefreshIcon: Boolean = false,
-    val showSettingsIcon: Boolean = false,
-    val headerIconsOrder: String = "MENU,NOTIF,CHAT",
-    val headerIconsVisible: String = "MENU,NOTIF,CHAT",
-    val categoriesLayoutType: String = "GRID_VERTICAL",
-    val isFavoritesEnabled: Boolean = true,
-    val encryptionType: String = "تشفير آمن سحابي",
-    val splashWelcomeMessage: String = AdminSettingsDefaults.SPLASH_WELCOME_MESSAGE,
-    val websiteUrl: String = "https://www.yamandelil.com",
     val telegramUrl: String = "https://t.me/yamandelil",
-    val facebookUrl: String = "https://facebook.com/yamandelil",
-    val twitterUrl: String = "https://twitter.com/yamandelil",
-    val instagramUrl: String = "https://instagram.com/yamandelil",
-    val youtubeUrl: String = "https://youtube.com/yamandelil",
     val aboutLayoutOrder: String = "COVER,LOGO,TITLE,ANNOUNCEMENT,ABOUT_CARD,DOWNLOAD_BTN,CONTACTS,SOCIALS",
     val hideTwitter: Boolean = false,
     val hideInstagram: Boolean = false,
@@ -198,44 +108,18 @@ data class AdminSettingsEntity(
     val hideFacebook: Boolean = false,
     val hideTelegram: Boolean = false,
     val hideWebsite: Boolean = false,
-
     // Integrated payment configurations
     val isPaymentEnabled: Boolean = false,
     val isBookingPaymentRequired: Boolean = false,
     val requireAdvancePayment: Boolean = false,
     val advancePaymentPercent: Float = 0.30f,
-    val minAdvanceAmount: Double = 500.0,
-    val maxAdvanceAmount: Double = 50000.0,
-    val isCommissionEnabled: Boolean = true,
     val paymentCommissionRate: Float = 0.10f,
-
-    // Dynamic controls for Stores & Real Estate sections
-    val isStoresEnabled: Boolean = true,
-    val isPropertiesEnabled: Boolean = true,
-    val dynamicTabsList: String = "الرئيسية,المحلات,العقارات,المفضلة",
-    val maxStorePhotos: Int = 5,
-    val maxPropertyPhotos: Int = 5,
-    val storesRequiredFields: String = "الاسم,الوصف,الهاتف,الموقع",
-    val propertiesRequiredFields: String = "العنوان,الوصف,السعر,الهاتف",
-    val recommendationsLayout: String = "GRID_HORIZONTAL",
-    val storesTabName: String = "المحلات",
-    val propertiesTabName: String = "العقارات",
-    val storesRegistrationTerms: String = AdminSettingsDefaults.STORES_TERMS,
-    val propertiesRegistrationTerms: String = AdminSettingsDefaults.PROPERTIES_TERMS,
-    val showStoresPhotosOption: Boolean = true,
-    val showPropertiesPhotosOption: Boolean = true,
-    val dynamicSectionsData: String = "",
-    val isUserPasswordRequired: Boolean = false,
     val isBookingsIconVisible: Boolean = true,
-    val isMapsIconVisible: Boolean = true,
-    val bookingsIconType: String = "DateRange",
     val bookingsAccessControl: String = "ALL",
     val blockedUsersForBookings: String = "",
-
     // 3D Golden Icons, Font Scaling, & Icon Customization Settings
     val topNavIconStyle: String = "GOLDEN_3D",
     val navIconSizeDp: Int = 18,
-    val globalFontScale: Float = 1.0f,
     val topHomeIcon: String = "🏠",
     val topMapsIcon: String = "🗺️",
     val topJoinIcon: String = "👤",
@@ -245,7 +129,6 @@ data class AdminSettingsEntity(
     val bottomBookingsIcon: String = "📅",
     val bottomLangIcon: String = "🌐",
     val bottomAdminIcon: String = "🔒",
-
     // Advanced Instant Chat System Controls & Routing
     val chatDisplayIdentityMode: String = "NAME_AND_PHONE",
     val isChatTextEnabled: Boolean = true,
@@ -255,45 +138,158 @@ data class AdminSettingsEntity(
     val isChatCallEnabled: Boolean = true,
     val chatRoutingMode: String = "DEFAULT",
     val chatBlockedIds: String = "",
-    val chatDisabledCategories: String = "",
-
     // Registration Forms Controls
     val enableProvidersRegistration: Boolean = true,
     val enableStoresRegistration: Boolean = false,
+    // Admin Customizable Booking Settings
+    val isBookingEnabled: Boolean = true,
+    val routingMode: String = "auto_nearest",
+    // Advanced Payment, Instant Booking & Deposit Rule Controls
+    val linkedCategoriesForInstantBooking: String = "",
+    val linkedProvidersForDeposit: String = "",
+    // Voice Call In-App System Controls
+    val voiceCallsEnabled: Boolean = true,
+    val disableVoiceCalls: Boolean = true,
+    val voiceCallsDisabledAnnouncement: String = "",
+    val appLanguage: String = "ar",
+    val minRequiredVersion: String = "2.5.0",
+    val forceUpdateEnabled: Boolean = false,
+    val autoDetectLanguage: Boolean = true,
+    val showInfoIcon: Boolean = true,
+    val showBookingsIcon: Boolean = true,
+    val showLangIcon: Boolean = true,
+    val showAdminIcon: Boolean = true,
+    val showFooterText: Boolean = true,
+    val infoIconType: String = "INFO",
+    val adminIconType: String = "LOCK",
+    val langIconType: String = "GLOBE",
+    val showLoyaltyBanner: Boolean = false,
+    val registrationRequirements: String = AdminSettingsDefaults.REGISTRATION_REQUIREMENTS,
+    val maxWorkPhotos: Int = 5,
+    val bypassVisitorRegistration: Boolean = true,
+    val disableChatFirewall: Boolean = false,
+    val disableBookingFirewall: Boolean = true,
+    val chatXOffset: Int = 20,
+    val chatYOffset: Int = 80,
+    val assistantXOffset: Int = 20,
+    val assistantYOffset: Int = 140,
+    val disabledMapLayers: String = "",
+    val mapMaxZoom: Int = 22,
+    val showSatMenuOnMap: Boolean = true,
+    val showMeasureToolOnMap: Boolean = true,
+    val mapMaxDistanceKm: Int = 20,
+    // Card dimensions & styles
+    val coverHeight: Int = 0,
+    val avatarSize: Int = 50,
+    val showVipBadge: Boolean = true,
+    val showVerifiedBadge: Boolean = true,
+    val showRecommendedBadge: Boolean = true,
+    val showDetailsButton: Boolean = true,
+    val callButtonColorHex: String = "#10B981",
+    val whatsappButtonColorHex: String = "#25D366",
+    val detailsButtonColorHex: String = "#3B82F6",
+    val bookButtonColorHex: String = "#F59E0B",
+    // About App customization fields
+    val aboutCoverType: String = "IMAGE",
+    val aboutCoverContent: String = AdminSettingsDefaults.ABOUT_COVER_URL,
+    val aboutCoverBase64: String = "",
+    val showRefreshIcon: Boolean = false,
+    val showSettingsIcon: Boolean = false,
+    val headerIconsOrder: String = "MENU,NOTIF,CHAT",
+    val categoriesLayoutType: String = "GRID_VERTICAL",
+    val encryptionType: String = "تشفير آمن سحابي",
+    val splashWelcomeMessage: String = AdminSettingsDefaults.SPLASH_WELCOME_MESSAGE,
+    val websiteUrl: String = "https://www.yamandelil.com",
+    val facebookUrl: String = "https://facebook.com/yamandelil",
+    val twitterUrl: String = "https://twitter.com/yamandelil",
+    val instagramUrl: String = "https://instagram.com/yamandelil",
+    val youtubeUrl: String = "https://youtube.com/yamandelil",
+    val minAdvanceAmount: Double = 500.0,
+    val maxAdvanceAmount: Double = 50000.0,
+    val isCommissionEnabled: Boolean = true,
+    // Dynamic controls for Stores & Real Estate sections
+    val isStoresEnabled: Boolean = true,
+    val isPropertiesEnabled: Boolean = true,
+    val isUserPasswordRequired: Boolean = false,
+    val bookingsIconType: String = "DateRange",
+    val globalFontScale: Float = 1.0f,
+    val chatDisabledCategories: String = "",
     val enableRestaurantsRegistration: Boolean = false,
     val enablePropertiesRegistration: Boolean = false,
     val enableMedicalRegistration: Boolean = false,
     val enableJobsRegistration: Boolean = false,
-
-    // Admin Customizable Booking Settings
-    val isBookingEnabled: Boolean = true,
-    val routingMode: String = "auto_nearest",
-    val maxCancellationHours: Int = 8,
-    val maxCancellationAttempts: Int = 3,
-    val enableBookingPassword: Boolean = true,
-    val bookingPasswordLength: Int = 4,
-    val enableUniqueBookingNumber: Boolean = true,
-    val bookingNumberPrefix: String = "BK",
-    val advancePaymentPercentage: Int = 30,
-    val enableProgressTracking: Boolean = true,
-
-    // Advanced Payment, Instant Booking & Deposit Rule Controls
-    val linkedCategoriesForInstantBooking: String = "",
-    val linkedProvidersForInstantBooking: String = "",
-    val linkedProvidersForDeposit: String = "",
     val exemptUsersFromDeposit: String = "",
     val showWalletInProfile: Boolean = true,
-    val allowBookingWithoutDeposit: Boolean = true,
-
-    // Voice Call In-App System Controls
-    val voiceCallsEnabled: Boolean = true,
     val voiceCallsAllowedCategories: String = "",
     val voiceCallsAllowedProviders: String = "",
     val voiceCallsAllowedUsers: String = "",
-    val disableVoiceCalls: Boolean = true,
-    val voiceCallsDisabledAnnouncement: String = "",
-    val appLanguage: String = "ar",
     val hideTopHeaderBar: Boolean = false,
     val customAppName: String = "",
-    val showClientIdentityToProviders: Boolean = true
-)
+    val forceRtlDirection: Boolean = true,
+    val defaultCurrency: String = "ريال يمني (YER)",
+    val defaultThemeMode: String = "الوضع الداكن (Dark)"
+) {
+    var ownerEmail: String = ""
+    // Notifications control
+    var isNotificationsEnabled: Boolean = true
+    var disableChatSupervisors: Boolean = false
+    var showWorkPhotos: Boolean = true
+    // Floating position percentages and offsets
+    var assistantPositionX: Float = 0.85f
+    var assistantPositionY: Float = 0.70f
+    var chatPositionX: Float = 0.85f
+    var chatPositionY: Float = 0.82f
+    var mapPrecisionDigits: Int = 1
+    var avatarShape: String = "CIRCLE"
+    var previewPriceColorHex: String = "#10B981"
+    // Badges switches
+    var showUserIdInsteadOfNameInChat: Boolean = false
+    var requirePaymentProofImage: Boolean = true
+    var enableBookingPaymentStep: Boolean = true
+    var showInstantChatButton: Boolean = true
+    var showReviewButton: Boolean = true
+    var showReportButton: Boolean = true
+    var buttonsOrder: String = "CALL,WHATSAPP,DETAILS,BOOK"
+    // Information rows switches and order
+    var showDistance: Boolean = true
+    var showPreviewPrice: Boolean = true
+    var showAvailability: Boolean = true
+    var showReviewsCount: Boolean = true
+    var infoRowsOrder: String = "NAME,RATING,DISTANCE,LOCATION,PRICE,AVAILABILITY"
+    var cardMarginHorizontal: Int = 0
+    var cardMarginVertical: Int = 4
+    // Click press effect scale
+    var enableScaleAnimation: Boolean = true
+    var clickScaleRatio: Float = 0.95f
+    var allowSendImages: Boolean = true
+    var allowSendVideos: Boolean = true
+    var maxImagesPerChat: Int = 5
+    var maxVideosPerChat: Int = 2
+    var headerIconsVisible: String = "MENU,NOTIF,CHAT"
+    var isFavoritesEnabled: Boolean = true
+    var dynamicTabsList: String = "الرئيسية,المحلات,العقارات,المفضلة"
+    var maxStorePhotos: Int = 5
+    var maxPropertyPhotos: Int = 5
+    var storesRequiredFields: String = "الاسم,الوصف,الهاتف,الموقع"
+    var propertiesRequiredFields: String = "العنوان,الوصف,السعر,الهاتف"
+    var recommendationsLayout: String = "GRID_HORIZONTAL"
+    var storesTabName: String = "المحلات"
+    var propertiesTabName: String = "العقارات"
+    var storesRegistrationTerms: String = AdminSettingsDefaults.STORES_TERMS
+    var propertiesRegistrationTerms: String = AdminSettingsDefaults.PROPERTIES_TERMS
+    var showStoresPhotosOption: Boolean = true
+    var showPropertiesPhotosOption: Boolean = true
+    var dynamicSectionsData: String = ""
+    var isMapsIconVisible: Boolean = true
+    var maxCancellationHours: Int = 8
+    var maxCancellationAttempts: Int = 3
+    var enableBookingPassword: Boolean = true
+    var bookingPasswordLength: Int = 4
+    var enableUniqueBookingNumber: Boolean = true
+    var bookingNumberPrefix: String = "BK"
+    var advancePaymentPercentage: Int = 30
+    var enableProgressTracking: Boolean = true
+    var linkedProvidersForInstantBooking: String = ""
+    var allowBookingWithoutDeposit: Boolean = true
+    var showClientIdentityToProviders: Boolean = true
+}

@@ -49,7 +49,10 @@ fun RealLeafletMapView(
     onPanOffsetChange: (Offset) -> Unit = {},
     selectedEntity: Any? = null,
     mapMode: MapMode = MapMode.VELA_3D,
-    currentMapLayer: String = "google_satellite",
+    currentMapLayer: String = "esri_world_imagery",
+    maxZoom: Int = 22,
+    showSatMenu: Boolean = true,
+    showMeasureTool: Boolean = true,
     tiltAngle: Float = 30f,
     onProviderSelected: (ProviderEntity) -> Unit,
     onStoreSelected: (StoreEntity) -> Unit,
@@ -172,6 +175,22 @@ fun RealLeafletMapView(
                 if (window.switchLayer) { window.switchLayer($quotedLayer); }
             """.trimIndent()
             webViewRef?.evaluateJavascript(script, null)
+        }
+    }
+
+    // مزامنة إعدادات الأدمن للخريطة (الحد الأقصى للتكبير، إظهار القائمة الفضائية والمسطرة)
+    LaunchedEffect(isMapReady, maxZoom, showSatMenu, showMeasureTool) {
+        if (isMapReady && webViewRef != null) {
+            val cfgJson = org.json.JSONObject()
+                .put("maxZoom", maxZoom)
+                .put("showSatMenu", showSatMenu)
+                .put("showMeasureTool", showMeasureTool)
+                .toString()
+            val quotedCfg = org.json.JSONObject.quote(cfgJson)
+            webViewRef?.evaluateJavascript(
+                "if (window.applyAdminMapConfig) { window.applyAdminMapConfig($quotedCfg); }",
+                null
+            )
         }
     }
 

@@ -51,6 +51,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,7 +80,12 @@ import com.serviseyem.data.SupervisorEntity
 import com.serviseyem.data.models.AdminPermissionsRegistry
 import com.serviseyem.data.models.PermissionCategory
 import com.serviseyem.ui.*
+import com.serviseyem.ui.screens.admin.components.adminSwitchColors
+import com.serviseyem.ui.screens.admin.components.shareGeneratedFile
+import com.serviseyem.ui.screens.admin.components.writeTextFileToExportsAndShare
 import com.serviseyem.utils.VisualThemePalette
+import java.io.File
+import java.io.FileOutputStream
 import java.util.zip.ZipInputStream
 
 internal fun LazyListScope.adminSecurityAndSystemSections(
@@ -292,9 +299,9 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
                                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
                                             shape = RoundedCornerShape(8.dp),
                                             contentPadding = PaddingValues(horizontal = 4.dp),
-                                            modifier = Modifier.weight(1f).height(32.dp)
+                                            modifier = Modifier.weight(1f).height(48.dp)
                                         ) {
-                                            Text("واتساب", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                            Text("واتساب", fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
                                         }
 
                                         Button(
@@ -310,9 +317,9 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
                                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0088CC)),
                                             shape = RoundedCornerShape(8.dp),
                                             contentPadding = PaddingValues(horizontal = 4.dp),
-                                            modifier = Modifier.weight(1f).height(32.dp)
+                                            modifier = Modifier.weight(1f).height(48.dp)
                                         ) {
-                                            Text("تيليجرام", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                            Text("تيليجرام", fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
                                         }
 
                                         Button(
@@ -330,9 +337,9 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
                                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                                             shape = RoundedCornerShape(8.dp),
                                             contentPadding = PaddingValues(horizontal = 4.dp),
-                                            modifier = Modifier.weight(1f).height(32.dp)
+                                            modifier = Modifier.weight(1f).height(48.dp)
                                         ) {
-                                            Text("SMS", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                            Text("SMS", fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
                                         }
 
                                         Button(
@@ -343,9 +350,9 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
                                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
                                             shape = RoundedCornerShape(8.dp),
                                             contentPadding = PaddingValues(horizontal = 4.dp),
-                                            modifier = Modifier.weight(1.1f).height(32.dp)
+                                            modifier = Modifier.weight(1.1f).height(48.dp)
                                         ) {
-                                            Text("إشعار فوري 🔔", fontSize = 8.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                                            Text("إشعار فوري 🔔", fontSize = 9.sp, color = Color.Black, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }
@@ -409,9 +416,9 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
                                 name = prop.title,
                                 phone = prop.phone,
                                 category = "عقار",
-                                password = "1234",
+                                password = "",
                                 onResetPassword = { newPass ->
-                                    viewModel.resetAccountPassword("STORE", prop.phone, newPass)
+                                    viewModel.resetAccountPassword("PROPERTY", prop.phone, newPass)
                                     Toast.makeText(context, "🔐 تم تحديث كلمة المرور لـ ${prop.title}", Toast.LENGTH_SHORT).show()
                                 },
                                 context = context
@@ -428,7 +435,7 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
                                 name = job.title,
                                 phone = job.phone,
                                 category = "وظيفة",
-                                password = "1234",
+                                password = "",
                                 onResetPassword = { newPass ->
                                     viewModel.resetAccountPassword("JOB", job.phone, newPass)
                                     Toast.makeText(context, "🔐 تم تحديث كلمة المرور لـ ${job.title}", Toast.LENGTH_SHORT).show()
@@ -903,7 +910,9 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
 
                         Button(
                             onClick = {
-                                Toast.makeText(context, "🔄 جاري إعادة فحص ومزامنة كامل جداول البيانات مع السحاب...", Toast.LENGTH_SHORT).show()
+                                viewModel.triggerManualSync(context)
+                                viewModel.refreshData(true)
+                                Toast.makeText(context, "🔄 تم بدء فحص ومزامنة كامل جداول البيانات مع السحاب!", Toast.LENGTH_SHORT).show()
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
                             modifier = Modifier.fillMaxWidth()
@@ -1064,13 +1073,23 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
                         var secBucket by remember { mutableStateOf("") }
                         var secEnabled by remember { mutableStateOf(false) }
 
+                        LaunchedEffect(Unit) {
+                            viewModel.loadSecondaryFirebaseConfig { projId, apiKey, appId, bucket, enabled ->
+                                secProjId = projId
+                                secApiKey = apiKey
+                                secAppId = appId
+                                secBucket = bucket
+                                secEnabled = enabled
+                            }
+                        }
+
                         OutlinedTextField(
                             value = secProjId,
                             onValueChange = { secProjId = it },
                             label = { Text("Project ID الحساب الثانوي", fontSize = 10.sp) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFF59E0B))
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFF59E0B), focusedTextColor = Color.White, unfocusedTextColor = Color.White)
                         )
                         OutlinedTextField(
                             value = secApiKey,
@@ -1078,14 +1097,14 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
                             label = { Text("API Key الحساب الثانوي", fontSize = 10.sp) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFF59E0B))
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFF59E0B), focusedTextColor = Color.White, unfocusedTextColor = Color.White)
                         )
 
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                             Switch(
                                 checked = secEnabled,
                                 onCheckedChange = { secEnabled = it },
-                                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF10B981))
+                                colors = adminSwitchColors(themeColors)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("تفعيل المزامنة المزدوجة التلقائية مع Firebase الثانوي ⚡", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
@@ -1115,7 +1134,24 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
 
                         Button(
                             onClick = {
-                                Toast.makeText(context, "تم تصدير الدليل الكامل للفنيين والمحافظات إلى ذاكرة الهاتف 📁", Toast.LENGTH_LONG).show()
+                                val csv = buildString {
+                                    appendLine("ID,Name,Phone,Profession,Area,CityId,Status,Verified,VIP,Rating")
+                                    activatedProviders.forEach { p ->
+                                        appendLine("\"${p.id}\",\"${p.name}\",\"${p.phone}\",\"${p.profession}\",\"${p.area}\",\"${p.cityId}\",\"${p.subscriptionStatus}\",${p.isVerified},${p.isVip},${p.rating}")
+                                    }
+                                }
+                                val exported = writeTextFileToExportsAndShare(
+                                    context = context,
+                                    fileName = "yemen_providers_${System.currentTimeMillis()}.csv",
+                                    content = csv,
+                                    mimeType = "text/csv",
+                                    chooserTitle = "تصدير الدليل الكامل للفنيين (CSV)"
+                                )
+                                Toast.makeText(
+                                    context,
+                                    if (exported != null) "✅ تم تصدير ومشاركة ${activatedProviders.size} سجل بنجاح!" else "❌ تعذر إنشاء ملف CSV",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                             modifier = Modifier.fillMaxWidth()
@@ -1125,7 +1161,26 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
 
                         Button(
                             onClick = {
-                                Toast.makeText(context, "تم تصدير جميع سجلات حجز الصيانة المجدولة والنشطة 📁", Toast.LENGTH_LONG).show()
+                                val csv = buildString {
+                                    appendLine("BookingCode,UserName,UserPhone,ProviderName,Area,Status,PaymentStatus,TotalAmount,Commission")
+                                    bookings.forEach { b ->
+                                        val amt = if (b.totalAmount > 0.0) b.totalAmount else b.price
+                                        val comm = amt * settingsState.paymentCommissionRate.toDouble()
+                                        appendLine("\"${b.bookingNumber}\",\"${b.effectiveCustomerName}\",\"${b.effectiveCustomerPhone}\",\"${b.providerName}\",\"${b.effectiveCustomerArea}\",\"${b.status}\",\"${b.paymentStatus}\",$amt,$comm")
+                                    }
+                                }
+                                val exported = writeTextFileToExportsAndShare(
+                                    context = context,
+                                    fileName = "yemen_bookings_${System.currentTimeMillis()}.csv",
+                                    content = csv,
+                                    mimeType = "text/csv",
+                                    chooserTitle = "تصدير سجل الحجوزات النشطة (CSV)"
+                                )
+                                Toast.makeText(
+                                    context,
+                                    if (exported != null) "✅ تم تصدير ومشاركة ${bookings.size} حجز بنجاح!" else "❌ تعذر إنشاء ملف الحجوزات",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                             modifier = Modifier.fillMaxWidth()
@@ -1172,7 +1227,7 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
                                     state.wipeCitiesChecked = allChecked
                                     state.wipeThemesChecked = allChecked
                                 },
-                                colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent)
+                                colors = adminSwitchColors(themeColors)
                             )
                         }
 
@@ -1422,19 +1477,75 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
         }
         "FINANCIAL_REPORTS" -> {
             item {
+                val completedBookings = bookings.filter { it.status.equals("COMPLETED", ignoreCase = true) || it.paymentStatus.equals("PAID", ignoreCase = true) }
+                val totalGrossRevenue = bookings.sumOf { if (it.totalAmount > 0.0) it.totalAmount else it.price }
+                val totalCommission = bookings.sumOf {
+                    val amt = if (it.totalAmount > 0.0) it.totalAmount else it.price
+                    amt * settingsState.paymentCommissionRate.toDouble()
+                }
                 Card(colors = CardDefaults.cardColors(containerColor = themeColors.surface), modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("📈 تقارير الأرباح المتقدمة", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
-                        Text("إجمالي العمليات المنفذة: ${bookings.size}", fontSize = 12.sp, color = Color.White)
-                        Text("إجمالي الأرباح المتوقعة من العمولات: ${bookings.size * 500} ريال يمني", fontSize = 12.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+                        Text("إجمالي الطلبات والحجوزات: ${bookings.size} (مكتملة/مدفوعة: ${completedBookings.size})", fontSize = 12.sp, color = Color.White)
+                        Text("إجمالي حجم المعاملات المسجلة: ${String.format("%.2f", totalGrossRevenue)} ريال يمني", fontSize = 12.sp, color = Color.LightGray)
+                        Text(
+                            "إجمالي العمولات الفعلية (${(settingsState.paymentCommissionRate * 100).toInt()}%): ${String.format("%.2f", totalCommission)} ريال يمني",
+                            fontSize = 12.sp,
+                            color = Color(0xFF10B981),
+                            fontWeight = FontWeight.Bold
+                        )
                         Button(
-                            onClick = { },
-                            enabled = false,
-                            colors = ButtonDefaults.buttonColors(disabledContainerColor = Color.White.copy(alpha = 0.1f), disabledContentColor = Color.Gray)
+                            onClick = {
+                                try {
+                                    val pdf = android.graphics.pdf.PdfDocument()
+                                    val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(595, 842, 1).create()
+                                    val page = pdf.startPage(pageInfo)
+                                    val canvas = page.canvas
+                                    val titlePaint = android.graphics.Paint().apply {
+                                        color = android.graphics.Color.BLACK
+                                        textSize = 18f
+                                        isFakeBoldText = true
+                                    }
+                                    val bodyPaint = android.graphics.Paint().apply {
+                                        color = android.graphics.Color.DKGRAY
+                                        textSize = 12f
+                                    }
+                                    var y = 60f
+                                    canvas.drawText("Yemen Services Financial Report", 40f, y, titlePaint)
+                                    y += 28f
+                                    canvas.drawText("Generated: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date())}", 40f, y, bodyPaint)
+                                    y += 22f
+                                    canvas.drawText("Total Bookings: ${bookings.size} | Completed/Paid: ${completedBookings.size}", 40f, y, bodyPaint)
+                                    y += 22f
+                                    canvas.drawText("Gross Transaction Volume: ${String.format(java.util.Locale.US, "%.2f", totalGrossRevenue)} YER", 40f, y, bodyPaint)
+                                    y += 22f
+                                    canvas.drawText("Platform Commission (${(settingsState.paymentCommissionRate * 100).toInt()}%): ${String.format(java.util.Locale.US, "%.2f", totalCommission)} YER", 40f, y, bodyPaint)
+                                    y += 30f
+                                    bookings.take(25).forEachIndexed { idx, b ->
+                                        val amt = if (b.totalAmount > 0.0) b.totalAmount else b.price
+                                        canvas.drawText("${idx + 1}. #${b.bookingNumber} | ${b.status} | $amt YER", 40f, y, bodyPaint)
+                                        y += 18f
+                                    }
+                                    pdf.finishPage(page)
+                                    val exportDir = File(context.cacheDir, "exports").apply { mkdirs() }
+                                    val pdfFile = File(exportDir, "financial_report_${System.currentTimeMillis()}.pdf")
+                                    FileOutputStream(pdfFile).use { pdf.writeTo(it) }
+                                    pdf.close()
+                                    shareGeneratedFile(
+                                        context = context,
+                                        file = pdfFile,
+                                        mimeType = "application/pdf",
+                                        chooserTitle = "مشاركة تقرير الأرباح (PDF)"
+                                    )
+                                    Toast.makeText(context, "✅ تم إنشاء وتصدير تقرير الأرباح PDF بنجاح!", Toast.LENGTH_SHORT).show()
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "❌ تعذر إنشاء ملف PDF: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent)
                         ) {
-                            Text("تصدير تقرير الأرباح (PDF) - قيد التطوير ⏳", fontSize = 11.sp)
+                            Text("تصدير ومشاركة تقرير الأرباح (PDF) 📄", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
-                        Text("ميزة تصدير التقارير بصيغة PDF قيد التطوير وستتوفر في التحديث القادم.", fontSize = 10.sp, color = Color.Gray)
                     }
                 }
             }
@@ -1446,11 +1557,26 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
         }
         "SECURITY_AUDIT" -> {
             item {
+                val activityLogs by viewModel.activityLogs.collectAsState()
+                val currentAuthUser = remember { com.google.firebase.auth.FirebaseAuth.getInstance().currentUser }
+                val errorLogs by com.serviseyem.utils.AppErrorLogManager.logs.collectAsState()
                 Card(colors = CardDefaults.cardColors(containerColor = themeColors.surface), modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("🛡️ سجل التدقيق الأمني وحراس الوسائط", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
-                        Text("آخر عملية فحص أمني: تمت بنجاح (لا توجد تهديدات)", fontSize = 12.sp, color = Color(0xFF10B981))
-                        Text("حالة تشفير قواعد البيانات: مفعل (AES-256)", fontSize = 12.sp, color = Color.White)
+                        Text("🛡️ سجل التدقيق الأمني المباشر", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
+                        Text("الصلاحية الحالية: $adminRole", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(
+                            "حالة Firebase Auth: ${if (currentAuthUser != null) "متصل (${currentAuthUser.uid.take(8)}...)" else "جلسة غير متصلة"}",
+                            fontSize = 12.sp,
+                            color = if (currentAuthUser != null) Color(0xFF10B981) else Color(0xFFF59E0B)
+                        )
+                        Text("إجمالي أحداث السجل النشط: ${activityLogs.size} | سجل أخطاء النظام: ${errorLogs.size}", fontSize = 11.5.sp, color = Color.LightGray)
+                        if (activityLogs.isNotEmpty()) {
+                            Divider(color = Color.White.copy(alpha = 0.1f))
+                            Text("أحدث عمليات الإدارة المسجلة:", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
+                            activityLogs.take(5).forEach { log ->
+                                Text("• ${log.action}", fontSize = 10.5.sp, color = Color.White)
+                            }
+                        }
                     }
                 }
             }
@@ -1478,13 +1604,23 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
             }
 
             item {
-                var adminCustomPermissions by remember { mutableStateOf(AdminPermissionsRegistry.allPermissions.map { it.key }) }
+                val syncedMatrix by viewModel.adminPermissionsMatrix.collectAsState()
+                var adminCustomPermissions by remember {
+                    mutableStateOf(
+                        syncedMatrix.ifEmpty { AdminPermissionsRegistry.allPermissions.map { it.key } }
+                    )
+                }
+                LaunchedEffect(syncedMatrix) {
+                    if (syncedMatrix.isNotEmpty()) {
+                        adminCustomPermissions = syncedMatrix
+                    }
+                }
                 AdminPermissionsSelectorView(
                     themeColors = themeColors,
                     selectedPermissions = adminCustomPermissions,
                     onPermissionsChanged = { adminCustomPermissions = it },
                     onSaveRequested = {
-                        viewModel.saveCustomPermissionsMatrixToFirestore(adminCustomPermissions)
+                        viewModel.saveCustomPermissionsMatrixToFirestore(adminCustomPermissions, "ADMIN")
                     }
                 )
             }
@@ -1496,71 +1632,16 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
         "MAP_CONTROLS" -> {
             item {
                 Text("🗺️ التحكم بشاشة الخرائط والمواقع الجغرافية", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
-                Text("إدارة ظهور الخرائط والمنشآت وتحديد مزودي الخرائط ونطاقات التغطية:", fontSize = 11.sp, color = themeColors.textSecondary)
+                Text("إدارة ظهور الخرائط والمنشآت والطبقات وتحديد نطاقات التغطية:", fontSize = 11.sp, color = themeColors.textSecondary)
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = themeColors.surface), modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("📍 إعدادات مزود ونظام الخرائط:", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            val mapProviders = listOf("الخريطة المدمجة 🗺️", "خرائط جوجل 📍", "خريطة شوارع اليمن 🌐")
-                            mapProviders.forEach { prov ->
-                                val isSel = prov.startsWith("الخريطة")
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(if (isSel) themeColors.accent else Color.Black.copy(alpha = 0.3f))
-                                        .clickable { viewModel.triggerNotification("تم تعيين مزود الخريطة: $prov") }
-                                        .padding(vertical = 8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(prov, fontSize = 9.sp, color = if (isSel) Color.Black else Color.White, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("إظهار الخريطة للجميع (الزوار والعملاء)", fontSize = 12.sp, color = Color.White)
-                            Switch(
-                                checked = true,
-                                onCheckedChange = { viewModel.triggerNotification("تم تحديث رؤية الخريطة") },
-                                colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent)
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("عرض مواقع المحلات والمراكز الطبية تلقائياً", fontSize = 12.sp, color = Color.White)
-                            Switch(
-                                checked = true,
-                                onCheckedChange = { viewModel.triggerNotification("تم تحديث علامات المنشآت على الخريطة") },
-                                colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent)
-                            )
-                        }
-
-                        Button(
-                            onClick = { viewModel.triggerNotification("🗺️ تم حفظ وتحديث إعدادات الخرائط بنجاح") },
-                            colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("حفظ إعدادات الخرائط 💾", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
+                AdminMapControlsSection(
+                    viewModel = viewModel,
+                    settingsState = settingsState,
+                    themeColors = themeColors
+                )
             }
 
             item {
@@ -1575,7 +1656,24 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
         }
         "ADMIN_PAYMENT_PANEL" -> {
             item {
-                AdminPaymentPanel(viewModel = viewModel, themeColors = themeColors)
+                AdminPaymentPanel(
+                    viewModel = viewModel,
+                    themeColors = themeColors,
+                    onToggleSystem = { enabled ->
+                        viewModel.saveCustomSettingsState(settingsState.copy(isPaymentEnabled = enabled))
+                    },
+                    onUnlinkAll = {
+                        viewModel.saveCustomSettingsState(
+                            settingsState.copy(
+                                linkedCategoriesForInstantBooking = "",
+                                linkedProvidersForDeposit = ""
+                            )
+                        )
+                    },
+                    onAdminOverride = { targetId, amount ->
+                        viewModel.adminOverrideWalletBalance(targetId, amount)
+                    }
+                )
             }
         }
         "VOICE_CALLS_PANEL" -> {
@@ -1617,11 +1715,11 @@ fun PasswordEntityCard(
     name: String,
     phone: String,
     category: String,
-    password: String?,
+    @Suppress("UNUSED_PARAMETER") password: String?,
     onResetPassword: (String) -> Unit,
     context: Context
 ) {
-    var editPass by remember { mutableStateOf(password ?: "") }
+    var editPass by remember { mutableStateOf("") }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
@@ -1637,7 +1735,7 @@ fun PasswordEntityCard(
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "🔒 كلمة المرور محمية (لا يمكن عرضها)",
+                    "🔒 كلمة المرور محمية ومشفرة (لا يمكن عرضها)",
                     fontSize = 11.sp,
                     color = Color.Gray,
                     fontWeight = FontWeight.Bold
@@ -1648,7 +1746,7 @@ fun PasswordEntityCard(
                 OutlinedTextField(
                     value = editPass,
                     onValueChange = { editPass = it },
-                    label = { Text("كلمة مرور جديدة", fontSize = 9.sp) },
+                    label = { Text("كلمة مرور جديدة (اختيار التحديث)", fontSize = 9.sp) },
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                     colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
@@ -1657,12 +1755,13 @@ fun PasswordEntityCard(
                     onClick = {
                         if (editPass.isNotBlank()) {
                             onResetPassword(editPass)
+                            editPass = ""
                         } else {
                             Toast.makeText(context, "الرجاء إدخال كلمة المرور الجديدة", Toast.LENGTH_SHORT).show()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                    modifier = Modifier.height(36.dp),
+                    modifier = Modifier.height(48.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
                     Text("تحديث 🔒", fontSize = 10.sp, color = Color.Black, fontWeight = FontWeight.Bold)
@@ -1682,10 +1781,10 @@ fun PasswordEntityCard(
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
-                    modifier = Modifier.height(28.dp).weight(1f),
+                    modifier = Modifier.height(48.dp).weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Text("🟢 واتساب", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text("🟢 واتساب", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
 
                 Button(
@@ -1700,10 +1799,10 @@ fun PasswordEntityCard(
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0088CC)),
-                    modifier = Modifier.height(28.dp).weight(1f),
+                    modifier = Modifier.height(48.dp).weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Text("✈️ تيليجرام", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text("✈️ تيليجرام", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
 
                 Button(
@@ -1719,10 +1818,10 @@ fun PasswordEntityCard(
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
-                    modifier = Modifier.height(28.dp).weight(1f),
+                    modifier = Modifier.height(48.dp).weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Text("💬 SMS", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text("💬 SMS", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

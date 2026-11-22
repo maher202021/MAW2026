@@ -128,15 +128,38 @@ class AccountRecoveryHelper(
                         runCatching {
                             for (ph in phoneVariants) {
                                 val snap = com.google.android.gms.tasks.Tasks.await(
-                                    db.collection("jobs").whereEqualTo("phone", ph).limit(1).get()
+                                    db.collection("jobs").whereEqualTo("phone", ph).limit(5).get()
                                 )
-                                val doc = snap.documents.firstOrNull()
-                                if (doc != null) {
-                                    val jName = doc.getString("title")?.takeIf { it.isNotBlank() }
-                                        ?: doc.getString("jobTitle")?.takeIf { it.isNotBlank() }
-                                        ?: doc.getString("companyName")?.takeIf { it.isNotBlank() }
+                                val candidates = snap.documents.mapNotNull { doc ->
+                                    doc.toObject(com.serviseyem.data.JobEntity::class.java)?.let { entity ->
+                                        if (entity.id.isBlank()) entity.copy(id = doc.id) else entity
+                                    }
+                                }
+                                val chosen = candidates.firstOrNull { !it.isDeleted } ?: candidates.firstOrNull()
+                                if (chosen != null) {
+                                    val jName = chosen.companyName.takeIf { it.isNotBlank() }
+                                        ?: chosen.title.takeIf { it.isNotBlank() }
                                         ?: "معلن وظائف"
-                                    return@runCatching RestoreAccountMatch("JOB", jName)
+                                    return@runCatching RestoreAccountMatch("JOB", jName, job = chosen)
+                                }
+                            }
+                            null
+                        }.getOrNull()
+                    }
+                    val jobSeekerDef = async(Dispatchers.IO) {
+                        runCatching {
+                            for (ph in phoneVariants) {
+                                val snap = com.google.android.gms.tasks.Tasks.await(
+                                    db.collection("job_seekers").whereEqualTo("phone", ph).limit(1).get()
+                                )
+                                val doc = snap.documents.firstOrNull() ?: runCatching {
+                                    com.google.android.gms.tasks.Tasks.await(
+                                        db.collection("job_seekers").document(ph).get()
+                                    ).takeIf { it.exists() }
+                                }.getOrNull()
+                                if (doc != null) {
+                                    val sName = doc.getString("name")?.takeIf { it.isNotBlank() } ?: "باحث عن عمل"
+                                    return@runCatching RestoreAccountMatch("JOB_SEEKER", sName)
                                 }
                             }
                             null
@@ -189,7 +212,7 @@ class AccountRecoveryHelper(
                         }.getOrNull()
                     }
 
-                    val results = awaitAll(providerDef, storeDef, propDef, jobDef, userDef, joinReqDef)
+                    val results = awaitAll(providerDef, storeDef, propDef, jobDef, jobSeekerDef, userDef, joinReqDef)
                     results.firstOrNull { it != null }
                 }
                 onResult(match)
@@ -211,6 +234,7 @@ class AccountRecoveryHelper(
             "STORE", "RESTAURANT", "MEDICAL" -> listOf("stores")
             "PROPERTY" -> listOf("properties")
             "JOB" -> listOf("jobs")
+            "JOB_SEEKER" -> listOf("job_seekers", "registered_users", "users")
             "CLIENT", "USER" -> listOf("users", "registered_users")
             else -> listOf("join_requests", "users", "registered_users")
         }
@@ -224,6 +248,7 @@ class AccountRecoveryHelper(
                         "stores",
                         "properties",
                         "jobs",
+                        "job_seekers",
                         "join_requests",
                         "pending_providers"
                     )).distinct()
@@ -491,7 +516,7 @@ class AccountRecoveryHelper(
                         "967$cleanPhone",
                         "00967$cleanPhone"
                     ).distinct()
-                    val collections = listOf("providers", "stores", "properties", "jobs", "users", "registered_users", "join_requests", "pending_providers")
+                    val collections = listOf("providers", "stores", "properties", "jobs", "job_seekers", "users", "registered_users", "join_requests", "pending_providers")
 
                     for (col in collections) {
                         for (ph in phoneQueries) {

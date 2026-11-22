@@ -1,7 +1,7 @@
 package com.serviseyem.ui.dialogs
 
 import android.widget.Toast
-import com.serviseyem.ui.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,16 +10,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.serviseyem.ui.MainViewModel
+import com.serviseyem.ui.*
 import com.serviseyem.utils.VisualThemePalette
 
 @Composable
@@ -32,6 +34,7 @@ fun RestoreAccountDialog(
     var restorePhoneInput by rememberSaveable { mutableStateOf("") }
     var restorePasswordInput by rememberSaveable { mutableStateOf("") }
     var restoreStep by rememberSaveable { mutableStateOf(1) }
+    var selectedChannel by rememberSaveable { mutableStateOf("IN_APP_CHAT") }
     var isSearchingAccount by remember { mutableStateOf(false) }
     var isVerifyingPassword by remember { mutableStateOf(false) }
     var isRequestingReset by remember { mutableStateOf(false) }
@@ -58,7 +61,6 @@ fun RestoreAccountDialog(
         }.getOrNull()
     }
 
-    // في حال تدوير الشاشة أثناء الخطوة 2 وفقدان matchResult غير القابل للحفظ في Bundle، نعيد جلبه تلقائياً
     LaunchedEffect(restoreStep) {
         if (restoreStep == 2 && matchResult == null) {
             val cleanPhone = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(restorePhoneInput).filter { it.isDigit() }
@@ -78,7 +80,6 @@ fun RestoreAccountDialog(
         }
     }
 
-    // ⏳ حماية زمنية (30 ثانية) لمنع تعليق أزرار التحميل والإرسال (القاعدة 7)
     LaunchedEffect(isSearchingAccount) {
         if (isSearchingAccount) {
             kotlinx.coroutines.delay(30_000L)
@@ -108,13 +109,13 @@ fun RestoreAccountDialog(
                 modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("🔑 استعادة حسابك التالف أو المفقود", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("🔑 استعادة حسابك برقم الهاتف", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
 
                 if (showSuccessState) {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(8.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text("🎉 تم استعادة الحساب بنجاح!", color = Color(0xFF4ADE80), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Text("أهلاً وسهلاً بك مجدداً: $successUserName", color = Color.White, fontSize = 14.sp)
@@ -129,18 +130,18 @@ fun RestoreAccountDialog(
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("موافق (الانتقال للحساب) 🚀", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("موافق (الانتقال للوحة الحساب) 🚀", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
                 } else if (restoreStep == 1) {
-                    Text("الرجاء إدخال رقم الهاتف المسجل به حسابك للبحث المباشر في قاعدة البيانات:", color = Color.LightGray, fontSize = 11.sp)
+                    Text("الرجاء إدخال رقم الهاتف المسجل به حسابك للبحث المباشر:", color = Color.LightGray, fontSize = 11.sp)
                     OutlinedTextField(
                         value = restorePhoneInput,
                         onValueChange = { restorePhoneInput = it },
                         label = { Text("رقم الهاتف المسجل") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testTag("restore_phone_input"),
                         colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
                     )
 
@@ -164,20 +165,24 @@ fun RestoreAccountDialog(
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).height(48.dp).testTag("restore_next_button"),
                             enabled = !isSearchingAccount
                         ) {
-                            Text(if (isSearchingAccount) "جاري البحث..." else "التالي ➡️", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text(if (isSearchingAccount) "جاري البحث..." else "التالي ➡️", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
-                        Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = Color.Gray), modifier = Modifier.weight(1f)) {
-                            Text("إلغاء", color = Color.White, fontSize = 11.sp)
+                        Button(
+                            onClick = onDismiss,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                            modifier = Modifier.weight(1f).height(48.dp)
+                        ) {
+                            Text("إلغاء", color = Color.White, fontSize = 12.sp)
                         }
                     }
                 } else {
                     val match = matchResult
                     val provName = match?.name?.takeIf { it.isNotBlank() } ?: "مستخدم"
-                    Text("👤 تم العثور على حساب (${match?.type ?: "CLIENT"}) لـ: $provName", color = themeColors.accent, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                    Text("الرجاء إدخال كلمة المرور للتحقق واسترجاع البيانات:", color = Color.LightGray, fontSize = 10.sp)
+                    Text("👤 تم العثور على حساب (${match?.type ?: "CLIENT"}) لـ: $provName", color = themeColors.accent, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                    Text("الرجاء إدخال كلمة المرور للتحقق واسترجاع البيانات:", color = Color.LightGray, fontSize = 10.5.sp)
 
                     OutlinedTextField(
                         value = restorePasswordInput,
@@ -186,7 +191,7 @@ fun RestoreAccountDialog(
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testTag("restore_password_input"),
                         colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
                     )
 
@@ -213,11 +218,12 @@ fun RestoreAccountDialog(
                                 ) { isPasswordCorrect ->
                                     isVerifyingPassword = false
                                     if (!isPasswordCorrect) {
-                                        Toast.makeText(context, "❌ كلمة المرور غير صحيحة! تأكد منها أو اضغط طلب الاستعادة.", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, "❌ كلمة المرور غير صحيحة! تأكد منها أو اطلب الاستعادة من الإدارة.", Toast.LENGTH_LONG).show()
                                     } else {
                                         val provArea = currentMatch.provider?.area?.takeIf { it.isNotBlank() }
                                             ?: currentMatch.store?.cityId?.takeIf { it.isNotBlank() }
                                             ?: currentMatch.property?.cityId?.takeIf { it.isNotBlank() }
+                                            ?: currentMatch.job?.cityId?.takeIf { it.isNotBlank() }
                                             ?: "اليمن"
                                         viewModel.setUserSessionDetails(context, provName, cleanPhone, provArea)
 
@@ -225,7 +231,12 @@ fun RestoreAccountDialog(
                                         val resolvedAccountId = currentMatch.provider?.id
                                             ?: currentMatch.store?.id
                                             ?: currentMatch.property?.id
-                                            ?: ""
+                                            ?: currentMatch.job?.id
+                                            ?: "usr_$cleanPhone"
+
+                                        if (resolvedAccountId.isNotBlank()) {
+                                            viewModel._currentUserId.value = resolvedAccountId
+                                        }
 
                                         sp.edit()
                                             .putBoolean("is_account_logged_in", true)
@@ -241,40 +252,66 @@ fun RestoreAccountDialog(
 
                                         viewModel.setJoinRequestPhone(context, cleanPhone)
                                         if (viewModel.adminRole.value !in listOf("OWNER", "ADMIN", "SUPERVISOR")) {
-                                            viewModel.authViewModel._adminRole.value = when (resolvedAccountType) {
-                                                "PROVIDER" -> "PROVIDER"
-                                                "STORE", "RESTAURANT", "MEDICAL" -> "STORE_OWNER"
-                                                else -> "GUEST"
-                                            }
+                                            viewModel.authViewModel.setAdminRole(
+                                                when (resolvedAccountType.uppercase()) {
+                                                    "PROVIDER" -> "PROVIDER"
+                                                    "STORE", "RESTAURANT", "MEDICAL" -> "STORE_OWNER"
+                                                    "PROPERTY" -> "PROPERTY_OWNER"
+                                                    "JOB" -> "JOB_POSTER"
+                                                    else -> "GUEST"
+                                                }
+                                            )
                                         }
 
-                                        if (currentMatch.provider != null) {
-                                            if (currentMatch.provider.isDeleted) viewModel.restoreProvider(currentMatch.provider.id)
-                                            viewModel.selectedProvider = currentMatch.provider
-                                            viewModel.selectedStore = null
-                                            viewModel.selectedProperty = null
-                                            viewModel.selectedJob = null
-                                            targetSuccessScreen = AppScreens.DYNAMIC_PROFILE
-                                        } else if (currentMatch.store != null) {
-                                            if (currentMatch.store.isDeleted) viewModel.restoreStore(currentMatch.store.id)
-                                            viewModel.selectedStore = currentMatch.store
-                                            viewModel.selectedProvider = null
-                                            viewModel.selectedProperty = null
-                                            viewModel.selectedJob = null
-                                            targetSuccessScreen = AppScreens.DYNAMIC_PROFILE
-                                        } else if (currentMatch.property != null) {
-                                            if (currentMatch.property.isDeleted) viewModel.restoreProperty(currentMatch.property.id)
-                                            viewModel.selectedProperty = currentMatch.property
-                                            viewModel.selectedProvider = null
-                                            viewModel.selectedStore = null
-                                            viewModel.selectedJob = null
-                                            targetSuccessScreen = AppScreens.DYNAMIC_PROFILE
-                                        } else {
-                                            viewModel.selectedProvider = null
-                                            viewModel.selectedStore = null
-                                            viewModel.selectedProperty = null
-                                            viewModel.selectedJob = null
-                                            targetSuccessScreen = AppScreens.USER_BROWSE
+                                        when {
+                                            currentMatch.provider != null -> {
+                                                if (currentMatch.provider.isDeleted) viewModel.restoreProvider(currentMatch.provider.id)
+                                                viewModel.selectedProvider = currentMatch.provider
+                                                viewModel.selectedStore = null
+                                                viewModel.selectedProperty = null
+                                                viewModel.selectedJob = null
+                                                val pCat = currentMatch.provider.categoryId
+                                                val isMed = pCat.contains("medical", ignoreCase = true) ||
+                                                    pCat.contains("clinic", ignoreCase = true) ||
+                                                    pCat.contains("pharmacy", ignoreCase = true) ||
+                                                    currentMatch.provider.profession.contains("طب", ignoreCase = true)
+                                                targetSuccessScreen = if (isMed) AppScreens.MEDICAL_DASHBOARD else AppScreens.PROVIDER_DASHBOARD
+                                            }
+                                            currentMatch.store != null -> {
+                                                if (currentMatch.store.isDeleted) viewModel.restoreStore(currentMatch.store.id)
+                                                viewModel.selectedStore = currentMatch.store
+                                                viewModel.selectedProvider = null
+                                                viewModel.selectedProperty = null
+                                                viewModel.selectedJob = null
+                                                targetSuccessScreen = when (currentMatch.store.sectionId.lowercase()) {
+                                                    "restaurants", "restaurant" -> AppScreens.RESTAURANT_DASHBOARD
+                                                    "medical" -> AppScreens.MEDICAL_DASHBOARD
+                                                    else -> AppScreens.STORE_DASHBOARD
+                                                }
+                                            }
+                                            currentMatch.property != null -> {
+                                                if (currentMatch.property.isDeleted) viewModel.restoreProperty(currentMatch.property.id)
+                                                viewModel.selectedProperty = currentMatch.property
+                                                viewModel.selectedProvider = null
+                                                viewModel.selectedStore = null
+                                                viewModel.selectedJob = null
+                                                targetSuccessScreen = AppScreens.PROPERTY_DASHBOARD
+                                            }
+                                            currentMatch.job != null -> {
+                                                if (currentMatch.job.isDeleted) viewModel.restoreJob(currentMatch.job.id)
+                                                viewModel.selectedJob = currentMatch.job
+                                                viewModel.selectedProvider = null
+                                                viewModel.selectedStore = null
+                                                viewModel.selectedProperty = null
+                                                targetSuccessScreen = AppScreens.JOB_POSTER_DASHBOARD
+                                            }
+                                            else -> {
+                                                viewModel.selectedProvider = null
+                                                viewModel.selectedStore = null
+                                                viewModel.selectedProperty = null
+                                                viewModel.selectedJob = null
+                                                targetSuccessScreen = "CLIENT_DASHBOARD"
+                                            }
                                         }
 
                                         restorePasswordInput = ""
@@ -284,10 +321,10 @@ fun RestoreAccountDialog(
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).height(48.dp).testTag("restore_confirm_button"),
                             enabled = !isVerifyingPassword && !isRequestingReset
                         ) {
-                            Text(if (isVerifyingPassword) "جاري التحقق..." else "تأكيد ودخول 🔓", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text(if (isVerifyingPassword) "جاري التحقق..." else "تأكيد ودخول 🔓", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
                         }
                         Button(
                             onClick = {
@@ -296,10 +333,39 @@ fun RestoreAccountDialog(
                                 restoreStep = 1
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).height(48.dp),
                             enabled = !isVerifyingPassword && !isRequestingReset
                         ) {
-                            Text("رجوع", color = Color.White, fontSize = 11.sp)
+                            Text("رجوع", color = Color.White, fontSize = 11.5.sp)
+                        }
+                    }
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                    Text("نسيت كلمة المرور؟ اختر وسيلة استلام كلمة المرور المؤقتة من الإدارة:", fontSize = 10.5.sp, color = Color.LightGray)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val channels = listOf(
+                            "IN_APP_CHAT" to "التطبيق",
+                            "WHATSAPP" to "واتساب",
+                            "TELEGRAM" to "تيليجرام"
+                        )
+                        channels.forEach { (code, label) ->
+                            val selected = selectedChannel == code
+                            OutlinedButton(
+                                onClick = { selectedChannel = code },
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, if (selected) themeColors.accent else Color.Gray.copy(alpha = 0.4f)),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (selected) themeColors.accent.copy(alpha = 0.2f) else Color.Transparent,
+                                    contentColor = if (selected) themeColors.accent else Color.White
+                                ),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                                modifier = Modifier.weight(1f).height(48.dp)
+                            ) {
+                                Text(label, fontSize = 10.5.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                            }
                         }
                     }
 
@@ -311,7 +377,13 @@ fun RestoreAccountDialog(
                                 return@Button
                             }
                             isRequestingReset = true
-                            viewModel.requestPasswordReset(context, cleanPhone, provName, match?.type ?: "USER") { success ->
+                            viewModel.requestPasswordReset(
+                                context = context,
+                                phone = cleanPhone,
+                                name = provName,
+                                accountType = match?.type ?: "USER",
+                                channel = selectedChannel
+                            ) { success ->
                                 isRequestingReset = false
                                 if (success) {
                                     Toast.makeText(context, "⏳ تم إرسال طلب استعادة كلمة المرور للإدارة بنجاح!", Toast.LENGTH_LONG).show()
@@ -323,13 +395,13 @@ fun RestoreAccountDialog(
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = themeColors.secondary),
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp).testTag("restore_request_admin_button"),
                         enabled = !isRequestingReset && !isVerifyingPassword
                     ) {
                         Text(
-                            if (isRequestingReset) "جاري إرسال الطلب..." else "💬 نسيت كلمة المرور؟ طلب الاستعادة من الأدمن",
+                            if (isRequestingReset) "جاري إرسال الطلب..." else "💬 طلب الاستعادة من الأدمن عبر القناة المختارة",
                             color = Color.White,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }

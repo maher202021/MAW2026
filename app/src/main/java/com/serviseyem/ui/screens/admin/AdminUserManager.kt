@@ -41,6 +41,7 @@ fun AdminUserManager(
     modifier: Modifier = Modifier,
     isPanelMode: Boolean = false
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -168,11 +169,18 @@ fun AdminUserManager(
                             val csv = buildString {
                                 appendLine("Name,Phone,Role,City")
                                 rawUsersList.forEach { u ->
-                                    appendLine("${u["name"]},${u["phone"]},${u["role"]},${u["city"]}")
+                                    appendLine("\"${u["name"] ?: ""}\",\"${u["phone"] ?: ""}\",\"${u["role"] ?: ""}\",\"${u["city"] ?: ""}\"")
                                 }
                             }
-                            adminViewModel.recordAuditLog("EXPORT_USERS", "تصدير المستخدمين")
-                            scope.launch { snackbarHostState.showSnackbar("📥 تم تصدير بيانات المستخدمين بنجاح") }
+                            com.serviseyem.ui.screens.admin.components.writeTextFileToExportsAndShare(
+                                context = context,
+                                fileName = "yemen_users_${System.currentTimeMillis()}.csv",
+                                content = csv,
+                                mimeType = "text/csv",
+                                chooserTitle = "تصدير ومشاركة قائمة المستخدمين (CSV)"
+                            )
+                            adminViewModel.recordAuditLog("EXPORT_USERS", "تصدير المستخدمين (${rawUsersList.size})")
+                            scope.launch { snackbarHostState.showSnackbar("📥 تم إنشاء ومشاركة ملف المستخدمين بنجاح") }
                         }) {
                             Icon(Icons.Default.Share, contentDescription = "تصدير", tint = themeColors.accent)
                         }

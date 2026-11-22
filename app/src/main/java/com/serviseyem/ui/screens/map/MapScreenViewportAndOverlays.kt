@@ -60,6 +60,9 @@ internal fun MapMainViewport(
     coroutineScope: CoroutineScope,
     snackbarHostState: SnackbarHostState,
     haptic: HapticFeedback,
+    maxZoom: Int = 22,
+    showSatMenu: Boolean = true,
+    showMeasureTool: Boolean = true,
     themeColors: VisualThemePalette
 ) {
     if (state.isRadarMode) {
@@ -112,6 +115,9 @@ internal fun MapMainViewport(
                 selectedEntity = state.selectedEntity,
                 mapMode = state.currentMapMode,
                 currentMapLayer = state.currentMapLayer,
+                maxZoom = maxZoom,
+                showSatMenu = showSatMenu,
+                showMeasureTool = showMeasureTool,
                 tiltAngle = state.tiltAngle,
                 onProviderSelected = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)

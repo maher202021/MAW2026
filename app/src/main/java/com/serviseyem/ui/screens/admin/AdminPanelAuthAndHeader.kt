@@ -46,6 +46,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -453,10 +454,11 @@ internal fun AdminDashboardTopBar(
 internal fun AdminNavigationTabsBar(
     adminRole: String,
     supervisorPermissions: List<String>,
+    adminPermissionsMatrix: List<String> = emptyList(),
     themeColors: VisualThemePalette,
     state: AdminPanelState
 ) {
-    val allTabs = remember(adminRole, supervisorPermissions) {
+    val allTabs = remember(adminRole, supervisorPermissions, adminPermissionsMatrix) {
         val baseTabs = mutableListOf(
             Triple("REG_REQ", "2️⃣ ⌛ طلبات الانضمام والاعتماد", "OPERATIONS"),
             Triple("MANUAL_ADD", "3️⃣ ➕ الإضافة اليدوية", "ENTITIES"),
@@ -509,10 +511,13 @@ internal fun AdminNavigationTabsBar(
             Triple("DATA_MANAGEMENT", "🏢 الإدارة الشاملة للمنشآت", "ENTITIES")
         )
 
-        val filteredByRole = if (adminRole == "SUPERVISOR" && supervisorPermissions.isNotEmpty()) {
-            baseTabs.filter { it.first in supervisorPermissions }
-        } else {
-            baseTabs
+        val filteredByRole = baseTabs.filter { tab ->
+            com.serviseyem.utils.PermissionGuard.hasTabAccess(
+                roleStr = adminRole,
+                tabId = tab.first,
+                supervisorPermissions = supervisorPermissions,
+                adminMatrix = adminPermissionsMatrix
+            )
         }
 
         val finalTabs = filteredByRole.toMutableList()
@@ -520,6 +525,12 @@ internal fun AdminNavigationTabsBar(
             finalTabs.add(0, Triple("BACKDOOR", "1️⃣ ⚙️ البوابة الخلفية (BACKDOOR)", "SECURITY"))
         }
         finalTabs
+    }
+
+    LaunchedEffect(allTabs) {
+        if (allTabs.isNotEmpty() && allTabs.none { it.first == state.activeSubTab }) {
+            state.activeSubTab = allTabs.first().first
+        }
     }
 
     val filteredTabs = remember(state.selectedGroupFilter, allTabs) {

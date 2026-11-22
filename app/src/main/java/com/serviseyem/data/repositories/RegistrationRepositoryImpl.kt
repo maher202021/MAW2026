@@ -34,42 +34,50 @@ class RegistrationRepositoryImpl(
     private val deduplicator = NotificationDeduplicator(context)
 
     private suspend fun checkExistingPendingRequest(phone: String): Boolean = coroutineScope {
-        val cleanPhone = ValidatePhoneUseCase.normalizePhone(phone)
-        if (cleanPhone.isBlank()) return@coroutineScope false
+        val cleanPhone = ValidatePhoneUseCase.normalizePhone(phone).filter { it.isDigit() }
+        if (cleanPhone.length < 7) return@coroutineScope false
 
-        // 1. فحص طلبات الانضمام المعلقة أولاً (استعلام واحد فقط محدود بواحد)
-        val hasPendingJoin = runCatching {
-            !firestore.collection(AppConstants.COL_JOIN_REQUESTS)
-                .whereEqualTo("phone", cleanPhone)
-                .whereEqualTo("status", "PENDING")
-                .limit(1)
-                .get()
-                .await()
-                .isEmpty
-        }.getOrDefault(false)
+        val variants = listOf(cleanPhone, "0$cleanPhone", "+967$cleanPhone", "967$cleanPhone").distinct()
 
-        if (hasPendingJoin) return@coroutineScope true
+        // 1. فحص طلبات الانضمام المعلقة أو المعتمدة عبر صيغ الرقم
+        for (ph in variants) {
+            val hasJoin = runCatching {
+                val snap = firestore.collection(AppConstants.COL_JOIN_REQUESTS)
+                    .whereEqualTo("phone", ph)
+                    .get()
+                    .await()
+                snap.documents.any { doc ->
+                    val st = (doc.getString("status") ?: doc.getString("approvalStatus") ?: "").uppercase()
+                    st in listOf("PENDING", "APPROVED", "ACCEPTED")
+                }
+            }.getOrDefault(false)
+            if (hasJoin) return@coroutineScope true
+        }
 
-        // 2. فحص سريع للمستخدمين المسجلين عبر المعرف المباشر (Direct Document Get - يستهلك قراءة واحدة فقط)
-        val hasDirectUser = runCatching {
+        // 2. فحص مباشر للمعرفات عبر صيغ الكيانات المعتمدة
+        val hasDirectEntity = runCatching {
             firestore.collection("registered_users").document(cleanPhone).get().await().exists() ||
                 firestore.collection("users").document(cleanPhone).get().await().exists() ||
-                firestore.collection("providers").document("p_$cleanPhone").get().await().exists()
+                firestore.collection("providers").document("prov_$cleanPhone").get().await().exists() ||
+                firestore.collection("providers").document("p_$cleanPhone").get().await().exists() ||
+                firestore.collection("stores").document("store_$cleanPhone").get().await().exists() ||
+                firestore.collection("properties").document("prop_$cleanPhone").get().await().exists() ||
+                firestore.collection("jobs").document("job_$cleanPhone").get().await().exists() ||
+                firestore.collection("job_seekers").document(cleanPhone).get().await().exists()
         }.getOrDefault(false)
 
-        if (hasDirectUser) return@coroutineScope true
+        if (hasDirectEntity) return@coroutineScope true
 
-        // 3. فحص احتياطي موحد فقط عند عدم وجود وثيقة مباشرة
-        val hasIndexedUser = runCatching {
-            !firestore.collection("registered_users")
-                .whereEqualTo("phone", cleanPhone)
-                .limit(1)
-                .get()
-                .await()
-                .isEmpty
-        }.getOrDefault(false)
+        // 3. فحص احتياطي موحد في registered_users / providers / stores / pending_providers
+        for (ph in variants) {
+            val hasIndexedUser = runCatching {
+                !firestore.collection("registered_users").whereEqualTo("phone", ph).limit(1).get().await().isEmpty ||
+                    !firestore.collection("pending_providers").whereEqualTo("phone", ph).whereEqualTo("status", "PENDING").limit(1).get().await().isEmpty
+            }.getOrDefault(false)
+            if (hasIndexedUser) return@coroutineScope true
+        }
 
-        hasIndexedUser
+        false
     }
 
     private suspend fun sendAdminJoinNotification(requestId: String, applicantName: String, phone: String, type: String) {

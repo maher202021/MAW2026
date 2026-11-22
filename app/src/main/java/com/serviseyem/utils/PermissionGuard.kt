@@ -43,41 +43,178 @@ object PermissionGuard {
     const val PERMISSION_JOBS = "MANAGE_JOBS"
     const val PERMISSION_CUSTOM_TABS = "MANAGE_CUSTOM_TABS"
 
+    private val legacyPermissionAliases: Map<String, List<String>> = mapOf(
+        PERMISSION_BOOKINGS to listOf("BOOKINGS"),
+        PERMISSION_RESTAURANTS to listOf("RESTAURANTS"),
+        PERMISSION_NOTIFICATIONS to listOf("NOTIFICATIONS"),
+        PERMISSION_BANNERS to listOf("BANNERS"),
+        PERMISSION_REG_FORMS to listOf("REG_FORMS_MANAGER"),
+        PERMISSION_QUICK_SERVICE to listOf("BOOKINGS", "REG_REQ"),
+        PERMISSION_CHAT to listOf("CHATS", "ADVANCED_CHAT"),
+        PERMISSION_THEMES to listOf("COLORS", "GOLDEN_ICONS"),
+        PERMISSION_SECTIONS to listOf("NEW_SECTION_CREATOR", "CATEGORIES"),
+        PERMISSION_MAP to listOf("MAP_CONTROLS"),
+        PERMISSION_STORES to listOf("STORES"),
+        PERMISSION_MEDICAL to listOf("MEDICAL"),
+        PERMISSION_PROPERTIES to listOf("PROPERTIES"),
+        PERMISSION_JOBS to listOf("JOBS", "APPLICANTS"),
+        PERMISSION_CUSTOM_TABS to listOf("CUSTOM_TABS")
+    )
+
+    private val tabCategoryMap: Map<String, String> = mapOf(
+        "BACKDOOR" to "OWNER_CONTROL",
+        "REG_REQ" to "REG_REQ",
+        "MANUAL_ADD" to "MANUAL_ADD",
+        "STORES" to "STORES",
+        "RESTAURANTS" to "RESTAURANTS",
+        "MEDICAL" to "MEDICAL",
+        "PROPERTIES" to "PROPERTIES",
+        "JOBS" to "JOBS",
+        "APPLICANTS" to "APPLICANTS",
+        "STATS" to "STATS",
+        "BOOKINGS" to "BOOKINGS",
+        "CHATS" to "CHATS",
+        "PROVIDERS" to "PROVIDERS",
+        "PASSWORDS_RESET" to "PASSWORDS_RESET",
+        "BANNERS" to "BANNERS",
+        "CATEGORIES" to "CATEGORIES",
+        "CITIES" to "CITIES",
+        "COMPLAINTS" to "COMPLAINTS",
+        "VIP" to "VIP",
+        "SUPERVISORS" to "SUPERVISORS",
+        "COLORS" to "COLORS",
+        "NOTIFICATIONS" to "NOTIFICATIONS",
+        "BACKUP" to "BACKUP",
+        "CLEAN" to "CLEAN",
+        "REVIEWS" to "REVIEWS",
+        "CALLS" to "CALLS",
+        "COUPONS" to "COUPONS",
+        "BLOCKED" to "BLOCKED",
+        "DELETED" to "DELETED",
+        "PAYMENTS" to "PAYMENTS",
+        "CUSTOM_TABS" to "CUSTOM_TABS",
+        "GOLDEN_ICONS" to "GOLDEN_ICONS",
+        "ADVANCED_CHAT" to "ADVANCED_CHAT",
+        "CARD_CUSTOMIZER" to "CARD_CUSTOMIZER",
+        "NEW_SECTION_CREATOR" to "NEW_SECTION_CREATOR",
+        "REG_FORMS_MANAGER" to "REG_FORMS_MANAGER",
+        "ROLES_PERMISSIONS" to "ROLES_PERMISSIONS",
+        "MAP_CONTROLS" to "MAP_CONTROLS",
+        "AI_ASSISTANT_PANEL" to "OWNER_CONTROL",
+        "ADMIN_PAYMENT_PANEL" to "PAYMENTS",
+        "VOICE_CALLS_PANEL" to "CALLS",
+        "QUICK_SERVICE" to "BOOKINGS",
+        "FINANCIAL_REPORTS" to "STATS",
+        "STORAGE_QUOTA" to "BACKUP",
+        "SECURITY_AUDIT" to "ROLES_PERMISSIONS",
+        "SYSTEM_SETTINGS" to "OWNER_CONTROL",
+        "AUTO_DISPATCH" to "BOOKINGS",
+        "API_MANAGEMENT" to "OWNER_CONTROL",
+        "MAINTENANCE_MODE" to "OWNER_CONTROL",
+        "DATA_MANAGEMENT" to "STORES"
+    )
+
+    private fun listContainsPermissionOrCategory(
+        granted: List<String>,
+        permission: String
+    ): Boolean {
+        if (granted.contains("ALL") || granted.contains("ALL_538")) return true
+        if (granted.contains(permission)) return true
+
+        legacyPermissionAliases[permission]?.forEach { tabKey ->
+            if (granted.contains(tabKey)) return true
+            val hasAnyInCat = AdminPermissionsRegistry.allPermissions.any {
+                it.category.tabKey == tabKey && granted.contains(it.key)
+            }
+            if (hasAnyInCat) return true
+        }
+
+        val permItem = AdminPermissionsRegistry.allPermissions.find {
+            it.key == permission || it.id == permission
+        }
+        if (permItem != null && granted.contains(permItem.category.tabKey)) {
+            return true
+        }
+
+        val hasDirectCategoryKey = AdminPermissionsRegistry.allPermissions.any {
+            it.category.tabKey == permission && granted.contains(it.key)
+        }
+        if (hasDirectCategoryKey) return true
+
+        return false
+    }
+
     /**
      * Verifies if the role and assigned permission set has access to a specific permission key.
-     * Owner (Main Admin) has ALL 320 permissions automatically.
+     * Owner / Main Admin / Super Admin have all permissions automatically.
+     * Supervisor MUST have the permission (or its category/tabKey) in supervisorGrantedPermissions.
+     * Admin follows adminMatrix when a custom admin matrix has been configured in Firestore.
      */
     fun hasPermission(
         role: AdminRole,
         permission: String,
-        supervisorGrantedPermissions: List<String> = emptyList()
+        supervisorGrantedPermissions: List<String> = emptyList(),
+        adminMatrix: List<String> = emptyList()
     ): Boolean {
         if (role == AdminRole.GUEST) return false
-        if (role == AdminRole.OWNER || role == AdminRole.SUPER_ADMIN || role == AdminRole.MAIN_ADMIN) return true
-
-        if (supervisorGrantedPermissions.contains("ALL") || supervisorGrantedPermissions.contains("ALL_538")) return true
-
-        // Admin and Supervisor have full permission by default unless explicit custom list restricts it
-        if (role == AdminRole.ADMIN || role == AdminRole.SUPERVISOR) {
-            if (supervisorGrantedPermissions.isEmpty()) return true
-            if (supervisorGrantedPermissions.contains(permission)) return true
+        if (role == AdminRole.OWNER || role == AdminRole.SUPER_ADMIN || role == AdminRole.MAIN_ADMIN) {
+            return true
         }
 
-        // Supervisor permissions check
-        if (supervisorGrantedPermissions.contains(permission)) return true
-
-        // Category-level check (e.g. if supervisor has "MANAGE_BOOKINGS", they can access all booking permissions)
-        val permItem = AdminPermissionsRegistry.allPermissions.find { it.key == permission || it.id == permission }
-        if (permItem != null) {
-            val mainCatKey = permItem.category.tabKey
-            if (supervisorGrantedPermissions.contains(mainCatKey)) return true
+        if (role == AdminRole.ADMIN) {
+            // If no custom matrix is saved for ADMIN yet, ADMIN has access;
+            // once saved in Firestore (even if empty when deliberately restricted, or a subset), enforce it.
+            return if (adminMatrix.isEmpty() && supervisorGrantedPermissions.isEmpty()) {
+                true
+            } else {
+                val effective = adminMatrix.ifEmpty { supervisorGrantedPermissions }
+                listContainsPermissionOrCategory(effective, permission)
+            }
         }
 
-        return role == AdminRole.ADMIN || role == AdminRole.SUPER_ADMIN || role == AdminRole.OWNER || role == AdminRole.MAIN_ADMIN || role == AdminRole.SUPERVISOR
+        // SUPERVISOR and specialized roles (SUPPORT, AUDITOR, OPERATIONS)
+        if (supervisorGrantedPermissions.isEmpty()) return false
+        return listContainsPermissionOrCategory(supervisorGrantedPermissions, permission)
     }
 
-    fun hasPermission(role: String, permission: String, grantedPermissions: List<String> = emptyList()): Boolean {
-        return hasPermission(RoleManager.fromRoleString(role), permission, grantedPermissions)
+    fun hasPermission(
+        role: String,
+        permission: String,
+        grantedPermissions: List<String> = emptyList(),
+        adminMatrix: List<String> = emptyList()
+    ): Boolean {
+        return hasPermission(RoleManager.fromRoleString(role), permission, grantedPermissions, adminMatrix)
+    }
+
+    fun hasTabAccess(
+        roleStr: String,
+        tabId: String,
+        supervisorPermissions: List<String> = emptyList(),
+        adminMatrix: List<String> = emptyList()
+    ): Boolean {
+        val normalizedRole = roleStr.uppercase().trim()
+        if (normalizedRole == "OWNER" || normalizedRole == "MAIN_ADMIN" || normalizedRole == "SUPER_ADMIN") {
+            return true
+        }
+        if (normalizedRole == "GUEST") return false
+
+        val categoryTabKey = tabCategoryMap[tabId] ?: tabId
+        val roleEnum = RoleManager.fromRoleString(normalizedRole)
+        if (roleEnum == AdminRole.ADMIN) {
+            if (adminMatrix.isEmpty()) return true
+            if (adminMatrix.contains(tabId) || adminMatrix.contains(categoryTabKey)) return true
+            return AdminPermissionsRegistry.allPermissions.any {
+                it.category.tabKey == categoryTabKey && adminMatrix.contains(it.key)
+            }
+        }
+
+        // Strict check for SUPERVISOR and other roles
+        if (supervisorPermissions.isEmpty()) return false
+        if (supervisorPermissions.contains("ALL") || supervisorPermissions.contains("ALL_538")) return true
+        if (supervisorPermissions.contains(tabId) || supervisorPermissions.contains(categoryTabKey)) return true
+        return AdminPermissionsRegistry.allPermissions.any {
+            it.category.tabKey == categoryTabKey && supervisorPermissions.contains(it.key)
+        }
     }
 
     @Composable

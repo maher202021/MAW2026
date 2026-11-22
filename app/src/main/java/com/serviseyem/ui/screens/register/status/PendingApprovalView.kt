@@ -1,16 +1,16 @@
 package com.serviseyem.ui.screens.register.status
 
 import androidx.compose.foundation.BorderStroke
-import com.serviseyem.ui.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -18,18 +18,57 @@ import androidx.compose.ui.unit.sp
 import com.serviseyem.utils.VisualThemePalette
 
 /**
- * ⏳ PendingApprovalView - عرض شاشة طلب قيد المراجعة والتدقيق الإداري
+ * PendingApprovalView - عرض شاشة طلب قيد المراجعة والتدقيق الإداري مع تأكيد قبل الإلغاء
  */
 @Composable
 fun PendingApprovalView(
     title: String = "طلب انضمامك قيد المراجعة ⏳",
-    message: String = "تم استلام طلبك بنجاح وهو قيد التدقيق الإداري والتأكد من المستندات. فور الموافقة سيتم تفعيل حسابك فوراً.",
+    message: String = "تم استلام طلبك بنجاح وهو قيد التدقيق الإداري ومراجعة البيانات من قِبل الإدارة. فور الموافقة سيتم تفعيل حسابك فوراً.",
     detailsTitle: String = "📋 تفاصيل الطلب المقدم:",
     detailsList: List<Pair<String, String>>,
     onCancelRequest: () -> Unit,
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
 ) {
+    var showCancelConfirmDialog by remember { mutableStateOf(false) }
+
+    if (showCancelConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelConfirmDialog = false },
+            containerColor = Color(0xFF1E293B),
+            title = {
+                Text("تأكيد إلغاء الطلب", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            },
+            text = {
+                Text(
+                    "هل أنت متأكد من إلغاء طلب التسجيل الحالي والعودة لشاشة التسجيل؟ سيتم حذف الطلب المعلق.",
+                    color = Color.LightGray,
+                    fontSize = 12.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showCancelConfirmDialog = false
+                        onCancelRequest()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                ) {
+                    Text("نعم، إلغاء الطلب", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showCancelConfirmDialog = false },
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                ) {
+                    Text("تراجع", color = Color.White, fontSize = 12.sp)
+                }
+            }
+        )
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -68,6 +107,20 @@ fun PendingApprovalView(
                 lineHeight = 16.sp
             )
 
+            // خطوات التتبع الواضحة
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = 0.22f), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("✅ 1. تم الإرسال", fontSize = 10.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+                Text("⏳ 2. مراجعة الأدمن", fontSize = 10.sp, color = Color(0xFFF59E0B), fontWeight = FontWeight.Bold)
+                Text("🔒 3. تفعيل الحساب", fontSize = 10.sp, color = Color.Gray)
+            }
+
             HorizontalDivider(color = Color.White.copy(alpha = 0.1f), thickness = 1.dp)
 
             Card(
@@ -87,14 +140,15 @@ fun PendingApprovalView(
             Spacer(modifier = Modifier.height(6.dp))
 
             Button(
-                onClick = onCancelRequest,
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                shape = RoundedCornerShape(8.dp),
+                onClick = { showCancelConfirmDialog = true },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF475569)),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(40.dp)
+                    .height(48.dp)
+                    .testTag("pending_cancel_button")
             ) {
-                Text("❌ إلغاء والعودة لشاشة التسجيل", color = Color.White, fontSize = 11.sp)
+                Text("❌ إلغاء والعودة لشاشة التسجيل", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

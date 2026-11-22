@@ -586,13 +586,25 @@ fun approveRequest(request: PendingProviderEntity) {
             .ifBlank { request.phone.trim().replace(" ", "").replace("+", "") }
         val resolvedPasswordHash = request.passwordHash.ifBlank { request.password }.let { rawOrHash ->
             val trimmed = rawOrHash.trim()
-            if (trimmed.isNotBlank() && !trimmed.contains(":")) {
+            if (trimmed.isNotBlank() && !com.serviseyem.utils.SecureHasher.isValidHash(trimmed)) {
                 com.serviseyem.utils.PasswordHasher.hash(trimmed)
             } else {
                 trimmed
             }
         }
-        
+
+        fun resolveDecryptedPhoto(raw: String): String {
+            val trimmed = raw.trim()
+            if (trimmed.isBlank()) return ""
+            return if (trimmed.startsWith("gcm:") || trimmed.startsWith("gcmx:") || trimmed.startsWith("enc::")) {
+                com.serviseyem.utils.SecurityCryptoUtils.decrypt(trimmed).ifBlank {
+                    com.serviseyem.utils.SecurityCryptoUtils.decryptCrossDevice(trimmed)
+                }
+            } else {
+                trimmed
+            }
+        }
+
         // Helper to remove from pending_providers permanently
         val clearPendingFromDbAndState = {
             db.collection("pending_providers").document(request.id).delete()
@@ -604,7 +616,7 @@ fun approveRequest(request: PendingProviderEntity) {
                     }
                 }
             }
-            _pendingProviders.value = _pendingProviders.value.filter { 
+            _pendingProviders.value = _pendingProviders.value.filter {
                 it.id != request.id && it.id != cleanPhone && (cleanPhone.isEmpty() || com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(it.phone).ifBlank { it.phone.trim().replace(" ", "").replace("+", "") } != cleanPhone)
             }
         }
@@ -624,6 +636,9 @@ fun approveRequest(request: PendingProviderEntity) {
             db.collection("join_requests").document(cleanPhone).update(joinReqUpdates)
         }
 
+        val resolvedOwnerName = request.ownerName.ifBlank { request.name }.trim()
+        val resolvedDescription = request.description.ifBlank { request.specialization }.trim()
+
         if (request.profession == "STORE_OWNER" || request.categoryId.uppercase() == "STORE" || request.categoryId.uppercase() == "RESTAURANT" || request.categoryId.uppercase() == "MEDICAL") {
             val storeId = "store_" + cleanPhone
             val resolvedCategory = when (request.categoryId.uppercase()) {
@@ -633,23 +648,34 @@ fun approveRequest(request: PendingProviderEntity) {
             }
             val resolvedSectionId = if (request.categoryId.uppercase() == "RESTAURANT") "restaurants" else if (request.categoryId.uppercase() == "MEDICAL") "medical" else "stores"
             viewModelScope.launch {
-                val resolvedStoreDocUrl = if (request.idPhotoBase64.isNotBlank()) {
+                val rawIdDoc = resolveDecryptedPhoto(request.idPhotoBase64)
+                val rawSelfie = resolveDecryptedPhoto(request.selfiePhotoBase64)
+                val resolvedStoreDocUrl = if (rawIdDoc.isNotBlank()) {
                     com.serviseyem.utils.FirebaseStorageUploader.resolveBase64ToStorageUrl(
-                        request.idPhotoBase64,
+                        rawIdDoc,
                         "stores/$storeId/verification_doc.pdf"
+                    )
+                } else ""
+                val resolvedLogoUrl = if (rawSelfie.isNotBlank()) {
+                    com.serviseyem.utils.FirebaseStorageUploader.resolveBase64ToStorageUrl(
+                        rawSelfie,
+                        com.serviseyem.utils.FirebaseStorageUploader.getStoreLogoPath(storeId)
                     )
                 } else ""
                 val newStore = com.serviseyem.data.StoreEntity(
                     id = storeId,
                     name = request.name,
-                    description = request.specialization.ifBlank { "محل تجاري معتمد وموثق" },
+                    description = resolvedDescription.ifBlank { "منشأة تجارية معتمدة وموثقة" },
                     ownerId = cleanPhone.ifBlank { request.phone },
-                    ownerName = request.name,
+                    ownerName = resolvedOwnerName,
                     phone = cleanPhone.ifBlank { request.phone },
                     localNeighborhood = request.localNeighborhood,
                     cityId = finalCityId,
                     sectionId = resolvedSectionId,
                     categoryId = resolvedCategory,
+                    logoImage = resolvedLogoUrl,
+                    images = request.workPhotosBase64,
+                    workingHours = request.workingHours.ifBlank { "9:00 AM - 10:00 PM" },
                     isActive = true,
                     isApproved = true,
                     isPinned = false,
@@ -664,9 +690,9 @@ fun approveRequest(request: PendingProviderEntity) {
                     db.collection("stores").document(cleanPhone).delete()
                 }
                 db.collection("stores").document(storeId).set(newStore)
-                
+
                 // Instant Local Sync for stores
-                _stores.value = _stores.value.filter { it.id != storeId && it.id != request.id && it.phone.trim().replace(" ", "").replace("+", "") != cleanPhone } + newStore
+                _stores.value = _stores.value.filter { it.id != storeId && it.id != request.id && com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(it.phone) != cleanPhone } + newStore
             }
 
             val (approvalTitle, approvalMsg, toastMsg) = when (request.categoryId.uppercase()) {
@@ -691,27 +717,38 @@ fun approveRequest(request: PendingProviderEntity) {
                 title = approvalTitle,
                 message = approvalMsg,
                 targetType = "USER",
-                targetValue = request.phone
+                targetValue = cleanPhone.ifBlank { request.phone }
             )
             mainViewModel.triggerNotification(toastMsg)
         } else if (request.profession == "PROPERTY_OWNER" || request.categoryId.uppercase() == "PROPERTY") {
             val propId = "prop_" + cleanPhone
-            val propPrice = try { request.chatRecipientId.toDouble() } catch(e: Exception) { 0.0 }
+            val propPrice = try { request.chatRecipientId.toDouble() } catch (e: Exception) { 0.0 }
             viewModelScope.launch {
-                val resolvedPropDocUrl = if (request.idPhotoBase64.isNotBlank()) {
+                val rawIdDoc = resolveDecryptedPhoto(request.idPhotoBase64)
+                val rawSelfie = resolveDecryptedPhoto(request.selfiePhotoBase64)
+                val resolvedPropDocUrl = if (rawIdDoc.isNotBlank()) {
                     com.serviseyem.utils.FirebaseStorageUploader.resolveBase64ToStorageUrl(
-                        request.idPhotoBase64,
+                        rawIdDoc,
                         "properties/$propId/verification_doc.pdf"
                     )
                 } else ""
+                val resolvedCoverUrl = if (rawSelfie.isNotBlank()) {
+                    com.serviseyem.utils.FirebaseStorageUploader.resolveBase64ToStorageUrl(
+                        rawSelfie,
+                        com.serviseyem.utils.FirebaseStorageUploader.getPropertyPhotoPath(propId, 0)
+                    )
+                } else ""
+                val propImages = (request.workPhotosBase64 + listOfNotNull(resolvedCoverUrl.takeIf { it.isNotBlank() })).distinct()
                 val newProp = com.serviseyem.data.PropertyEntity(
                     id = propId,
                     title = request.name,
-                    description = request.specialization.ifBlank { "عقار معلن وموثق" },
+                    description = resolvedDescription.ifBlank { "عقار معلن وموثق" },
                     phone = cleanPhone.ifBlank { request.phone },
                     ownerId = cleanPhone.ifBlank { request.phone },
+                    ownerName = resolvedOwnerName,
                     localNeighborhood = request.localNeighborhood,
                     cityId = finalCityId,
+                    images = propImages,
                     isActive = true,
                     isApproved = true,
                     isPinned = false,
@@ -727,16 +764,16 @@ fun approveRequest(request: PendingProviderEntity) {
                     db.collection("properties").document(cleanPhone).delete()
                 }
                 db.collection("properties").document(propId).set(newProp)
-                
+
                 // Instant Local Sync for properties
-                _properties.value = _properties.value.filter { it.id != propId && it.id != request.id && it.phone.trim().replace(" ", "").replace("+", "") != cleanPhone } + newProp
+                _properties.value = _properties.value.filter { it.id != propId && it.id != request.id && com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(it.phone) != cleanPhone } + newProp
             }
 
             mainViewModel.addNotification(
                 title = "🎉 تهانينا! تم تفعيل إعلان عقارك بنجاح",
                 message = "مرحباً بك، لقد تم مراجعة وتفعيل عقارك '${request.name}' بنجاح في دليل العقارات المعتمد! يمكنك تعديله وإدارته ورؤية تعليقات العملاء مباشرة من شاشة الانضمام.",
                 targetType = "USER",
-                targetValue = request.phone
+                targetValue = cleanPhone.ifBlank { request.phone }
             )
             mainViewModel.triggerNotification("✅ تم تفعيل عقار ${request.name}")
         } else if (request.profession == "JOB_POSTER" || request.categoryId.uppercase() == "JOB") {
@@ -745,12 +782,15 @@ fun approveRequest(request: PendingProviderEntity) {
                 id = jobId,
                 title = request.customCategoryName.ifBlank { "وظيفة - " + request.name },
                 companyName = request.name,
+                managerName = resolvedOwnerName,
                 phone = cleanPhone.ifBlank { request.phone },
                 cityId = finalCityId,
                 address = request.localNeighborhood,
-                description = request.specialization.ifBlank { "إعلان وظيفة معتمد وموثق" },
+                description = resolvedDescription.ifBlank { "إعلان وظيفة معتمد وموثق" },
                 isActive = true,
-                isApproved = true
+                isApproved = true,
+                ownerId = cleanPhone.ifBlank { request.phone },
+                passwordHash = resolvedPasswordHash
             )
             if (request.id != jobId) {
                 db.collection("jobs").document(request.id).delete()
@@ -759,105 +799,147 @@ fun approveRequest(request: PendingProviderEntity) {
                 db.collection("jobs").document(cleanPhone).delete()
             }
             db.collection("jobs").document(jobId).set(newJob)
-            
+
             // Instant Local Sync for jobs: clean up unapproved version and set approved job
-            _jobs.value = _jobs.value.filter { it.id != jobId && it.id != request.id && it.phone.trim().replace(" ", "").replace("+", "") != cleanPhone } + newJob
+            _jobs.value = _jobs.value.filter { it.id != jobId && it.id != request.id && com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(it.phone) != cleanPhone } + newJob
 
             mainViewModel.addNotification(
                 title = "🎉 تهانينا! تم تفعيل إعلان وظيفتك بنجاح",
                 message = "مرحباً بك، لقد تم مراجعة ونشر إعلان وظيفتك '${request.name}' بنجاح! يمكنك إدارتها الآن مباشرة من شاشة الانضمام.",
                 targetType = "USER",
-                targetValue = request.phone
+                targetValue = cleanPhone.ifBlank { request.phone }
             )
             mainViewModel.triggerNotification("✅ تم تفعيل إعلان وظيفة ${request.name}")
         } else if (request.profession == "JOB_SEEKER" || request.categoryId.uppercase() == "JOB_SEEKER") {
-            val seekerMap = mapOf(
-                "id" to request.id,
+            val seekerDocId = cleanPhone.ifBlank { request.id }
+            val seekerMap = mutableMapOf<String, Any>(
+                "id" to seekerDocId,
+                "ownerId" to seekerDocId,
                 "name" to request.name,
                 "phone" to cleanPhone,
                 "profession" to request.customCategoryName.ifBlank { "باحث عن عمل" },
                 "city" to request.area,
+                "area" to request.localNeighborhood,
+                "description" to resolvedDescription,
+                "experienceYears" to request.experienceYears,
                 "isApproved" to true,
                 "status" to "APPROVED",
-                "createdAt" to System.currentTimeMillis()
+                "approvalStatus" to "APPROVED",
+                "createdAt" to now
             )
-            db.collection("job_seekers").document(request.id).set(seekerMap)
-            if (cleanPhone.isNotEmpty() && cleanPhone != request.id) {
-                db.collection("job_seekers").document(cleanPhone).set(seekerMap)
+            if (resolvedPasswordHash.isNotBlank()) {
+                seekerMap["passwordHash"] = resolvedPasswordHash
             }
+            db.collection("job_seekers").document(seekerDocId).set(seekerMap, SetOptions.merge())
+            if (request.id.isNotBlank() && request.id != seekerDocId) {
+                db.collection("job_seekers").document(request.id).set(seekerMap, SetOptions.merge())
+            }
+            appState._jobSeekers.value = appState._jobSeekers.value.filter {
+                val p = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(it["phone"]?.toString() ?: "")
+                p != cleanPhone && it["id"]?.toString() != seekerDocId && it["id"]?.toString() != request.id
+            } + seekerMap
             mainViewModel.addNotification(
                 title = "🎉 تهانينا! تم اعتماد ملفك كباحث عن عمل",
                 message = "مرحباً بك يا غالي، تم اعتماد ملفك في قسم التوظيف والبحث عن عمل بنجاح!",
                 targetType = "USER",
-                targetValue = request.phone
+                targetValue = cleanPhone.ifBlank { request.phone }
             )
             mainViewModel.triggerNotification("✅ تم اعتماد ملف المتقدم ${request.name}")
         } else if (request.profession == "CLIENT" || request.categoryId.uppercase() == "CLIENT") {
+            val userDocId = cleanPhone.ifBlank { request.id }
             val userMap = mutableMapOf<String, Any>(
-                "id" to cleanPhone.ifBlank { request.id },
+                "id" to userDocId,
                 "name" to request.name,
+                "fullName" to request.name,
                 "phone" to cleanPhone,
+                "city" to request.area,
                 "residence" to request.area,
+                "area" to request.localNeighborhood,
+                "role" to "CLIENT",
+                "accountType" to "CLIENT",
+                "status" to "APPROVED",
+                "approvalStatus" to "APPROVED",
                 "isApproved" to true,
-                "createdAt" to System.currentTimeMillis()
+                "createdAt" to now
             )
             if (resolvedPasswordHash.isNotBlank()) {
                 userMap["passwordHash"] = resolvedPasswordHash
             }
-            db.collection("users").document(request.id).set(userMap, SetOptions.merge())
-            if (cleanPhone.isNotEmpty() && cleanPhone != request.id) {
-                db.collection("users").document(cleanPhone).set(userMap, SetOptions.merge())
+            db.collection("users").document(userDocId).set(userMap, SetOptions.merge())
+            db.collection("registered_users").document(userDocId).set(userMap, SetOptions.merge())
+            if (request.id.isNotBlank() && request.id != userDocId) {
+                db.collection("users").document(request.id).set(userMap, SetOptions.merge())
+                db.collection("registered_users").document(request.id).set(userMap, SetOptions.merge())
             }
-            
+            _registeredUsersList.value = _registeredUsersList.value.filter {
+                val p = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(it["phone"]?.toString() ?: "")
+                p != cleanPhone && it["id"]?.toString() != userDocId && it["id"]?.toString() != request.id
+            } + userMap
+
             mainViewModel.addNotification(
                 title = "🎉 تهانينا! تم تفعيل حسابك بنجاح",
                 message = "مرحباً بك يا غالي، تم تفعيل حسابك كعميل مسجل بنجاح!",
                 targetType = "USER",
-                targetValue = request.phone
+                targetValue = cleanPhone.ifBlank { request.phone }
             )
             mainViewModel.triggerNotification("✅ تم تفعيل حساب المستخدم ${request.name}")
         } else {
             val providerId = "prov_" + cleanPhone
-            val approvedProvider = ProviderEntity(
-                id = providerId,
-                name = request.name,
-                phone = cleanPhone.ifBlank { request.phone },
-                categoryId = request.categoryId,
-                area = request.area,
-                isVip = false,
-                subscriptionStatus = "APPROVED",
-                isAvailable = true,
-                cityId = finalCityId,
-                localNeighborhood = request.localNeighborhood,
-                rating = 5.0f,
-                isBlocked = false,
-                customCategoryName = request.customCategoryName,
-                passwordHash = resolvedPasswordHash,
-                isDeleted = false,
-                deletedAt = null
-            )
-            db.collection("providers").document(approvedProvider.id).set(approvedProvider)
-            
-            // Instant Local Sync
-            val currentProviders = mainViewModel.homeViewModel._providers.value.filter { it.id != approvedProvider.id && it.phone.trim().replace(" ", "").replace("+", "") != cleanPhone }.toMutableList()
-            currentProviders.add(approvedProvider)
-            mainViewModel.homeViewModel._providers.value = currentProviders
-            applyFilters()
+            val rawSelfie = resolveDecryptedPhoto(request.selfiePhotoBase64)
+            viewModelScope.launch {
+                val resolvedProfileUrl = if (rawSelfie.isNotBlank()) {
+                    com.serviseyem.utils.FirebaseStorageUploader.resolveBase64ToStorageUrl(
+                        rawSelfie,
+                        com.serviseyem.utils.FirebaseStorageUploader.getProviderProfilePath(cleanPhone)
+                    )
+                } else ""
+                val approvedProvider = ProviderEntity(
+                    id = providerId,
+                    name = request.name,
+                    phone = cleanPhone.ifBlank { request.phone },
+                    categoryId = request.categoryId,
+                    area = request.area,
+                    isVip = false,
+                    subscriptionStatus = "APPROVED",
+                    isAvailable = true,
+                    cityId = finalCityId,
+                    localNeighborhood = request.localNeighborhood,
+                    profileImage = resolvedProfileUrl,
+                    workPhotosBase64 = request.workPhotosBase64,
+                    specialization = resolvedDescription.ifBlank { request.specialization },
+                    rating = 5.0f,
+                    isBlocked = false,
+                    customCategoryName = request.customCategoryName,
+                    passwordHash = resolvedPasswordHash,
+                    isDeleted = false,
+                    deletedAt = null
+                )
+                db.collection("providers").document(approvedProvider.id).set(approvedProvider)
+
+                // Instant Local Sync
+                val currentProviders = mainViewModel.homeViewModel._providers.value.filter {
+                    it.id != approvedProvider.id && com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(it.phone) != cleanPhone
+                }.toMutableList()
+                currentProviders.add(approvedProvider)
+                mainViewModel.homeViewModel._providers.value = currentProviders
+                applyFilters()
+            }
 
             // Add accepted notification!
             mainViewModel.addNotification(
                 title = "🎉 تهانينا! تم قبول انضمامك كفني معتمد",
                 message = "مرحباً بك يا غالي، لقد تم قبول طلب انضمامك كمهني معتمد وأصبحت الآن نشطاً في دليل كل خدمات اليمن! حسابك يظهر الآن لجميع العملاء.",
                 targetType = "USER",
-                targetValue = request.phone
+                targetValue = cleanPhone.ifBlank { request.phone }
             )
-            
+
             mainViewModel.triggerNotification("✅ تم قبول طلب ${request.name}")
         }
     }
 
 fun rejectRequest(request: PendingProviderEntity, reason: String) {
-        val cleanPhone = request.phone.trim().replace(" ", "").replace("+", "")
+        val cleanPhone = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(request.phone)
+            .ifBlank { request.phone.trim().replace(" ", "").replace("+", "") }
         val now = System.currentTimeMillis()
         val finalReason = reason.ifBlank { "لم تستوفِ المستندات أو الشروط المطلوبة" }
 
@@ -879,18 +961,18 @@ fun rejectRequest(request: PendingProviderEntity, reason: String) {
         if (cleanPhone.isNotEmpty()) {
             db.collection("pending_providers").document(cleanPhone).delete()
         }
-        _pendingProviders.value = _pendingProviders.value.filter { 
-            it.id != request.id && it.id != cleanPhone && (cleanPhone.isEmpty() || it.phone.trim().replace(" ", "").replace("+", "") != cleanPhone)
+        _pendingProviders.value = _pendingProviders.value.filter {
+            it.id != request.id && it.id != cleanPhone && (cleanPhone.isEmpty() || com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(it.phone) != cleanPhone)
         }
-        
+
         // Add rejected notification!
         mainViewModel.addNotification(
             title = "❌ تنويه حول طلب انضمامك",
             message = "للأسف لم يتم قبول طلب انضمامك للأسباب التالية: $finalReason. يمكنك تعديل البيانات وإعادة تقديم الطلب.",
             targetType = "USER",
-            targetValue = request.phone
+            targetValue = cleanPhone.ifBlank { request.phone }
         )
-        
+
         mainViewModel.triggerNotification("❌ تم رفض طلب ${request.name} بسبب: $finalReason")
     }
 
@@ -1118,14 +1200,6 @@ fun saveStore(store: com.serviseyem.data.StoreEntity) {
         val updatedStores = _stores.value.filter { it.id != targetId }.toMutableList()
         updatedStores.add(finalStore)
         _stores.value = updatedStores
-
-        if (rawPassword.isNotEmpty() && !com.serviseyem.utils.SecureHasher.isValidHash(rawPassword)) {
-            try {
-                val authEmail = getAuthEmailForPhone(cleanPhone)
-                auth.createUserWithEmailAndPassword(authEmail, rawPassword)
-                    .addOnFailureListener { /* account exists */ }
-            } catch (e: Exception) {}
-        }
 
         viewModelScope.launch {
             val ctx = appContext
@@ -1452,14 +1526,6 @@ fun saveProperty(property: com.serviseyem.data.PropertyEntity) {
         val updatedProps = _properties.value.filter { it.id != targetId }.toMutableList()
         updatedProps.add(finalProp)
         _properties.value = updatedProps
-
-        if (rawPassword.isNotEmpty() && !com.serviseyem.utils.SecureHasher.isValidHash(rawPassword)) {
-            try {
-                val authEmail = getAuthEmailForPhone(cleanPhone)
-                auth.createUserWithEmailAndPassword(authEmail, rawPassword)
-                    .addOnFailureListener { /* account exists */ }
-            } catch (e: Exception) {}
-        }
 
         viewModelScope.launch {
             val ctx = appContext
@@ -3000,25 +3066,48 @@ fun logCall(providerId: String, providerName: String) {
     }
 
 fun checkAndGetDuplicateAccountType(phone: String, excludeId: String): String? {
-        val cleanInput = phone.trim().replace(" ", "").replace("+", "")
+        val cleanInput = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(phone)
+            .filter { it.isDigit() }
         if (cleanInput.isEmpty()) return null
-        
-        // 1. Check in active mainViewModel.homeViewModel.providers
-        val dupProvider = mainViewModel.homeViewModel._providers.value.any { !it.isDeleted && it.phone.trim().replace(" ", "").replace("+", "") == cleanInput && it.id != excludeId }
+
+        fun samePhone(candidate: String?): Boolean {
+            if (candidate.isNullOrBlank()) return false
+            val norm = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(candidate)
+                .filter { it.isDigit() }
+            return norm.isNotEmpty() && norm == cleanInput
+        }
+
+        // 1. Check active providers
+        val dupProvider = mainViewModel.homeViewModel._providers.value.any { !it.isDeleted && samePhone(it.phone) && it.id != excludeId }
         if (dupProvider) return "مقدم خدمة نشط (فني)"
-        
-        // 2. Check in pending mainViewModel.homeViewModel.providers
-        val dupPendingProvider = _pendingProviders.value.any { it.status == "PENDING" && it.phone.trim().replace(" ", "").replace("+", "") == cleanInput && it.id != excludeId }
-        if (dupPendingProvider) return "طلب انضمام فني قيد المراجعة"
-        
-        // 3. Check in stores
-        val dupStore = _stores.value.any { !it.isDeleted && it.phone.trim().replace(" ", "").replace("+", "") == cleanInput && it.id != excludeId }
-        if (dupStore) return "محل أو متجر تجاري مسجل"
-        
-        // 4. Check in properties
-        val dupProp = _properties.value.any { !it.isDeleted && it.phone.trim().replace(" ", "").replace("+", "") == cleanInput && it.id != excludeId }
+
+        // 2. Check pending requests
+        val dupPendingProvider = _pendingProviders.value.any { it.status.equals("PENDING", ignoreCase = true) && samePhone(it.phone) && it.id != excludeId }
+        if (dupPendingProvider) return "طلب انضمام قيد المراجعة"
+
+        // 3. Check stores / restaurants / medical
+        val dupStore = _stores.value.any { !it.isDeleted && samePhone(it.phone) && it.id != excludeId }
+        if (dupStore) return "محل أو مركز مسجل"
+
+        // 4. Check properties
+        val dupProp = _properties.value.any { !it.isDeleted && samePhone(it.phone) && it.id != excludeId }
         if (dupProp) return "إعلان عقاري مدرج"
-        
+
+        // 5. Check jobs
+        val dupJob = _jobs.value.any { !it.isDeleted && samePhone(it.phone) && it.id != excludeId }
+        if (dupJob) return "إعلان توظيف مدرج"
+
+        // 6. Check job seekers
+        val dupSeeker = appState._jobSeekers.value.any { samePhone(it["phone"]?.toString()) && (it["id"]?.toString() ?: "") != excludeId }
+        if (dupSeeker) return "باحث عن عمل مسجل"
+
+        // 7. Check registered users
+        val dupUser = _registeredUsersList.value.any {
+            val isDel = it["isDeleted"] == true
+            !isDel && samePhone(it["phone"]?.toString()) && (it["id"]?.toString() ?: "") != excludeId
+        }
+        if (dupUser) return "حساب مستخدم مسجل"
+
         return null
     }
 

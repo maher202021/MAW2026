@@ -78,13 +78,14 @@ fun AdminRequestsPanel(
         (it.status == "PENDING" || it.status.isEmpty()) &&
         it.categoryId != "STORE" && it.categoryId != "RESTAURANT" &&
         it.categoryId != "MEDICAL" && it.categoryId != "PROPERTY" &&
-        it.categoryId != "JOB" && it.categoryId != "CLIENT" &&
+        it.categoryId != "JOB" && it.categoryId != "JOB_SEEKER" && it.categoryId != "CLIENT" &&
         it.profession != "STORE_OWNER" && it.profession != "PROPERTY_OWNER" &&
-        it.profession != "JOB_POSTER" && it.profession != "CLIENT" &&
+        it.profession != "JOB_POSTER" && it.profession != "JOB_SEEKER" && it.profession != "CLIENT" &&
         !it.categoryId.contains("متجر") && !it.categoryId.contains("محل") &&
         !it.categoryId.contains("مطعم") && !it.categoryId.contains("كافيه") &&
         !it.categoryId.contains("طبي") && !it.categoryId.contains("عياد") &&
         !it.categoryId.contains("عقار") && !it.categoryId.contains("وظيفة") &&
+        !it.categoryId.contains("باحث") && !it.categoryId.contains("متقدم") &&
         !it.categoryId.contains("عميل")
     }
     val activeServicesCount = activeServicesPending.size
@@ -155,7 +156,7 @@ fun AdminRequestsPanel(
                                     Text(text = "المهنة / الخدمة: ${req.customCategoryName.ifBlank { req.categoryId }}", fontSize = 11.5.sp, color = themeColors.accent, fontWeight = FontWeight.Bold)
                                     Text(text = "الهاتف: ${req.phone} | المنطقة: ${req.area} - ${req.localNeighborhood}", fontSize = 11.sp, color = themeColors.textSecondary)
                                     if (req.password.isNotBlank()) {
-                                        Text(text = "🔑 كلمة المرور: ${req.password}", fontSize = 11.sp, color = Color(0xFFFBBF24), fontWeight = FontWeight.Bold)
+                                        Text(text = "🔒 الحساب مؤمّن بكلمة مرور مشفرة", fontSize = 11.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -197,7 +198,7 @@ fun AdminRequestsPanel(
                                     Text(text = "🏠 طلب انضمام عقار: ${req.name}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                     Text(text = "الهاتف: ${req.phone} | المنطقة: ${req.area} - ${req.localNeighborhood}", fontSize = 11.sp, color = themeColors.textSecondary)
                                     if (req.password.isNotBlank()) {
-                                        Text(text = "🔑 كلمة المرور: ${req.password}", fontSize = 11.sp, color = Color(0xFFFBBF24), fontWeight = FontWeight.Bold)
+                                        Text(text = "🔒 الحساب مؤمّن بكلمة مرور مشفرة", fontSize = 11.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -277,7 +278,7 @@ fun AdminRequestsPanel(
                                         Text(text = "النشاط: ${req.specialization}", fontSize = 11.sp, color = themeColors.accent)
                                     }
                                     if (req.password.isNotBlank()) {
-                                        Text(text = "🔑 كلمة المرور: ${req.password}", fontSize = 11.sp, color = Color(0xFFFBBF24), fontWeight = FontWeight.Bold)
+                                        Text(text = "🔒 الحساب مؤمّن بكلمة مرور مشفرة", fontSize = 11.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -416,7 +417,7 @@ fun AdminRequestsPanel(
                                     Text(text = "👤 اسم المستخدم: ${req.name}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                     Text(text = "الهاتف: ${req.phone} | المدينة/المحافظة: ${req.area}", fontSize = 11.sp, color = themeColors.textSecondary)
                                     if (req.password.isNotBlank()) {
-                                        Text(text = "🔑 كلمة المرور: ${req.password}", fontSize = 11.sp, color = Color(0xFFFBBF24), fontWeight = FontWeight.Bold)
+                                        Text(text = "🔒 الحساب مؤمّن بكلمة مرور مشفرة", fontSize = 11.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {

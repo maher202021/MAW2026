@@ -36,6 +36,13 @@ internal fun MapControlsDock(
     onOpenRegionsDialog: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val settingsState = viewModel.settings.collectAsState().value
+    val orderedVisibleLayerIds = androidx.compose.runtime.remember(settingsState.mapLayersOrder, settingsState.disabledMapLayers) {
+        com.serviseyem.data.models.MapLayersCatalog.parseOrderedVisibleLayers(
+            orderCsv = settingsState.mapLayersOrder,
+            disabledCsv = settingsState.disabledMapLayers
+        ).map { it.id }
+    }
     MapControls(
         isRadarMode = state.isRadarMode,
         onToggleRadarMode = {
@@ -430,6 +437,8 @@ internal fun MapControlsDock(
                 }
             }
         },
+        defaultBaseLayer = settingsState.defaultMapBaseLayer,
+        orderedVisibleLayerIds = orderedVisibleLayerIds,
         themeColors = themeColors,
         modifier = modifier
     )

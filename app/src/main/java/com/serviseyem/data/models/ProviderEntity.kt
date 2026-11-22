@@ -77,6 +77,15 @@ data class PendingProviderEntity(
     val chatRecipientId: String = "",
     val passwordHash: String = "",
     val providerType: String = "",
+    val ownerName: String = "",
+    val description: String = "",
+    val workingHours: String = "",
+    val hasDelivery: Boolean = false,
+    val hasEmergency: Boolean = false,
+    val experienceYears: String = "",
+    val submittedAt: Long = 0L,
+    val ownerId: String = "",
+    val uid: String = "",
     val keywords: List<String> = emptyList()
 ) {
     @get:com.google.firebase.firestore.Exclude

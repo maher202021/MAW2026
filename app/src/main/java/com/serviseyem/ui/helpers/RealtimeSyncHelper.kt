@@ -395,8 +395,18 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                                 localNeighborhood = doc.getString("localNeighborhood") ?: "",
                                 status = doc.getString("status") ?: "PENDING",
                                 profession = doc.getString("profession") ?: "",
+                                specialization = doc.getString("specialization") ?: "",
                                 customCategoryName = doc.getString("customCategoryName") ?: "",
-                                passwordHash = doc.getString("passwordHash") ?: doc.getString("password") ?: ""
+                                passwordHash = doc.getString("passwordHash") ?: doc.getString("password") ?: "",
+                                ownerName = doc.getString("ownerName") ?: "",
+                                description = doc.getString("description") ?: "",
+                                workingHours = doc.getString("workingHours") ?: "",
+                                hasDelivery = doc.getBoolean("hasDelivery") == true,
+                                hasEmergency = doc.getBoolean("hasEmergency") == true,
+                                experienceYears = doc.getString("experienceYears") ?: "",
+                                submittedAt = doc.getLong("submittedAt") ?: doc.getLong("createdAt") ?: 0L,
+                                ownerId = doc.getString("ownerId") ?: "",
+                                uid = doc.getString("uid") ?: ""
                             )
                         } catch (ex: Exception) {
                             null
@@ -430,7 +440,10 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                     if (!currentPending.containsKey(docId)) {
                         val type = doc.getString("type") ?: "CLIENT"
                         val phone = doc.getString("phone") ?: ""
-                        val name = doc.getString("fullName") ?: doc.getString("name") ?: doc.getString("businessName") ?: "طلب انضمام جديد"
+                        val name = doc.getString("businessName")?.takeIf { it.isNotBlank() }
+                            ?: doc.getString("fullName")
+                            ?: doc.getString("name")
+                            ?: "طلب انضمام جديد"
                         val city = doc.getString("city") ?: doc.getString("area") ?: ""
                         val entity = PendingProviderEntity(
                             id = docId,
@@ -438,9 +451,18 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                             phone = phone,
                             categoryId = type,
                             area = city,
+                            localNeighborhood = doc.getString("neighborhood") ?: "",
                             status = "PENDING",
                             profession = type,
-                            providerType = type
+                            providerType = type,
+                            ownerName = doc.getString("ownerName") ?: doc.getString("fullName") ?: "",
+                            description = doc.getString("description") ?: "",
+                            workingHours = doc.getString("workingHours") ?: "",
+                            hasDelivery = doc.getBoolean("hasDelivery") == true,
+                            hasEmergency = doc.getBoolean("hasEmergency") == true,
+                            experienceYears = doc.getString("experienceYears") ?: "",
+                            submittedAt = doc.getLong("submittedAt") ?: doc.getLong("createdAt") ?: 0L,
+                            uid = doc.getString("uid") ?: ""
                         )
                         currentPending[docId] = entity
                         updated = true
@@ -471,6 +493,187 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                     }
                 }.filter { !it.isDeleted }
                 appState._products.value = fetched
+            }
+        }
+
+        // 13. Job Seekers Realtime Listener
+        db.collection("job_seekers").limit(REALTIME_QUERY_LIMIT).addSnapshotListenerReg { snapshot, error ->
+            if (error == null && snapshot != null) {
+                val fetched = snapshot.documents.mapNotNull { doc ->
+                    val data = doc.data?.toMutableMap() ?: mutableMapOf()
+                    data["id"] = doc.id
+                    data
+                }
+                appState._jobSeekers.value = fetched
+            }
+        }
+
+        // 14. Admin & Role Permissions Matrix
+        db.collection("settings").document("admin_permissions_matrix").addSnapshotListenerReg { snapshot, error ->
+            if (error == null && snapshot != null && snapshot.exists()) {
+                try {
+                    @Suppress("UNCHECKED_CAST")
+                    val activePerms = (snapshot.get("activePermissions") as? List<*>)
+                        ?.mapNotNull { it?.toString() } ?: emptyList()
+                    val roleMap = mutableMapOf<String, List<String>>()
+                    val rawMatrices = snapshot.get("roleMatrices") as? Map<*, *>
+                    rawMatrices?.forEach { (k, v) ->
+                        val roleKey = k?.toString()?.uppercase()?.trim().orEmpty()
+                        val list = (v as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList()
+                        if (roleKey.isNotBlank()) roleMap[roleKey] = list
+                    }
+                    if (!roleMap.containsKey("ADMIN") && activePerms.isNotEmpty()) {
+                        roleMap["ADMIN"] = activePerms
+                    }
+                    appState._adminPermissionsMatrix.value = roleMap["ADMIN"] ?: activePerms
+                    appState._rolePermissionsMap.value = roleMap
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+
+        // 15. Quick Service Config
+        db.collection("settings").document("quick_service").addSnapshotListenerReg { snapshot, error ->
+            if (error == null && snapshot != null && snapshot.exists()) {
+                try {
+                    appState._quickServiceConfig.value = QuickServiceConfig(
+                        isQuickServiceActive = snapshot.getBoolean("isQuickServiceActive") ?: true,
+                        quickServiceTitle = snapshot.getString("quickServiceTitle") ?: "اطلب خدمتك الفورية ⚡",
+                        quickServiceDescription = snapshot.getString("quickServiceDescription")
+                            ?: "أرسل طلبك وسيصلك أقرب مقدم خدمة معتمد في دقائق",
+                        allowAudioRecording = snapshot.getBoolean("allowAudioRecording") ?: true,
+                        allowImageUpload = snapshot.getBoolean("allowImageUpload") ?: true,
+                        allowLiveLocation = snapshot.getBoolean("allowLiveLocation") ?: true,
+                        maxImagesAllowed = snapshot.getString("maxImagesAllowed") ?: "3",
+                        maxAudioSeconds = snapshot.getString("maxAudioSeconds") ?: "60",
+                        broadcastRadiusKm = snapshot.getString("broadcastRadiusKm") ?: "10",
+                        defaultResponseWindowMinutes = snapshot.getString("defaultResponseWindowMinutes") ?: "5"
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+
+        // 16. Payment System Config
+        db.collection("settings").document("payment_config").addSnapshotListenerReg { snapshot, error ->
+            if (error == null && snapshot != null && snapshot.exists()) {
+                try {
+                    appState._paymentSystemConfig.value = PaymentSystemConfig(
+                        systemEnabled = snapshot.getBoolean("systemEnabled") ?: true,
+                        linkBookings = snapshot.getBoolean("linkBookings") ?: true,
+                        linkStores = snapshot.getBoolean("linkStores") ?: true,
+                        linkRestaurants = snapshot.getBoolean("linkRestaurants") ?: true,
+                        linkMedical = snapshot.getBoolean("linkMedical") ?: true,
+                        linkProperties = snapshot.getBoolean("linkProperties") ?: true,
+                        linkJobs = snapshot.getBoolean("linkJobs") ?: true
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+
+        // 17. Auto Routing Config
+        db.collection("settings").document("auto_routing").addSnapshotListenerReg { snapshot, error ->
+            if (error == null && snapshot != null && snapshot.exists()) {
+                try {
+                    appState._autoRoutingConfig.value = AutoRoutingConfig(
+                        isGeneralAutoRoutingEnabled = snapshot.getBoolean("isGeneralAutoRoutingEnabled") ?: true,
+                        isStoresRoutingEnabled = snapshot.getBoolean("isStoresRoutingEnabled") ?: true,
+                        storesCriteria = snapshot.getString("storesCriteria") ?: "الأقرب جغرافياً (GPS)",
+                        storesRadiusKm = snapshot.getString("storesRadiusKm") ?: "15",
+                        isMallsRoutingEnabled = snapshot.getBoolean("isMallsRoutingEnabled") ?: true,
+                        mallsCriteria = snapshot.getString("mallsCriteria") ?: "الأقرب داخل نفس المدينة",
+                        isRestaurantsRoutingEnabled = snapshot.getBoolean("isRestaurantsRoutingEnabled") ?: true,
+                        restaurantsCriteria = snapshot.getString("restaurantsCriteria") ?: "أقرب مطعم مع أسرع تحضير",
+                        restaurantsRadiusKm = snapshot.getString("restaurantsRadiusKm") ?: "10",
+                        isMedicalRoutingEnabled = snapshot.getBoolean("isMedicalRoutingEnabled") ?: true,
+                        medicalCriteria = snapshot.getString("medicalCriteria") ?: "أقرب طوارئ وتوفر التخصص",
+                        isDeliveryRoutingEnabled = snapshot.getBoolean("isDeliveryRoutingEnabled") ?: true,
+                        deliveryCriteria = snapshot.getString("deliveryCriteria") ?: "إسناد تلقائي لأقرب مندوب شاغر",
+                        deliveryMaxRadiusKm = snapshot.getString("deliveryMaxRadiusKm") ?: "25"
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+
+        // 18. Registration Forms & Terms Config
+        db.collection("settings").document("registration_forms").addSnapshotListenerReg { snapshot, error ->
+            if (error == null && snapshot != null && snapshot.exists()) {
+                try {
+                    val termsMap = RegistrationFormsConfig.DEFAULT_TERMS.toMutableMap()
+                    val rawTerms = snapshot.get("termsBySection") as? Map<*, *>
+                    rawTerms?.forEach { (k, v) ->
+                        val sec = k?.toString().orEmpty()
+                        val valStr = v?.toString().orEmpty()
+                        if (sec.isNotBlank() && valStr.isNotBlank()) termsMap[sec] = valStr
+                    }
+                    val fieldsList = mutableListOf<RegistrationCustomField>()
+                    val rawFields = snapshot.get("customFields") as? List<*>
+                    rawFields?.forEach { item ->
+                        val map = item as? Map<*, *> ?: return@forEach
+                        val label = map["label"]?.toString().orEmpty()
+                        if (label.isNotBlank()) {
+                            fieldsList.add(
+                                RegistrationCustomField(
+                                    id = map["id"]?.toString() ?: java.util.UUID.randomUUID().toString(),
+                                    sectionKey = map["sectionKey"]?.toString() ?: "الفنيين والصيانة",
+                                    label = label,
+                                    fieldType = map["fieldType"]?.toString() ?: "نص",
+                                    isRequired = (map["isRequired"] as? Boolean) ?: true
+                                )
+                            )
+                        }
+                    }
+                    appState._registrationFormsConfig.value = RegistrationFormsConfig(
+                        termsBySection = termsMap,
+                        customFields = fieldsList
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+
+        // 19. Platform Home Sections & Services Order
+        db.collection("settings").document("platform_sections").addSnapshotListenerReg { snapshot, error ->
+            if (error == null && snapshot != null && snapshot.exists()) {
+                try {
+                    val rawList = snapshot.get("sections") as? List<*>
+                    if (rawList != null && rawList.isNotEmpty()) {
+                        val parsed = rawList.mapIndexedNotNull { idx, item ->
+                            val m = item as? Map<*, *> ?: return@mapIndexedNotNull null
+                            val id = m["id"]?.toString().orEmpty()
+                            val titleAr = m["titleAr"]?.toString().orEmpty()
+                            if (id.isBlank() || titleAr.isBlank()) return@mapIndexedNotNull null
+                            PlatformHomeSection(
+                                id = id,
+                                titleAr = titleAr,
+                                titleEn = m["titleEn"]?.toString().orEmpty(),
+                                emoji = m["emoji"]?.toString()?.ifBlank { "✨" } ?: "✨",
+                                subtitleAr = m["subtitleAr"]?.toString().orEmpty(),
+                                routeKey = m["routeKey"]?.toString() ?: id,
+                                isVisible = (m["isVisible"] as? Boolean) ?: true,
+                                isBuiltIn = (m["isBuiltIn"] as? Boolean) ?: false,
+                                order = (m["order"] as? Number)?.toInt() ?: idx,
+                                linkToMap = (m["linkToMap"] as? Boolean) ?: true,
+                                linkToOrders = (m["linkToOrders"] as? Boolean) ?: true,
+                                linkToPayment = (m["linkToPayment"] as? Boolean) ?: false,
+                                enableBookings = (m["enableBookings"] as? Boolean) ?: true,
+                                sectionType = m["sectionType"]?.toString() ?: "خدمات وصيانة"
+                            )
+                        }.sortedBy { it.order }
+                        if (parsed.isNotEmpty()) {
+                            appState._platformHomeSections.value = parsed
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
     }

@@ -34,7 +34,7 @@ import com.serviseyem.utils.VisualThemePalette
 @Composable
 fun AdminStoresPropertiesPanel(
     onBack: () -> Unit = {},
-    viewModel: MainViewModel = viewModel(),
+    viewModel: MainViewModel,
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier,
     initialSector: String = "STORES"

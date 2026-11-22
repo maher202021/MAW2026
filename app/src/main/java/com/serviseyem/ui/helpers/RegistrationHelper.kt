@@ -69,6 +69,12 @@ class RegistrationHelper(
         customCategoryName: String = "",
         password: String = "",
         productAttachmentsJson: String = "",
+        ownerName: String = "",
+        description: String = "",
+        workingHours: String = "",
+        hasDelivery: Boolean = false,
+        hasEmergency: Boolean = false,
+        experienceYears: String = "",
         checkDuplicate: (String) -> String?,
         logAdminActivity: (String) -> Unit,
         triggerNotification: (String) -> Unit,
@@ -79,24 +85,84 @@ class RegistrationHelper(
         onJobAdded: (JobEntity) -> Unit,
         onClientAdded: (Map<String, Any>) -> Unit,
         onJoinRequestPhoneUpdated: (String) -> Unit,
-        onNavigateToScreen: (String) -> Unit
+        onNavigateToScreen: (String) -> Unit,
+        onResult: (Boolean, String) -> Unit = { _, _ -> }
     ) {
-        val cleanPhone = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(phone)
+        val cleanPhone = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(phone).filter { it.isDigit() }
+        if (cleanPhone.length < 7) {
+            val msg = "رقم الهاتف غير صحيح. يجب أن يتكون من 9 أرقام ويبدأ بـ (77, 73, 71, 70, 78)"
+            triggerNotification("❌ $msg")
+            onResult(false, msg)
+            return
+        }
         val duplicateType = checkDuplicate(cleanPhone)
         if (duplicateType != null) {
-            triggerNotification("❌ عذراً! رقم الهاتف ($phone) مسجل بالفعل كـ ($duplicateType). لا يُسمح بتكرار الحسابات.")
-            logAdminActivity("محاولة تسجيل فني مكرر محجوبة لرقم: $cleanPhone - نوع التكرار: $duplicateType")
+            val msg = "عذراً! رقم الهاتف ($phone) مسجل بالفعل كـ ($duplicateType). لا يُسمح بتكرار الحسابات."
+            triggerNotification("❌ $msg")
+            logAdminActivity("محاولة تسجيل مكرر محجوبة لرقم: $cleanPhone - نوع التكرار: $duplicateType")
+            onResult(false, msg)
             return
         }
 
         scope.launch {
             try {
-                // Synchronous check in join_requests
-                val qs = com.google.android.gms.tasks.Tasks.await(
-                    db.collection("join_requests").whereEqualTo("phone", cleanPhone).get()
-                )
-                if (!qs.isEmpty) {
-                    triggerNotification("❌ يوجد طلب انضمام مسجل بالفعل قيد المراجعة لرقم الهاتف هذا")
+                val phoneVariants = listOf(
+                    cleanPhone,
+                    phone.trim(),
+                    "0$cleanPhone",
+                    "+967$cleanPhone",
+                    "967$cleanPhone"
+                ).filter { it.isNotBlank() }.distinct()
+
+                val existingConflict = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    var foundMsg: String? = null
+                    for (ph in phoneVariants) {
+                        val jrSnap = runCatching {
+                            com.google.android.gms.tasks.Tasks.await(
+                                db.collection("join_requests").whereEqualTo("phone", ph).get()
+                            )
+                        }.getOrNull()
+                        val hasActiveJoin = jrSnap?.documents?.any { doc ->
+                            val st = (doc.getString("status") ?: doc.getString("approvalStatus") ?: "").uppercase()
+                            st in listOf("PENDING", "APPROVED", "ACCEPTED")
+                        } == true
+                        if (hasActiveJoin) {
+                            foundMsg = "يوجد طلب انضمام أو حساب نشط مسجل بالفعل لرقم الهاتف هذا"
+                            break
+                        }
+
+                        val pendSnap = runCatching {
+                            com.google.android.gms.tasks.Tasks.await(
+                                db.collection("pending_providers").whereEqualTo("phone", ph).get()
+                            )
+                        }.getOrNull()
+                        val hasActivePending = pendSnap?.documents?.any { doc ->
+                            val st = (doc.getString("status") ?: "PENDING").uppercase()
+                            st == "PENDING"
+                        } == true
+                        if (hasActivePending) {
+                            foundMsg = "يوجد طلب انضمام قيد المراجعة بالفعل لرقم الهاتف هذا"
+                            break
+                        }
+
+                        val userExists = runCatching {
+                            !com.google.android.gms.tasks.Tasks.await(
+                                db.collection("registered_users").whereEqualTo("phone", ph).limit(1).get()
+                            ).isEmpty || com.google.android.gms.tasks.Tasks.await(
+                                db.collection("registered_users").document(ph).get()
+                            ).exists()
+                        }.getOrDefault(false)
+                        if (userExists) {
+                            foundMsg = "يوجد حساب مستخدم مسجل بالفعل لرقم الهاتف هذا"
+                            break
+                        }
+                    }
+                    foundMsg
+                }
+
+                if (existingConflict != null) {
+                    triggerNotification("❌ $existingConflict")
+                    onResult(false, existingConflict)
                     return@launch
                 }
             } catch (e: Exception) {
@@ -104,199 +170,232 @@ class RegistrationHelper(
             }
 
             try {
-                triggerNotification("⏳ جاري ضغط الصور وحفظ الملفات في سحابة التخزين...")
-            val finalSelfie = uploadImageStringOrUri(
-                context, photoPath,
-                FirebaseStorageUploader.getProviderProfilePath(cleanPhone),
-                maxSizeBytes = 150 * 1024L
-            )
-            val finalIdCard = uploadImageStringOrUri(
-                context, idCardPath,
-                FirebaseStorageUploader.getProviderIdCardPath(cleanPhone),
-                maxSizeBytes = 150 * 1024L
-            )
-            val finalWorkPhotos = workPhotos.mapIndexed { idx, p ->
-                uploadImageStringOrUri(
-                    context, p,
-                    FirebaseStorageUploader.getProviderWorkPhotoPath(cleanPhone, idx),
-                    maxSizeBytes = 300 * 1024L
-                )
-            }
-            val encSelfie = if (finalSelfie.isNotEmpty()) SecurityCryptoUtils.encrypt(finalSelfie) else ""
-            val encIdCard = if (finalIdCard.isNotEmpty()) SecurityCryptoUtils.encrypt(finalIdCard) else ""
-            if (password.isNotEmpty()) {
-                val valResult = SecurityCryptoUtils.validatePasswordPolicy(password)
-                if (valResult.first) {
-                    val authEmail = "$cleanPhone@yemen-services.app"
-                    auth.createUserWithEmailAndPassword(authEmail, password.trim())
-                        .addOnFailureListener { /* Account might already exist */ }
-                }
-            }
-            val requestType = when (catId.uppercase()) {
-                "STORE" -> "STORE"
-                "RESTAURANT" -> "RESTAURANT"
-                "MEDICAL" -> "MEDICAL"
-                "PROPERTY" -> "PROPERTY"
-                "JOB" -> "JOB"
-                "JOB_SEEKER" -> "JOB_SEEKER"
-                "CLIENT" -> "CLIENT"
-                else -> if (catId.contains("وظيف", ignoreCase = true) || customCategoryName.contains("باحث", ignoreCase = true) || customCategoryName.contains("متقدم", ignoreCase = true)) "JOB_SEEKER" else "PROVIDER"
-            }
-            val requestProfession = when (requestType) {
-                "STORE", "RESTAURANT", "MEDICAL" -> "STORE_OWNER"
-                "PROPERTY" -> "PROPERTY_OWNER"
-                "JOB" -> "JOB_POSTER"
-                "JOB_SEEKER" -> "JOB_SEEKER"
-                "CLIENT" -> "CLIENT"
-                else -> "PROVIDER"
-            }
-            val requestDocId = cleanPhone
-            val currentAuthUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
-            val securedPasswordHash = if (password.isNotBlank()) com.serviseyem.utils.PasswordHasher.hash(password.trim()) else ""
-            val newRequest = PendingProviderEntity(
-                id = requestDocId,
-                name = name,
-                phone = cleanPhone,
-                categoryId = catId,
-                area = area,
-                localNeighborhood = neighborhood,
-                status = "PENDING",
-                selfiePhotoBase64 = encSelfie,
-                idPhotoBase64 = encIdCard,
-                workPhotosBase64 = finalWorkPhotos,
-                customCategoryName = customCategoryName,
-                passwordHash = securedPasswordHash,
-                productAttachmentsJson = productAttachmentsJson,
-                profession = requestProfession,
-                providerType = requestProfession
-            )
-            val coordParts = gpsCoords.split(",")
-            val parsedLat = coordParts.getOrNull(0)?.trim()?.toDoubleOrNull() ?: 15.3694
-            val parsedLng = coordParts.getOrNull(1)?.trim()?.toDoubleOrNull() ?: 44.1910
-
-            // Push to Cloud
-            val pendingDataMap = mapOf(
-                "id" to requestDocId,
-                "uid" to currentAuthUid,
-                "name" to name,
-                "phone" to cleanPhone,
-                "categoryId" to catId,
-                "area" to area,
-                "localNeighborhood" to neighborhood,
-                "gpsCoords" to gpsCoords,
-                "latitude" to parsedLat,
-                "longitude" to parsedLng,
-                "status" to "PENDING",
-                "selfiePhotoBase64" to encSelfie,
-                "idPhotoBase64" to encIdCard,
-                "workPhotosBase64" to finalWorkPhotos,
-                "customCategoryName" to customCategoryName,
-                "password" to securedPasswordHash,
-                "passwordHash" to securedPasswordHash,
-                "productAttachmentsJson" to productAttachmentsJson,
-                "profession" to requestProfession,
-                "providerType" to requestProfession
-            )
-            db.collection("pending_providers").document(requestDocId).set(pendingDataMap)
-            val joinRequestMap = mapOf(
-                "id" to requestDocId,
-                "uid" to currentAuthUid,
-                "userId" to currentAuthUid,
-                "type" to requestType,
-                "status" to "PENDING",
-                "approvalStatus" to "PENDING",
-                "fullName" to name,
-                "phone" to cleanPhone,
-                "password" to securedPasswordHash,
-                "passwordHash" to securedPasswordHash,
-                "city" to area,
-                "area" to neighborhood,
-                "neighborhood" to neighborhood,
-                "gpsCoords" to gpsCoords,
-                "latitude" to parsedLat,
-                "longitude" to parsedLng,
-                "categoryId" to catId,
-                "categoryName" to customCategoryName.ifBlank { catId },
-                "businessName" to (if (requestType == "STORE" || requestType == "RESTAURANT" || requestType == "MEDICAL") name else ""),
-                "ownerName" to name,
-                "propertyTitle" to (if (requestType == "PROPERTY") (if (customCategoryName.isNotBlank()) "$customCategoryName ($name)" else "مكتب/عقار ($name)") else ""),
-                "jobTitle" to (if (requestType == "JOB") customCategoryName.ifBlank { name } else ""),
-                "companyName" to (if (requestType == "JOB") name else ""),
-                "profileImage" to finalSelfie,
-                "idCardImage" to finalIdCard,
-                "workImages" to finalWorkPhotos,
-                "submittedAt" to System.currentTimeMillis(),
-                "createdAt" to System.currentTimeMillis(),
-                "updatedAt" to System.currentTimeMillis()
-            )
-            db.collection("join_requests").document(requestDocId).set(joinRequestMap)
-                .addOnSuccessListener {
-                    val adminNotifTitle = when (requestType) {
-                        "STORE" -> "🏪 طلب انضمام متجر جديد"
-                        "RESTAURANT" -> "🍔 طلب انضمام مطعم / كافيه جديد"
-                        "MEDICAL" -> "🏥 طلب انضمام مركز طبي جديد"
-                        "PROPERTY" -> "🏠 طلب إضافة عقار جديد"
-                        "JOB" -> "💼 طلب إعلان وظيفة جديدة"
-                        "JOB_SEEKER" -> "💼 طلب انضمام متقدم للوظائف"
-                        "CLIENT" -> "👤 طلب تسجيل حساب عميل جديد"
-                        else -> "🔧 طلب انضمام فني جديد"
-                    }
-                    val entityLabel = when (requestType) {
-                        "STORE" -> "متجر / محل تجاري"
-                        "RESTAURANT" -> "مطعم / كافيه"
-                        "MEDICAL" -> "مركز طبي / عيادة"
-                        "PROPERTY" -> "عقار"
-                        "JOB" -> "إعلان وظيفي"
-                        "JOB_SEEKER" -> "متقدم للوظيفة"
-                        "CLIENT" -> "عميل / مستخدم عادي"
-                        else -> "مهني / فني"
-                    }
-                    val adminNotif = NotificationEntity(
-                        id = UUID.randomUUID().toString(),
-                        title = adminNotifTitle,
-                        message = "قدم $name طلب تسجيل جديد كـ ($entityLabel) في مدينة/منطقة $area.",
-                        targetType = "SUPERVISOR",
-                        targetValue = "ALL",
-                        notificationType = "JOIN_REQUEST",
-                        relatedRequestId = requestDocId,
-                        timestamp = System.currentTimeMillis()
+                triggerNotification("⏳ جاري معالجة الطلب وحفظ البيانات...")
+                val (finalSelfie, finalIdCard, finalWorkPhotos) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val selfie = uploadImageStringOrUri(
+                        context, photoPath,
+                        FirebaseStorageUploader.getProviderProfilePath(cleanPhone),
+                        maxSizeBytes = 150 * 1024L
                     )
-                    try {
-                        if (adminNotif.isValid()) db.collection("notifications").document(adminNotif.id).set(adminNotif)
-                    } catch (e: Exception) {}
+                    val idCard = uploadImageStringOrUri(
+                        context, idCardPath,
+                        FirebaseStorageUploader.getProviderIdCardPath(cleanPhone),
+                        maxSizeBytes = 150 * 1024L
+                    )
+                    val work = workPhotos.mapIndexed { idx, p ->
+                        uploadImageStringOrUri(
+                            context, p,
+                            FirebaseStorageUploader.getProviderWorkPhotoPath(cleanPhone, idx),
+                            maxSizeBytes = 300 * 1024L
+                        )
+                    }
+                    Triple(selfie, idCard, work)
                 }
-                .addOnFailureListener { e ->
-                    val errorMsg = e.localizedMessage ?: "تأكد من صغر حجم الصور واتصالك بالإنترنت"
-                    triggerNotification("❌ فشل تقديم الطلب: $errorMsg")
+
+                val encSelfie = if (finalSelfie.isNotEmpty()) SecurityCryptoUtils.encrypt(finalSelfie) else ""
+                val encIdCard = if (finalIdCard.isNotEmpty()) SecurityCryptoUtils.encrypt(finalIdCard) else ""
+                val requestType = when (catId.uppercase()) {
+                    "STORE" -> "STORE"
+                    "RESTAURANT" -> "RESTAURANT"
+                    "MEDICAL" -> "MEDICAL"
+                    "PROPERTY" -> "PROPERTY"
+                    "JOB" -> "JOB"
+                    "JOB_SEEKER" -> "JOB_SEEKER"
+                    "CLIENT" -> "CLIENT"
+                    else -> if (catId.contains("وظيف", ignoreCase = true) || customCategoryName.contains("باحث", ignoreCase = true) || customCategoryName.contains("متقدم", ignoreCase = true)) "JOB_SEEKER" else "PROVIDER"
+                }
+                val requestProfession = when (requestType) {
+                    "STORE", "RESTAURANT", "MEDICAL" -> "STORE_OWNER"
+                    "PROPERTY" -> "PROPERTY_OWNER"
+                    "JOB" -> "JOB_POSTER"
+                    "JOB_SEEKER" -> "JOB_SEEKER"
+                    "CLIENT" -> "CLIENT"
+                    else -> "PROVIDER"
+                }
+                val resolvedOwnerName = ownerName.trim().ifBlank { name.trim() }
+                val cleanName = name.trim()
+                val requestDocId = cleanPhone
+                val currentAuthUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                val resolvedOwnerId = currentAuthUid.ifBlank { cleanPhone }
+                val securedPasswordHash = if (password.isNotBlank()) com.serviseyem.utils.PasswordHasher.hash(password.trim()) else ""
+                val now = System.currentTimeMillis()
+                val newRequest = PendingProviderEntity(
+                    id = requestDocId,
+                    name = cleanName,
+                    phone = cleanPhone,
+                    categoryId = catId,
+                    area = area,
+                    localNeighborhood = neighborhood,
+                    status = "PENDING",
+                    selfiePhotoBase64 = encSelfie,
+                    idPhotoBase64 = encIdCard,
+                    workPhotosBase64 = finalWorkPhotos,
+                    customCategoryName = customCategoryName,
+                    specialization = customCategoryName,
+                    passwordHash = securedPasswordHash,
+                    productAttachmentsJson = productAttachmentsJson,
+                    profession = requestProfession,
+                    providerType = requestProfession,
+                    ownerName = resolvedOwnerName,
+                    description = description.trim(),
+                    workingHours = workingHours.trim(),
+                    hasDelivery = hasDelivery,
+                    hasEmergency = hasEmergency,
+                    experienceYears = experienceYears.trim(),
+                    submittedAt = now,
+                    ownerId = resolvedOwnerId,
+                    uid = currentAuthUid
+                )
+                val coordParts = gpsCoords.split(",")
+                val parsedLat = coordParts.getOrNull(0)?.trim()?.toDoubleOrNull() ?: 15.3694
+                val parsedLng = coordParts.getOrNull(1)?.trim()?.toDoubleOrNull() ?: 44.1910
+
+                // Push to Cloud safely on IO dispatcher
+                val pendingDataMap = mapOf(
+                    "id" to requestDocId,
+                    "uid" to currentAuthUid,
+                    "ownerId" to resolvedOwnerId,
+                    "name" to cleanName,
+                    "ownerName" to resolvedOwnerName,
+                    "phone" to cleanPhone,
+                    "categoryId" to catId,
+                    "area" to area,
+                    "localNeighborhood" to neighborhood,
+                    "gpsCoords" to gpsCoords,
+                    "latitude" to parsedLat,
+                    "longitude" to parsedLng,
+                    "status" to "PENDING",
+                    "selfiePhotoBase64" to encSelfie,
+                    "idPhotoBase64" to encIdCard,
+                    "workPhotosBase64" to finalWorkPhotos,
+                    "customCategoryName" to customCategoryName,
+                    "specialization" to customCategoryName,
+                    "description" to description.trim(),
+                    "workingHours" to workingHours.trim(),
+                    "hasDelivery" to hasDelivery,
+                    "hasEmergency" to hasEmergency,
+                    "experienceYears" to experienceYears.trim(),
+                    "submittedAt" to now,
+                    "createdAt" to now,
+                    "password" to "",
+                    "passwordHash" to securedPasswordHash,
+                    "productAttachmentsJson" to productAttachmentsJson,
+                    "profession" to requestProfession,
+                    "providerType" to requestProfession
+                )
+                val joinRequestMap = mapOf(
+                    "id" to requestDocId,
+                    "uid" to currentAuthUid,
+                    "userId" to resolvedOwnerId,
+                    "type" to requestType,
+                    "status" to "PENDING",
+                    "approvalStatus" to "PENDING",
+                    "fullName" to resolvedOwnerName,
+                    "phone" to cleanPhone,
+                    "password" to "",
+                    "passwordHash" to securedPasswordHash,
+                    "city" to area,
+                    "area" to neighborhood,
+                    "neighborhood" to neighborhood,
+                    "gpsCoords" to gpsCoords,
+                    "latitude" to parsedLat,
+                    "longitude" to parsedLng,
+                    "categoryId" to catId,
+                    "categoryName" to customCategoryName.ifBlank { catId },
+                    "specialization" to customCategoryName,
+                    "description" to description.trim(),
+                    "workingHours" to workingHours.trim(),
+                    "hasDelivery" to hasDelivery,
+                    "hasEmergency" to hasEmergency,
+                    "experienceYears" to experienceYears.trim(),
+                    "businessName" to (if (requestType == "STORE" || requestType == "RESTAURANT" || requestType == "MEDICAL") cleanName else ""),
+                    "ownerName" to resolvedOwnerName,
+                    "propertyTitle" to (if (requestType == "PROPERTY") (if (customCategoryName.isNotBlank()) "$customCategoryName ($cleanName)" else cleanName) else ""),
+                    "jobTitle" to (if (requestType == "JOB") customCategoryName.ifBlank { cleanName } else ""),
+                    "companyName" to (if (requestType == "JOB") cleanName else ""),
+                    "profileImage" to finalSelfie,
+                    "logoImage" to finalSelfie,
+                    "idCardImage" to finalIdCard,
+                    "workImages" to finalWorkPhotos,
+                    "submittedAt" to now,
+                    "createdAt" to now,
+                    "updatedAt" to now
+                )
+
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    com.google.android.gms.tasks.Tasks.await(
+                        db.collection("pending_providers").document(requestDocId).set(pendingDataMap)
+                    )
+                    com.google.android.gms.tasks.Tasks.await(
+                        db.collection("join_requests").document(requestDocId).set(joinRequestMap)
+                    )
                 }
 
-            onPendingAdded(newRequest)
-            preferenceHelper.setJoinRequestPhone(context, cleanPhone)
-            onJoinRequestPhoneUpdated(cleanPhone)
+                val adminNotifTitle = when (requestType) {
+                    "STORE" -> "🏪 طلب انضمام متجر جديد"
+                    "RESTAURANT" -> "🍔 طلب انضمام مطعم / كافيه جديد"
+                    "MEDICAL" -> "🏥 طلب انضمام مركز طبي جديد"
+                    "PROPERTY" -> "🏠 طلب إضافة عقار / مكتب عقاري"
+                    "JOB" -> "💼 طلب إعلان وظيفة جديدة"
+                    "JOB_SEEKER" -> "💼 طلب انضمام باحث عن عمل"
+                    "CLIENT" -> "👤 طلب تسجيل حساب عميل جديد"
+                    else -> "🔧 طلب انضمام فني جديد"
+                }
+                val entityLabel = when (requestType) {
+                    "STORE" -> "متجر / محل تجاري"
+                    "RESTAURANT" -> "مطعم / كافيه"
+                    "MEDICAL" -> "مركز طبي / عيادة"
+                    "PROPERTY" -> "عقار / مكتب عقاري"
+                    "JOB" -> "إعلان وظيفي"
+                    "JOB_SEEKER" -> "باحث عن عمل"
+                    "CLIENT" -> "عميل / مستخدم عادي"
+                    else -> "مهني / فني"
+                }
+                val adminNotif = NotificationEntity(
+                    id = UUID.randomUUID().toString(),
+                    title = adminNotifTitle,
+                    message = "قدم $cleanName طلب تسجيل جديد كـ ($entityLabel) في مدينة/منطقة $area.",
+                    targetType = "SUPERVISOR",
+                    targetValue = "ALL",
+                    notificationType = "JOIN_REQUEST",
+                    relatedRequestId = requestDocId,
+                    timestamp = now
+                )
+                try {
+                    if (adminNotif.isValid()) db.collection("notifications").document(adminNotif.id).set(adminNotif)
+                } catch (_: Exception) {}
 
-            val userEntityLabel = when (requestType) {
-                "STORE" -> "متجر / محل تجاري"
-                "RESTAURANT" -> "مطعم / كافيه"
-                "MEDICAL" -> "مركز طبي / عيادة"
-                "PROPERTY" -> "عقار"
-                "JOB" -> "إعلان وظيفة"
-                "JOB_SEEKER" -> "متقدم للوظيفة"
-                "CLIENT" -> "حساب عميل"
-                else -> "فني / مهني"
-            }
-            addApplicantNotification(
-                "📨 تم استلام طلب انضمامك بنجاح",
-                "مرحباً $name، تم استلام طلب تسجيلك كـ ($userEntityLabel) وجاري مراجعته والتحقق من البيانات من قِبل إدارة التطبيق. نسعد بانضمامك وسنبلغك بإشعار فور التفعيل والاعتماد!",
-                "USER",
-                cleanPhone
-            )
+                onPendingAdded(newRequest)
+                preferenceHelper.setJoinRequestPhone(context, cleanPhone)
+                onJoinRequestPhoneUpdated(cleanPhone)
 
-            triggerNotification("📨 تم إرسال طلب انضمامك بنجاح، وهو قيد المراجعة لدى الإدارة")
-            onNavigateToScreen("JOIN_REQUEST_STATUS")
+                val userEntityLabel = when (requestType) {
+                    "STORE" -> "متجر / محل تجاري"
+                    "RESTAURANT" -> "مطعم / كافيه"
+                    "MEDICAL" -> "مركز طبي / عيادة"
+                    "PROPERTY" -> "عقار / مكتب عقاري"
+                    "JOB" -> "إعلان وظيفة"
+                    "JOB_SEEKER" -> "باحث عن عمل"
+                    "CLIENT" -> "حساب عميل"
+                    else -> "فني / مهني"
+                }
+                addApplicantNotification(
+                    "📨 تم استلام طلب انضمامك بنجاح",
+                    "مرحباً $resolvedOwnerName، تم استلام طلب تسجيلك كـ ($userEntityLabel) وجاري مراجعته والتحقق من البيانات من قِبل إدارة التطبيق. نسعد بانضمامك وسنبلغك بإشعار فور التفعيل والاعتماد!",
+                    "USER",
+                    cleanPhone
+                )
+
+                val okMsg = "تم إرسال طلب انضمامك بنجاح، وهو قيد المراجعة لدى الإدارة"
+                triggerNotification("📨 $okMsg")
+                onResult(true, okMsg)
+                onNavigateToScreen("JOIN_REQUEST_STATUS")
             } catch (e: Exception) {
                 e.printStackTrace()
                 com.serviseyem.utils.AppErrorLogManager.logFirestoreError("RegistrationHelper", "Error in submitJoinForm", e)
-                triggerNotification("❌ حدث خطأ أثناء إرسال الطلب: ${e.localizedMessage ?: "يرجى المحاولة مجدداً"}")
+                val errMsg = "حدث خطأ أثناء إرسال الطلب: ${e.localizedMessage ?: "يرجى المحاولة مجدداً"}"
+                triggerNotification("❌ $errMsg")
+                onResult(false, errMsg)
             }
         }
     }

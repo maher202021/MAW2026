@@ -329,7 +329,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
                     Switch(
                         checked = showInfoIcon,
                         onCheckedChange = { showInfoIcon = it },
-                        colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent)
+                        colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors)
                     )
                 }
 
@@ -342,7 +342,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
                     Switch(
                         checked = showBookingsIcon,
                         onCheckedChange = { showBookingsIcon = it },
-                        colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent)
+                        colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors)
                     )
                 }
 
@@ -355,7 +355,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
                     Switch(
                         checked = showLangIcon,
                         onCheckedChange = { showLangIcon = it },
-                        colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent)
+                        colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors)
                     )
                 }
 
@@ -368,7 +368,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
                     Switch(
                         checked = showAdminIcon,
                         onCheckedChange = { showAdminIcon = it },
-                        colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent)
+                        colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors)
                     )
                 }
 
@@ -381,7 +381,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
                     Switch(
                         checked = showFooterText,
                         onCheckedChange = { showFooterText = it },
-                        colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent)
+                        colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors)
                     )
                 }
 
@@ -532,7 +532,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("وضع الصيانة المؤقت", color = Color.White, fontSize = 13.sp)
-            Switch(checked = isMaintenanceActive, onCheckedChange = { isMaintenanceActive = it })
+            Switch(checked = isMaintenanceActive, onCheckedChange = { isMaintenanceActive = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         Row(
@@ -541,7 +541,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("إخفاء زر المساعد الذكي العائم", color = Color.White, fontSize = 13.sp)
-            Switch(checked = assistantHidden, onCheckedChange = { assistantHidden = it })
+            Switch(checked = assistantHidden, onCheckedChange = { assistantHidden = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         Row(
@@ -550,7 +550,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("تفعيل البحث الصوتي", color = Color.White, fontSize = 13.sp)
-            Switch(checked = isSpeechSearchEnabled, onCheckedChange = { isSpeechSearchEnabled = it })
+            Switch(checked = isSpeechSearchEnabled, onCheckedChange = { isSpeechSearchEnabled = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         Row(
@@ -559,7 +559,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("إلغاء شرط تسجيل الزائرين للحجز والمحادثة", color = Color.White, fontSize = 13.sp)
-            Switch(checked = bypassVisitorRegistration, onCheckedChange = { bypassVisitorRegistration = it })
+            Switch(checked = bypassVisitorRegistration, onCheckedChange = { bypassVisitorRegistration = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         Row(
@@ -568,10 +568,17 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("🔑 إلزامية كلمة المرور لجميع حسابات المواطنين الجديدة", color = Color.White, fontSize = 13.sp)
-            Switch(checked = isUserPasswordRequired, onCheckedChange = { isUserPasswordRequired = it })
+            Switch(checked = isUserPasswordRequired, onCheckedChange = { isUserPasswordRequired = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
-        var mapProviderState by remember { mutableStateOf(settingsState.mapProvider) }
+        var defaultBaseLayerState by remember {
+            mutableStateOf(
+                when (settingsState.defaultMapBaseLayer) {
+                    "esri_world_imagery", "osm_ar", "eox_cloudless", "opentopomap" -> settingsState.defaultMapBaseLayer
+                    else -> "esri_world_imagery"
+                }
+            )
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -579,33 +586,29 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("تمكين ميزة الرادار والخريطة للجماهير", color = Color.White, fontSize = 13.sp)
-            Switch(checked = isMapFeatureEnabled, onCheckedChange = { isMapFeatureEnabled = it })
+            Switch(
+                checked = isMapFeatureEnabled,
+                onCheckedChange = { isMapFeatureEnabled = it },
+                colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors)
+            )
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("محرك الخرائط المعتمد:", color = Color.White, fontSize = 13.sp)
-            Row {
-                FilterChip(
-                    selected = mapProviderState == "MAPLIBRE",
-                    onClick = { mapProviderState = "MAPLIBRE" },
-                    label = { Text("MapLibre", fontSize = 10.sp) }
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("الطبقة الأساسية للخريطة (بدون Google/Mapbox):", color = Color.White, fontSize = 13.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val baseOptions = listOf(
+                    "esri_world_imagery" to "أقمار Esri",
+                    "osm_ar" to "شوارع OSM",
+                    "eox_cloudless" to "فضائي EOX",
+                    "opentopomap" to "تضاريس"
                 )
-                Spacer(modifier = Modifier.width(4.dp))
-                FilterChip(
-                    selected = mapProviderState == "GOOGLE",
-                    onClick = { mapProviderState = "GOOGLE" },
-                    label = { Text("Google", fontSize = 10.sp) }
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                FilterChip(
-                    selected = mapProviderState == "MAPBOX",
-                    onClick = { mapProviderState = "MAPBOX" },
-                    label = { Text("Mapbox", fontSize = 10.sp) }
-                )
+                baseOptions.forEach { (key, label) ->
+                    FilterChip(
+                        selected = defaultBaseLayerState == key,
+                        onClick = { defaultBaseLayerState = key },
+                        label = { Text(label, fontSize = 10.sp) }
+                    )
+                }
             }
         }
 
@@ -615,7 +618,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("🔓 تعطيل جدار حماية المحادثات الفورية", color = Color.White, fontSize = 13.sp)
-            Switch(checked = disableChatFirewall, onCheckedChange = { disableChatFirewall = it })
+            Switch(checked = disableChatFirewall, onCheckedChange = { disableChatFirewall = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         Row(
@@ -624,7 +627,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("🔓 تعطيل جدار حماية حجز المواعيد", color = Color.White, fontSize = 13.sp)
-            Switch(checked = disableBookingFirewall, onCheckedChange = { disableBookingFirewall = it })
+            Switch(checked = disableBookingFirewall, onCheckedChange = { disableBookingFirewall = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         Row(
@@ -633,7 +636,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("🏪 تفعيل وتبويب قسم المحلات التجارية بالكامل", color = Color.White, fontSize = 13.sp)
-            Switch(checked = isStoresEnabled, onCheckedChange = { isStoresEnabled = it })
+            Switch(checked = isStoresEnabled, onCheckedChange = { isStoresEnabled = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         Row(
@@ -642,7 +645,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("🏠 تفعيل وتبويب قسم العقارات بالكامل", color = Color.White, fontSize = 13.sp)
-            Switch(checked = isPropertiesEnabled, onCheckedChange = { isPropertiesEnabled = it })
+            Switch(checked = isPropertiesEnabled, onCheckedChange = { isPropertiesEnabled = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         // Dedicated Card for Registration Forms Control
@@ -658,27 +661,27 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("🛠️ استمارة انضمام مقدمي الخدمات (أصحاب المهن)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Switch(checked = enableProvidersRegistration, onCheckedChange = { enableProvidersRegistration = it })
+                    Switch(checked = enableProvidersRegistration, onCheckedChange = { enableProvidersRegistration = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("🏪 استمارة تسجيل المحلات والمراكز التجارية", color = Color.White, fontSize = 12.sp)
-                    Switch(checked = enableStoresRegistration, onCheckedChange = { enableStoresRegistration = it })
+                    Switch(checked = enableStoresRegistration, onCheckedChange = { enableStoresRegistration = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("🍔 استمارة إضافة المطاعم والكافيهات", color = Color.White, fontSize = 12.sp)
-                    Switch(checked = enableRestaurantsRegistration, onCheckedChange = { enableRestaurantsRegistration = it })
+                    Switch(checked = enableRestaurantsRegistration, onCheckedChange = { enableRestaurantsRegistration = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("🏢 استمارة إدراج العقارات والبيوت", color = Color.White, fontSize = 12.sp)
-                    Switch(checked = enablePropertiesRegistration, onCheckedChange = { enablePropertiesRegistration = it })
+                    Switch(checked = enablePropertiesRegistration, onCheckedChange = { enablePropertiesRegistration = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("🏥 استمارة تسجيل المراكز الطبية والعيادات", color = Color.White, fontSize = 12.sp)
-                    Switch(checked = enableMedicalRegistration, onCheckedChange = { enableMedicalRegistration = it })
+                    Switch(checked = enableMedicalRegistration, onCheckedChange = { enableMedicalRegistration = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("💼 استمارة نشر الوظائف والفرص", color = Color.White, fontSize = 12.sp)
-                    Switch(checked = enableJobsRegistration, onCheckedChange = { enableJobsRegistration = it })
+                    Switch(checked = enableJobsRegistration, onCheckedChange = { enableJobsRegistration = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
                 }
             }
         }
@@ -689,7 +692,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("إخفاء البوت المساعد المساعد", color = Color.White, fontSize = 13.sp)
-            Switch(checked = assistantHidden, onCheckedChange = { assistantHidden = it })
+            Switch(checked = assistantHidden, onCheckedChange = { assistantHidden = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         Column {
@@ -703,7 +706,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("إخفاء زر المحادثة العائم", color = Color.White, fontSize = 13.sp)
-            Switch(checked = chatHidden, onCheckedChange = { chatHidden = it })
+            Switch(checked = chatHidden, onCheckedChange = { chatHidden = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         Column {
@@ -726,7 +729,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("إظهار أيقونة المزامنة/التحديث (Refresh)", color = Color.White, fontSize = 13.sp)
-            Switch(checked = showRefreshIcon, onCheckedChange = { showRefreshIcon = it })
+            Switch(checked = showRefreshIcon, onCheckedChange = { showRefreshIcon = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         Row(
@@ -735,7 +738,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("إظهار أيقونة الإعدادات/اللغة (Settings)", color = Color.White, fontSize = 13.sp)
-            Switch(checked = showSettingsIcon, onCheckedChange = { showSettingsIcon = it })
+            Switch(checked = showSettingsIcon, onCheckedChange = { showSettingsIcon = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         OutlinedTextField(
@@ -893,7 +896,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("تذكرني (حفظ الدخول بصورة دائمة كمالك)", color = Color.White, fontSize = 13.sp)
-            Switch(checked = rememberLoginInput, onCheckedChange = { rememberLoginInput = it })
+            Switch(checked = rememberLoginInput, onCheckedChange = { rememberLoginInput = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -982,7 +985,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("إخفاء تويتر (X):", fontSize = 11.sp, color = Color.White)
-            Switch(checked = hideTwitter, onCheckedChange = { hideTwitter = it }, colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent))
+            Switch(checked = hideTwitter, onCheckedChange = { hideTwitter = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         OutlinedTextField(
@@ -994,7 +997,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("إخفاء إنستغرام:", fontSize = 11.sp, color = Color.White)
-            Switch(checked = hideInstagram, onCheckedChange = { hideInstagram = it }, colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent))
+            Switch(checked = hideInstagram, onCheckedChange = { hideInstagram = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         OutlinedTextField(
@@ -1006,7 +1009,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("إخفاء يوتيوب:", fontSize = 11.sp, color = Color.White)
-            Switch(checked = hideYoutube, onCheckedChange = { hideYoutube = it }, colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent))
+            Switch(checked = hideYoutube, onCheckedChange = { hideYoutube = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         OutlinedTextField(
@@ -1018,7 +1021,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("إخفاء الموقع الإلكتروني:", fontSize = 11.sp, color = Color.White)
-            Switch(checked = hideWebsite, onCheckedChange = { hideWebsite = it }, colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent))
+            Switch(checked = hideWebsite, onCheckedChange = { hideWebsite = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         OutlinedTextField(
@@ -1030,7 +1033,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("إخفاء فيسبوك:", fontSize = 11.sp, color = Color.White)
-            Switch(checked = hideFacebook, onCheckedChange = { hideFacebook = it }, colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent))
+            Switch(checked = hideFacebook, onCheckedChange = { hideFacebook = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         OutlinedTextField(
@@ -1042,7 +1045,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("إخفاء تليجرام:", fontSize = 11.sp, color = Color.White)
-            Switch(checked = hideTelegram, onCheckedChange = { hideTelegram = it }, colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent))
+            Switch(checked = hideTelegram, onCheckedChange = { hideTelegram = it }, colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors))
         }
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -1070,7 +1073,7 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
             Switch(
                 checked = bannerEnabled,
                 onCheckedChange = { bannerEnabled = it },
-                colors = SwitchDefaults.colors(checkedThumbColor = themeColors.accent)
+                colors = com.serviseyem.ui.screens.admin.components.adminSwitchColors(themeColors)
             )
         }
 
@@ -1242,7 +1245,8 @@ fun OwnerBackdoorPanelLayout(viewModel: MainViewModel, themeColors: VisualThemeP
                     disableChatFirewall = disableChatFirewall,
                     disableBookingFirewall = disableBookingFirewall,
                     isMapFeatureEnabled = isMapFeatureEnabled,
-                    mapProvider = mapProviderState,
+                    mapProvider = "LEAFLET_OSM",
+                    defaultMapBaseLayer = defaultBaseLayerState,
                     enableProvidersRegistration = enableProvidersRegistration,
                     enableStoresRegistration = enableStoresRegistration,
                     enableRestaurantsRegistration = enableRestaurantsRegistration,

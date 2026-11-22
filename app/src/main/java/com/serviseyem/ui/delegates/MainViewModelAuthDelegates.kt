@@ -10,6 +10,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
+fun isGuestSessionId(uid: String): Boolean {
+    val t = uid.trim()
+    return t.isBlank() || t.equals("guest", ignoreCase = true) || t.startsWith("USR_GUEST_")
+}
+
 fun MainViewModel.applyFilters() {
     homeViewModel.applyFilters()
 }
@@ -242,7 +247,14 @@ fun MainViewModel.submitJoinForm(
     workPhotos: List<String> = emptyList(),
     customCategoryName: String = "",
     password: String = "",
-    productAttachmentsJson: String = ""
+    productAttachmentsJson: String = "",
+    ownerName: String = "",
+    description: String = "",
+    workingHours: String = "",
+    hasDelivery: Boolean = false,
+    hasEmergency: Boolean = false,
+    experienceYears: String = "",
+    onResult: (Boolean, String) -> Unit = { _, _ -> }
 ) {
     registrationHelper.submitJoinForm(
         context = context,
@@ -259,6 +271,12 @@ fun MainViewModel.submitJoinForm(
         customCategoryName = customCategoryName,
         password = password,
         productAttachmentsJson = productAttachmentsJson,
+        ownerName = ownerName,
+        description = description,
+        workingHours = workingHours,
+        hasDelivery = hasDelivery,
+        hasEmergency = hasEmergency,
+        experienceYears = experienceYears,
         checkDuplicate = { checkAndGetDuplicateAccountType(it, "") },
         logAdminActivity = { logAdminActivity(it) },
         triggerNotification = { triggerNotification(it) },
@@ -297,13 +315,15 @@ fun MainViewModel.submitJoinForm(
             _jobs.value = jList
         },
         onClientAdded = { userMap ->
+            val cleanPhone = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(userMap["phone"]?.toString() ?: "")
             val uList = _registeredUsersList.value.toMutableList()
-            uList.removeAll { it["phone"] == userMap["phone"] }
+            uList.removeAll { com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(it["phone"]?.toString() ?: "") == cleanPhone }
             uList.add(userMap)
             _registeredUsersList.value = uList
         },
         onJoinRequestPhoneUpdated = { _joinRequestPhone.value = it },
-        onNavigateToScreen = { _currentScreen.value = it }
+        onNavigateToScreen = { _currentScreen.value = it },
+        onResult = onResult
     )
 }
 
@@ -382,7 +402,7 @@ fun MainViewModel.adminResolvePasswordReset(
 fun MainViewModel.isUserLoggedIn(context: Context): Boolean {
     val isLoggedIn = preferenceHelper.isAccountLoggedIn(context)
     val phone = currentUserPhone.value
-    return isLoggedIn || (phone.isNotBlank() && currentUserId.value != "guest" && currentUserId.value.isNotBlank())
+    return isLoggedIn || (phone.isNotBlank() && !isGuestSessionId(currentUserId.value))
 }
 
 fun MainViewModel.restoreUserAccountByPhoneAndPassword(
@@ -391,21 +411,107 @@ fun MainViewModel.restoreUserAccountByPhoneAndPassword(
     password: String,
     onResult: (Boolean, String) -> Unit
 ) {
-    val email = getAuthEmailForPhone(phone)
-    auth.signInWithEmailAndPassword(email, password)
-        .addOnSuccessListener { authResult ->
-            val userId = authResult.user?.uid ?: ""
+    val cleanPhone = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(phone).filter { it.isDigit() }
+    val cleanPassword = password.trim()
+    if (cleanPhone.length < 7) {
+        onResult(false, "رقم الهاتف غير صحيح")
+        return
+    }
+    if (cleanPassword.isBlank()) {
+        onResult(false, "يرجى إدخال كلمة المرور")
+        return
+    }
+    accountRecoveryHelper.searchAccountForRestore(cleanPhone) { match ->
+        if (match == null) {
+            onResult(false, "لم يتم العثور على حساب مرتبط برقم الهاتف هذا")
+            return@searchAccountForRestore
+        }
+        accountRecoveryHelper.verifyRestorePassword(cleanPhone, match.type, cleanPassword) { isValid ->
+            if (!isValid) {
+                onResult(false, "كلمة المرور غير صحيحة")
+                return@verifyRestorePassword
+            }
             viewModelScope.launch {
-                adminViewModel.crud.updateFields("users", userId, mapOf("isDeleted" to false))
-                adminViewModel.crud.updateFields("providers", phone, mapOf("isDeleted" to false))
-                adminViewModel.crud.updateFields("stores", phone, mapOf("isDeleted" to false))
-                adminViewModel.crud.updateFields("properties", phone, mapOf("isDeleted" to false))
-                onResult(true, "تم استعادة الحساب بنجاح!")
+                val restoredEntityId = when {
+                    match.provider != null -> {
+                        if (match.provider.isDeleted) {
+                            adminViewModel.crud.updateFields("providers", match.provider.id, mapOf("isDeleted" to false))
+                        }
+                        match.provider.id
+                    }
+                    match.store != null -> {
+                        if (match.store.isDeleted) {
+                            adminViewModel.crud.updateFields("stores", match.store.id, mapOf("isDeleted" to false))
+                        }
+                        match.store.id
+                    }
+                    match.property != null -> {
+                        if (match.property.isDeleted) {
+                            adminViewModel.crud.updateFields("properties", match.property.id, mapOf("isDeleted" to false))
+                        }
+                        match.property.id
+                    }
+                    match.job != null -> {
+                        if (match.job.isDeleted) {
+                            adminViewModel.crud.updateFields("jobs", match.job.id, mapOf("isDeleted" to false))
+                        }
+                        match.job.id
+                    }
+                    else -> "usr_$cleanPhone"
+                }
+
+                val area = match.provider?.area?.takeIf { it.isNotBlank() }
+                    ?: match.store?.cityId?.takeIf { it.isNotBlank() }
+                    ?: match.property?.cityId?.takeIf { it.isNotBlank() }
+                    ?: match.job?.cityId?.takeIf { it.isNotBlank() }
+                    ?: "اليمن"
+
+                setUserSessionDetails(context, match.name, cleanPhone, area)
+                setJoinRequestPhone(context, cleanPhone)
+                if (restoredEntityId.isNotBlank()) {
+                    _currentUserId.value = restoredEntityId
+                }
+
+                val mappedRole = when (match.type.uppercase()) {
+                    "PROVIDER" -> "PROVIDER"
+                    "STORE", "RESTAURANT", "MEDICAL" -> "STORE_OWNER"
+                    "PROPERTY" -> "PROPERTY_OWNER"
+                    "JOB" -> "JOB_POSTER"
+                    else -> null
+                }
+                if (mappedRole != null && _adminRole.value !in listOf("OWNER", "ADMIN", "SUPERVISOR")) {
+                    _adminRole.value = mappedRole
+                }
+
+                val sp = context.getSharedPreferences("yemen_service_prefs", Context.MODE_PRIVATE)
+                sp.edit().apply {
+                    putBoolean("is_account_logged_in", true)
+                    putString("user_account_type", match.type)
+                    putString("logged_account_id", restoredEntityId)
+                    putString("user_id", com.serviseyem.utils.SecurityCryptoUtils.encrypt(restoredEntityId))
+                    apply()
+                }
+                runCatching {
+                    val masterKey = androidx.security.crypto.MasterKey.Builder(context)
+                        .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
+                        .build()
+                    val secureSp = androidx.security.crypto.EncryptedSharedPreferences.create(
+                        context,
+                        "yemen_service_secure_prefs",
+                        masterKey,
+                        androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                    )
+                    secureSp.edit()
+                        .putBoolean("is_account_logged_in", true)
+                        .putString("user_account_type", match.type)
+                        .putString("logged_account_id", restoredEntityId)
+                        .apply()
+                }
+                onResult(true, "تم استعادة الحساب وتسجيل الدخول بنجاح!")
             }
         }
-        .addOnFailureListener { e ->
-            onResult(false, e.message ?: "فشل في تسجيل الدخول")
-        }
+    }
 }
 
 fun MainViewModel.restoreGuestUser(context: Context, phone: String, password: String, onResult: (Boolean, String) -> Unit) {
@@ -452,9 +558,10 @@ fun MainViewModel.registerGuestUser(
     phone: String,
     residence: String,
     password: String = "",
-    confirmPassword: String = password
+    confirmPassword: String = password,
+    onResult: (Boolean, String) -> Unit = { _, _ -> }
 ) {
-    authViewModel.registerGuestUser(context, name, phone, residence, password, confirmPassword)
+    authViewModel.registerGuestUser(context, name, phone, residence, password, confirmPassword, onResult)
 }
 
 fun MainViewModel.toggleFavorite(id: String) {
@@ -566,8 +673,9 @@ fun MainViewModel.changeEntityPassword(
         onResult(false, "معرف الحساب غير صالح")
         return
     }
-    if (cleanNew.length < 6) {
-        onResult(false, "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل")
+    val policyCheck = com.serviseyem.utils.SecurityCryptoUtils.validatePasswordPolicy(cleanNew)
+    if (!policyCheck.first) {
+        onResult(false, policyCheck.second ?: "كلمة المرور يجب أن تكون 7 خانات على الأقل وتحتوي على حرف ورقم")
         return
     }
     viewModelScope.launch {
@@ -615,6 +723,14 @@ fun MainViewModel.changeEntityPassword(
                         selectedProperty = selectedProperty?.copy(passwordHash = newHash)
                     }
                 }
+                "jobs" -> {
+                    adminViewModel.appState._jobs.value = adminViewModel.appState._jobs.value.map {
+                        if (it.id == cleanId) it.copy(passwordHash = newHash) else it
+                    }
+                    if (selectedJob?.id == cleanId) {
+                        selectedJob = selectedJob?.copy(passwordHash = newHash)
+                    }
+                }
             }
             triggerNotification("🔒 تم تحديث كلمة المرور بنجاح")
             onResult(true, "تم تحديث كلمة المرور بنجاح")
@@ -642,14 +758,15 @@ fun MainViewModel.incrementEntityViews(collection: String, entityId: String) {
 
 fun MainViewModel.findOwnedBusinessDestination(): Pair<String, (() -> Unit)>? {
     val rawPhone = currentUserPhone.value.trim()
-    val normPhone = rawPhone.filter { it.isDigit() }.takeLast(9)
+    val normPhone = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(rawPhone).filter { it.isDigit() }
     val uid = currentUserId.value.trim()
-    if (normPhone.length < 7 && (uid.isBlank() || uid == "guest")) return null
+    val isGuestUid = isGuestSessionId(uid)
+    if (normPhone.length < 7 && isGuestUid) return null
 
     fun matchesPhoneOrId(phone: String?, id: String?, ownerId: String? = null): Boolean {
-        val pNorm = (phone ?: "").filter { it.isDigit() }.takeLast(9)
+        val pNorm = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(phone ?: "").filter { it.isDigit() }
         if (normPhone.length >= 7 && pNorm == normPhone) return true
-        if (uid.isNotBlank() && uid != "guest" && (id == uid || ownerId == uid)) return true
+        if (!isGuestUid && (id == uid || ownerId == uid)) return true
         return false
     }
 

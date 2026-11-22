@@ -75,6 +75,9 @@ class AppState @Inject constructor() {
     internal val _jobListings = MutableStateFlow<List<JobEntity>>(emptyList())
     val jobListings: StateFlow<List<JobEntity>> = _jobListings.asStateFlow()
 
+    internal val _jobSeekers = MutableStateFlow<List<Map<String, Any>>>(emptyList())
+    val jobSeekers: StateFlow<List<Map<String, Any>>> = _jobSeekers.asStateFlow()
+
     internal val _maxKmRadius = MutableStateFlow(50)
     val maxKmRadius: StateFlow<Int> = _maxKmRadius.asStateFlow()
 
@@ -134,4 +137,25 @@ class AppState @Inject constructor() {
 
     internal val _pendingTechnicians = MutableStateFlow<List<PendingProviderEntity>>(emptyList())
     val pendingTechnicians: StateFlow<List<PendingProviderEntity>> = _pendingTechnicians.asStateFlow()
+
+    internal val _quickServiceConfig = MutableStateFlow(QuickServiceConfig())
+    val quickServiceConfig: StateFlow<QuickServiceConfig> = _quickServiceConfig.asStateFlow()
+
+    internal val _paymentSystemConfig = MutableStateFlow(PaymentSystemConfig())
+    val paymentSystemConfig: StateFlow<PaymentSystemConfig> = _paymentSystemConfig.asStateFlow()
+
+    internal val _autoRoutingConfig = MutableStateFlow(AutoRoutingConfig())
+    val autoRoutingConfig: StateFlow<AutoRoutingConfig> = _autoRoutingConfig.asStateFlow()
+
+    internal val _registrationFormsConfig = MutableStateFlow(RegistrationFormsConfig())
+    val registrationFormsConfig: StateFlow<RegistrationFormsConfig> = _registrationFormsConfig.asStateFlow()
+
+    internal val _platformHomeSections = MutableStateFlow(PlatformHomeSection.DEFAULT_SECTIONS)
+    val platformHomeSections: StateFlow<List<PlatformHomeSection>> = _platformHomeSections.asStateFlow()
+
+    internal val _adminPermissionsMatrix = MutableStateFlow<List<String>>(emptyList())
+    val adminPermissionsMatrix: StateFlow<List<String>> = _adminPermissionsMatrix.asStateFlow()
+
+    internal val _rolePermissionsMap = MutableStateFlow<Map<String, List<String>>>(emptyMap())
+    val rolePermissionsMap: StateFlow<Map<String, List<String>>> = _rolePermissionsMap.asStateFlow()
 }

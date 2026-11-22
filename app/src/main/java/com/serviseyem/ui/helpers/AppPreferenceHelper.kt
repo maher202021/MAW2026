@@ -33,7 +33,8 @@ class AppPreferenceHelper {
          */
         fun normalizePhoneNumber(phone: String): String {
             if (phone.isBlank()) return phone
-            val digits = phone.filter { it.isDigit() }
+            val converted = convertArabicDigitsToEnglish(phone)
+            val digits = converted.filter { it in '0'..'9' }
             if (digits.length < 7) return phone
 
             var processed = digits
@@ -56,6 +57,21 @@ class AppPreferenceHelper {
             }
 
             return phone
+        }
+
+        private fun convertArabicDigitsToEnglish(input: String): String {
+            val arabic = charArrayOf('٠','١','٢','٣','٤','٥','٦','٧','٨','٩','۰','۱','۲','۳','۴','۵','۶','۷','۸','۹')
+            val english = charArrayOf('0','1','2','3','4','5','6','7','8','9','0','1','2','3','4','5','6','7','8','9')
+            val builder = StringBuilder(input.length)
+            for (ch in input) {
+                val idx = arabic.indexOf(ch)
+                if (idx != -1) {
+                    builder.append(english[idx])
+                } else {
+                    builder.append(ch)
+                }
+            }
+            return builder.toString()
         }
     }
 

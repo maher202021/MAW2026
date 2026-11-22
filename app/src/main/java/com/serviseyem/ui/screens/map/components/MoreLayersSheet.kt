@@ -74,6 +74,7 @@ fun Row3(
 fun MoreLayersSheet(
     state: MapScreenState,
     onDismiss: () -> Unit,
+    disabledLayerIds: Set<String> = emptySet(),
     themeColors: VisualThemePalette
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -144,148 +145,162 @@ fun MoreLayersSheet(
 
             HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
 
-            // 1. Meteosat Live (EUMETSAT IODC 41.5°E)
-            var layers by remember { mutableStateOf<List<WmsLayerInfo>?>(null) }
-            var menu by remember { mutableStateOf(false) }
+            if ("EUMETSAT" !in disabledLayerIds) {
+                // 1. Meteosat Live (EUMETSAT IODC 41.5°E)
+                var layers by remember { mutableStateOf<List<WmsLayerInfo>?>(null) }
+                var menu by remember { mutableStateOf(false) }
 
-            LaunchedEffect(state.eumetEnabled) {
-                if (state.eumetEnabled && layers == null) {
-                    layers = EumetViewCatalog.iodcLayers() ?: emptyList()
+                LaunchedEffect(state.eumetEnabled) {
+                    if (state.eumetEnabled && layers == null) {
+                        layers = EumetViewCatalog.iodcLayers() ?: emptyList()
+                    }
                 }
-            }
 
-            Row3(
-                title = "قمر Meteosat مباشر (EUMETSAT)",
-                subtitle = "يتجدد كل ~15 دقيقة • سحب وغبار فوق اليمن • دقة ≈ 3 كم",
-                checked = state.eumetEnabled
-            ) {
-                state.eumetEnabled = it
-            }
+                Row3(
+                    title = "قمر Meteosat مباشر (EUMETSAT)",
+                    subtitle = "يتجدد كل ~15 دقيقة • سحب وغبار فوق اليمن • دقة ≈ 3 كم",
+                    checked = state.eumetEnabled
+                ) {
+                    state.eumetEnabled = it
+                }
 
-            if (state.eumetEnabled) {
-                val list = layers
-                when {
-                    list == null -> {
-                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                            Text(
-                                text = "جاري استعلام الطبقات المتوفرة من EUMETView...",
-                                fontSize = 11.5.sp,
-                                color = Color(0xFF94A3B8),
-                                modifier = Modifier.padding(bottom = 6.dp)
-                            )
-                            LinearProgressIndicator(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = Color(0xFF00E5FF),
-                                trackColor = Color(0xFF1E293B)
-                            )
-                        }
-                    }
-                    list.isEmpty() -> {
-                        Text(
-                            text = "تعذر جلب قائمة الطبقات (تحتاج إنترنت).",
-                            color = Color(0xFFF59E0B),
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
-                    }
-                    else -> {
-                        if (state.eumetLayerName.isEmpty()) {
-                            state.eumetLayerName = (list.firstOrNull { it.title.contains("dust", true) } ?: list.first()).name
-                        }
-                        Box(modifier = Modifier.padding(vertical = 4.dp)) {
-                            OutlinedButton(
-                                onClick = { menu = true },
-                                modifier = Modifier.defaultMinSize(minHeight = 48.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.6f)),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = Color(0xFF00E5FF),
-                                    containerColor = Color(0xFF00E5FF).copy(alpha = 0.08f)
-                                )
-                            ) {
-                                Icon(Icons.Default.Satellite, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
+                if (state.eumetEnabled) {
+                    val list = layers
+                    when {
+                        list == null -> {
+                            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                                 Text(
-                                    text = list.firstOrNull { it.name == state.eumetLayerName }?.arabicLabel() ?: "اختر طبقة",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium
+                                    text = "جاري استعلام الطبقات المتوفرة من EUMETView...",
+                                    fontSize = 11.5.sp,
+                                    color = Color(0xFF94A3B8),
+                                    modifier = Modifier.padding(bottom = 6.dp)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                LinearProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = Color(0xFF00E5FF),
+                                    trackColor = Color(0xFF1E293B)
+                                )
                             }
-                            DropdownMenu(
-                                expanded = menu,
-                                onDismissRequest = { menu = false },
-                                modifier = Modifier
-                                    .background(Color(0xFF1E293B))
-                                    .widthIn(min = 220.dp, max = 320.dp)
-                            ) {
-                                list.forEach { l ->
-                                    val isCurrent = l.name == state.eumetLayerName
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = l.arabicLabel(),
-                                                color = if (isCurrent) Color(0xFF00E5FF) else Color.White,
-                                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                                fontSize = 13.sp
-                                            )
-                                        },
-                                        onClick = {
-                                            state.eumetLayerName = l.name
-                                            menu = false
-                                        }
+                        }
+                        list.isEmpty() -> {
+                            Text(
+                                text = "تعذر جلب قائمة الطبقات (تحتاج إنترنت).",
+                                color = Color(0xFFF59E0B),
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
+                        else -> {
+                            if (state.eumetLayerName.isEmpty()) {
+                                state.eumetLayerName = (list.firstOrNull { it.title.contains("dust", true) } ?: list.first()).name
+                            }
+                            Box(modifier = Modifier.padding(vertical = 4.dp)) {
+                                OutlinedButton(
+                                    onClick = { menu = true },
+                                    modifier = Modifier.defaultMinSize(minHeight = 48.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.6f)),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = Color(0xFF00E5FF),
+                                        containerColor = Color(0xFF00E5FF).copy(alpha = 0.08f)
                                     )
+                                ) {
+                                    Icon(Icons.Default.Satellite, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = list.firstOrNull { it.name == state.eumetLayerName }?.arabicLabel() ?: "اختر طبقة",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                }
+                                DropdownMenu(
+                                    expanded = menu,
+                                    onDismissRequest = { menu = false },
+                                    modifier = Modifier
+                                        .background(Color(0xFF1E293B))
+                                        .widthIn(min = 220.dp, max = 320.dp)
+                                ) {
+                                    list.forEach { l ->
+                                        val isCurrent = l.name == state.eumetLayerName
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = l.arabicLabel(),
+                                                    color = if (isCurrent) Color(0xFF00E5FF) else Color.White,
+                                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                                    fontSize = 13.sp
+                                                )
+                                            },
+                                            onClick = {
+                                                state.eumetLayerName = l.name
+                                                menu = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
             }
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
+            if ("NASA_GIBS" !in disabledLayerIds) {
+                // 2. NASA GIBS Live Satellites
+                Row3(
+                    title = "ناسا اليومية شبه الفورية (NASA GIBS)",
+                    subtitle = "تأخير ≈ 3 ساعات • VIIRS NOAA-20 / SNPP / MODIS • دقة 250م",
+                    checked = state.isNasaGibsActive
+                ) { active ->
+                    state.isNasaGibsActive = active
+                    if (active) {
+                        state.isEoxCloudlessActive = false
+                        state.isEsriImageryActive = false
+                    }
+                }
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
+            }
 
-            // 2. NASA GIBS Live Satellites
-            Row3(
-                title = "ناسا اليومية شبه الفورية (NASA GIBS)",
-                subtitle = "تأخير ≈ 3 ساعات • VIIRS NOAA-20 / SNPP / MODIS • دقة 250م",
-                checked = state.isNasaGibsActive
-            ) { active ->
-                state.isNasaGibsActive = active
-                if (active) {
-                    state.isEoxCloudlessActive = false
-                    state.isEsriImageryActive = false
+            if ("EOX_CLOUDLESS" !in disabledLayerIds) {
+                // 3. EOX Cloudless 2023 Sentinel-2
+                Row3(
+                    title = "EOX Cloudless (Sentinel-2)",
+                    subtitle = "صور فضائية فائقة الدقة 10 أمتار بدون غيوم لعموم اليمن",
+                    checked = state.isEoxCloudlessActive
+                ) { active ->
+                    state.isEoxCloudlessActive = active
+                    if (active) {
+                        state.isNasaGibsActive = false
+                        state.isEsriImageryActive = false
+                    }
+                }
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            if ("ESRI_IMAGERY" !in disabledLayerIds) {
+                // 4. Esri World Imagery
+                Row3(
+                    title = "صور Esri الفضائية فائقة الدقة",
+                    subtitle = "تغطية عالمية وتفصيلية للمدن والشوارع",
+                    checked = state.isEsriImageryActive
+                ) { active ->
+                    state.isEsriImageryActive = active
+                    if (active) {
+                        state.isNasaGibsActive = false
+                        state.isEoxCloudlessActive = false
+                    }
                 }
             }
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
-
-            // 3. EOX Cloudless 2023 Sentinel-2
-            Row3(
-                title = "EOX Cloudless (Sentinel-2)",
-                subtitle = "صور فضائية فائقة الدقة 10 أمتار بدون غيوم لعموم اليمن",
-                checked = state.isEoxCloudlessActive
-            ) { active ->
-                state.isEoxCloudlessActive = active
-                if (active) {
-                    state.isNasaGibsActive = false
-                    state.isEsriImageryActive = false
-                }
-            }
-
-            HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
-
-            // 4. Esri World Imagery
-            Row3(
-                title = "صور Esri الفضائية فائقة الدقة",
-                subtitle = "تغطية عالمية وتفصيلية للمدن والشوارع",
-                checked = state.isEsriImageryActive
-            ) { active ->
-                state.isEsriImageryActive = active
-                if (active) {
-                    state.isNasaGibsActive = false
-                    state.isEoxCloudlessActive = false
-                }
+            if (listOf("EUMETSAT", "NASA_GIBS", "EOX_CLOUDLESS", "ESRI_IMAGERY").all { it in disabledLayerIds }) {
+                Text(
+                    text = "تم تعطيل طبقات الأقمار الصناعية الإضافية من لوحة التحكم.",
+                    fontSize = 12.sp,
+                    color = Color(0xFFF59E0B),
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))

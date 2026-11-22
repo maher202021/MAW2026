@@ -16,7 +16,7 @@ import javax.inject.Inject
 open class AuthViewModel @Inject constructor() : BaseViewModel() {
 
     fun updateUserFcmToken(userId: String, token: String, currentUserPhone: String) {
-        if (userId.isEmpty() || userId == "guest" || token.isBlank()) return
+        if (isGuestSessionId(userId) || token.isBlank()) return
         viewModelScope.launch {
             try {
                 db.collection("registered_users").document(userId).get().addOnSuccessListener { doc ->
@@ -359,35 +359,57 @@ open class AuthViewModel @Inject constructor() : BaseViewModel() {
         phone: String,
         residence: String,
         password: String = "",
-        confirmPassword: String = password
+        confirmPassword: String = password,
+        onResult: (Boolean, String) -> Unit = { _, _ -> }
     ) {
         cachedAppContext = context.applicationContext
+        val cleanName = name.trim()
         val cleanPhone = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(phone).filter { it.isDigit() }
         val cleanPassword = password.trim()
         val cleanConfirm = confirmPassword.trim()
+        if (cleanName.isBlank()) {
+            val msg = "يرجى إدخال الاسم الثلاثي"
+            triggerToast("⚠️ $msg")
+            onResult(false, msg)
+            return
+        }
         if (cleanPhone.length < 7) {
-            triggerToast("⚠️ يرجى إدخال رقم هاتف صحيح")
+            val msg = "رقم الهاتف غير صحيح. يجب أن يتكون من 9 أرقام ويبدأ بـ (77, 73, 71, 70, 78)"
+            triggerToast("⚠️ $msg")
+            onResult(false, msg)
+            return
+        }
+        if (residence.trim().isBlank()) {
+            val msg = "يرجى اختيار المدينة / المحافظة"
+            triggerToast("⚠️ $msg")
+            onResult(false, msg)
             return
         }
         if (cleanPassword.isBlank()) {
-            triggerToast("⚠️ لا يمكن التسجيل بدون كلمة مرور، يرجى إدخال كلمة مرور صريحة لتأمين حسابك")
+            val msg = "لا يمكن التسجيل بدون كلمة مرور، يرجى إدخال كلمة مرور صريحة لتأمين حسابك"
+            triggerToast("⚠️ $msg")
+            onResult(false, msg)
             return
         }
         if (cleanPassword != cleanConfirm) {
-            triggerToast("⚠️ كلمة المرور وتأكيد كلمة المرور غير متطابقين")
+            val msg = "كلمة المرور وتأكيد كلمة المرور غير متطابقين"
+            triggerToast("⚠️ $msg")
+            onResult(false, msg)
             return
         }
 
         val valResult = com.serviseyem.utils.SecurityCryptoUtils.validatePasswordPolicy(cleanPassword)
         if (!valResult.first) {
-            triggerToast("⚠️ ${valResult.second ?: "يرجى إدخال كلمة مرور قوية لحماية حسابك"}")
+            val msg = valResult.second ?: "يرجى إدخال كلمة مرور قوية لحماية حسابك"
+            triggerToast("⚠️ $msg")
+            onResult(false, msg)
             return
         }
 
         viewModelScope.launch {
             try {
                 val client = com.serviseyem.domain.entities.RegistrationEntity.Client(
-                    fullName = name.trim(),
+                    fullName = cleanName,
                     phone = cleanPhone,
                     city = residence.trim(),
                     rawPassword = cleanPassword
@@ -400,7 +422,7 @@ open class AuthViewModel @Inject constructor() : BaseViewModel() {
                     val userId = result.getOrNull() ?: ("usr_" + cleanPhone)
 
                     _currentUserId.value = userId
-                    _currentUserName.value = name.trim()
+                    _currentUserName.value = cleanName
                     _currentUserPhone.value = cleanPhone
                     _currentUserResidence.value = residence.trim()
                     _joinRequestPhone.value = cleanPhone
@@ -408,20 +430,25 @@ open class AuthViewModel @Inject constructor() : BaseViewModel() {
                     val sp = context.getSharedPreferences("yemen_service_prefs", Context.MODE_PRIVATE)
                     sp.edit().apply {
                         putString("user_id", com.serviseyem.utils.SecurityCryptoUtils.encrypt(userId))
-                        putString("user_name", com.serviseyem.utils.SecurityCryptoUtils.encrypt(name.trim()))
+                        putString("user_name", com.serviseyem.utils.SecurityCryptoUtils.encrypt(cleanName))
                         putString("user_phone", com.serviseyem.utils.SecurityCryptoUtils.encrypt(cleanPhone))
                         putString("user_residence", com.serviseyem.utils.SecurityCryptoUtils.encrypt(residence.trim()))
                         putString("join_request_phone", com.serviseyem.utils.SecurityCryptoUtils.encrypt(cleanPhone))
                         apply()
                     }
 
-                    triggerToast("🎉 أهلاً بك في الدليل $name، تم تسجيل وحماية حسابك آمنياً بنجاح!")
+                    val successMsg = "تم إرسال طلب إنشاء حسابك ($cleanName) بنجاح وهو الآن قيد مراجعة واعتماد الإدارة."
+                    triggerToast("🎉 $successMsg")
+                    onResult(true, successMsg)
                 } else {
                     val errorMsg = result.exceptionOrNull()?.localizedMessage ?: "فشل تسجيل حساب العميل"
                     triggerToast("❌ $errorMsg")
+                    onResult(false, errorMsg)
                 }
             } catch (e: Exception) {
-                triggerToast("❌ حدث خطأ أثناء التسجيل: ${e.localizedMessage}")
+                val errorMsg = e.localizedMessage ?: "حدث خطأ غير متوقع أثناء التسجيل"
+                triggerToast("❌ $errorMsg")
+                onResult(false, errorMsg)
             }
         }
     }

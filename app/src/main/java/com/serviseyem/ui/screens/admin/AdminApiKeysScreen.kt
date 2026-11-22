@@ -64,9 +64,9 @@ fun AdminApiKeysScreenContent(
     var selectedAiModel by remember { mutableStateOf("gemini-1.5-flash") }
     var showGeminiKey by remember { mutableStateOf(false) }
 
-    var googleMapsKey by remember { mutableStateOf("") }
-    var mapboxKey by remember { mutableStateOf("") }
-    var selectedMapEngine by remember { mutableStateOf("OPEN_STREET_MAP") }
+    var osmTilesEndpoint by remember { mutableStateOf("") }
+    var nominatimApiKey by remember { mutableStateOf("") }
+    var selectedMapEngine by remember { mutableStateOf("LEAFLET_OSM") }
     var showMapsKey by remember { mutableStateOf(false) }
 
     var kuraimiToken by remember { mutableStateOf("") }
@@ -88,9 +88,9 @@ fun AdminApiKeysScreenContent(
         geminiApiKey = apiKeyRepository.getApiKey("geminiApiKey").getOrDefault("")
         openaiApiKey = apiKeyRepository.getApiKey("openaiApiKey").getOrDefault("")
         selectedAiModel = apiKeyRepository.getApiKey("selectedAiModel").getOrDefault("gemini-1.5-flash")
-        googleMapsKey = apiKeyRepository.getApiKey("googleMapsKey").getOrDefault("")
-        mapboxKey = apiKeyRepository.getApiKey("mapboxKey").getOrDefault("")
-        selectedMapEngine = apiKeyRepository.getApiKey("selectedMapEngine").getOrDefault("OPEN_STREET_MAP")
+        osmTilesEndpoint = apiKeyRepository.getApiKey("osmTilesEndpoint").getOrDefault("")
+        nominatimApiKey = apiKeyRepository.getApiKey("nominatimApiKey").getOrDefault("")
+        selectedMapEngine = apiKeyRepository.getApiKey("selectedMapEngine").getOrDefault("LEAFLET_OSM")
         kuraimiToken = apiKeyRepository.getApiKey("kuraimiToken").getOrDefault("")
         jawwalPayKey = apiKeyRepository.getApiKey("jawwalPayKey").getOrDefault("")
         floosakKey = apiKeyRepository.getApiKey("floosakKey").getOrDefault("")
@@ -98,6 +98,23 @@ fun AdminApiKeysScreenContent(
         webhookUrl = apiKeyRepository.getApiKey("webhookUrl").getOrDefault("")
         whatsappToken = apiKeyRepository.getApiKey("whatsappToken").getOrDefault("")
         smsGatewayKey = apiKeyRepository.getApiKey("smsGatewayKey").getOrDefault("")
+        val customJson = apiKeyRepository.getApiKey("customKeysJson").getOrDefault("")
+        if (customJson.isNotBlank()) {
+            try {
+                val arr = org.json.JSONArray(customJson)
+                customKeys.clear()
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    customKeys.add(
+                        Triple(
+                            obj.optString("name", ""),
+                            obj.optString("key", ""),
+                            obj.optString("endpoint", "")
+                        )
+                    )
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -144,7 +161,7 @@ fun AdminApiKeysScreenContent(
             }
         }
 
-        // 2. مفاتيح الخرائط
+        // 2. روابط ومفاتيح محرك الخرائط المفتوح (Leaflet / OSM / Valhalla / Nominatim)
         Card(
             colors = CardDefaults.cardColors(containerColor = themeColors.surface),
             shape = RoundedCornerShape(14.dp),
@@ -154,13 +171,19 @@ fun AdminApiKeysScreenContent(
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF34D399))
-                    Text("🗺️ مفاتيح الخرائط وتحديد المواقع", fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("🗺️ إعدادات محرك الخرائط المفتوح (OSM / Valhalla / Leaflet)", fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
 
+                Text(
+                    "يعتمد التطبيق بالكامل على محرك Leaflet + OpenStreetMap + Esri + EOX + Valhalla بدون الحاجة لمفاتيح مدفوعة.",
+                    fontSize = 11.sp,
+                    color = Color(0xFF34D399)
+                )
+
                 OutlinedTextField(
-                    value = googleMapsKey,
-                    onValueChange = { googleMapsKey = it },
-                    label = { Text("Google Maps SDK API Key") },
+                    value = osmTilesEndpoint,
+                    onValueChange = { osmTilesEndpoint = it },
+                    label = { Text("رابط خادم بلاطات OSM / Valhalla المخصص (اختياري)") },
                     visualTransformation = if (showMapsKey) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = { showMapsKey = !showMapsKey }) {
@@ -173,9 +196,9 @@ fun AdminApiKeysScreenContent(
                 )
 
                 OutlinedTextField(
-                    value = mapboxKey,
-                    onValueChange = { mapboxKey = it },
-                    label = { Text("Mapbox Access Token (اختياري)") },
+                    value = nominatimApiKey,
+                    onValueChange = { nominatimApiKey = it },
+                    label = { Text("رابط أو مفتاح البحث الجغرافي Nominatim / Overpass (اختياري)") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
@@ -344,20 +367,31 @@ fun AdminApiKeysScreenContent(
         Button(
             onClick = {
                 scope.launch {
+                    val customArr = org.json.JSONArray()
+                    customKeys.forEach { (kName, kVal, kEndpoint) ->
+                        customArr.put(
+                            org.json.JSONObject().apply {
+                                put("name", kName)
+                                put("key", kVal)
+                                put("endpoint", kEndpoint)
+                            }
+                        )
+                    }
                     val results = listOf(
                         apiKeyRepository.setApiKey("geminiApiKey", geminiApiKey),
                         apiKeyRepository.setApiKey("openaiApiKey", openaiApiKey),
                         apiKeyRepository.setApiKey("selectedAiModel", selectedAiModel),
-                        apiKeyRepository.setApiKey("googleMapsKey", googleMapsKey),
-                        apiKeyRepository.setApiKey("mapboxKey", mapboxKey),
-                        apiKeyRepository.setApiKey("selectedMapEngine", selectedMapEngine),
+                        apiKeyRepository.setApiKey("osmTilesEndpoint", osmTilesEndpoint),
+                        apiKeyRepository.setApiKey("nominatimApiKey", nominatimApiKey),
+                        apiKeyRepository.setApiKey("selectedMapEngine", "LEAFLET_OSM"),
                         apiKeyRepository.setApiKey("kuraimiToken", kuraimiToken),
                         apiKeyRepository.setApiKey("jawwalPayKey", jawwalPayKey),
                         apiKeyRepository.setApiKey("floosakKey", floosakKey),
                         apiKeyRepository.setApiKey("oneCashKey", oneCashKey),
                         apiKeyRepository.setApiKey("webhookUrl", webhookUrl),
                         apiKeyRepository.setApiKey("whatsappToken", whatsappToken),
-                        apiKeyRepository.setApiKey("smsGatewayKey", smsGatewayKey)
+                        apiKeyRepository.setApiKey("smsGatewayKey", smsGatewayKey),
+                        apiKeyRepository.setApiKey("customKeysJson", customArr.toString())
                     )
                     if (results.all { it.isSuccess }) {
                         Toast.makeText(context, "✅ تم حفظ ومزامنة كافة المفاتيح سحابياً فوراً وأمان تام!", Toast.LENGTH_LONG).show()

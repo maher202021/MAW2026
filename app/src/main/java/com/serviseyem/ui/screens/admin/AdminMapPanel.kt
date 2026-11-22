@@ -177,6 +177,7 @@ fun AdminMapPanel(
                     typeLabel = "فني 👷",
                     typeColor = Color(0xFF00E5FF),
                     phone = p.phone,
+                    onNavigate = { viewModel.openNavigation(p.latitude, p.longitude, p.name) },
                     themeColors = themeColors
                 )
             }
@@ -203,6 +204,7 @@ fun AdminMapPanel(
                     typeLabel = label,
                     typeColor = color,
                     phone = s.phone,
+                    onNavigate = { viewModel.openNavigation(s.latitude, s.longitude, s.name) },
                     themeColors = themeColors
                 )
             }
@@ -222,6 +224,7 @@ fun AdminMapPanel(
                     typeLabel = "عقار 🏠",
                     typeColor = Color(0xFF8B5CF6),
                     phone = pr.phone,
+                    onNavigate = { viewModel.openNavigation(pr.latitude, pr.longitude, pr.title) },
                     themeColors = themeColors
                 )
             }
@@ -255,6 +258,7 @@ private fun AdminMapEntityItem(
     typeLabel: String,
     typeColor: Color,
     phone: String,
+    onNavigate: () -> Unit,
     themeColors: VisualThemePalette
 ) {
     val context = LocalContext.current
@@ -303,40 +307,24 @@ private fun AdminMapEntityItem(
                 }
             }
 
-            // Navigation button
+            // Navigation button (in-app navigation engine - zero Google Maps dependency)
             if (hasGps) {
                 IconButton(
                     onClick = {
-                        val provider = "GOOGLE_MAPS"
                         try {
-                            when (provider) {
-                                "MAPBOX" -> {
-                                    val uri = android.net.Uri.parse("mapbox://directions/profile/mapbox/driving/$lng,$lat")
-                                    context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
-                                    android.widget.Toast.makeText(context, "تم فتح Mapbox", android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                                "MAPLIBRE" -> {
-                                    val uri = android.net.Uri.parse("geo:$lat,$lng?q=$lat,$lng")
-                                    context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
-                                    android.widget.Toast.makeText(context, "تم فتح MapLibre / الخريطة الافتراضية", android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                                else -> {
-                                    val uri = android.net.Uri.parse("google.navigation:q=$lat,$lng")
-                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri).apply {
-                                        setPackage("com.google.android.apps.maps")
-                                    }
-                                    context.startActivity(intent)
-                                    android.widget.Toast.makeText(context, "تم فتح خرائط جوجل", android.widget.Toast.LENGTH_SHORT).show()
-                                }
+                            onNavigate()
+                        } catch (_: Exception) {
+                            try {
+                                val geoUri = android.net.Uri.parse("geo:$lat,$lng?q=$lat,$lng(${android.net.Uri.encode(title)})")
+                                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, geoUri))
+                            } catch (_: Exception) {
+                                Toast.makeText(context, "تعذر فتح التوجيه للموقع", Toast.LENGTH_SHORT).show()
                             }
-                        } catch (e: Exception) {
-                            val fallbackUri = android.net.Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng")
-                            context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, fallbackUri))
                         }
                     },
-                    modifier = androidx.compose.ui.Modifier.size(32.dp)
+                    modifier = androidx.compose.ui.Modifier.size(48.dp)
                 ) {
-                    Icon(Icons.Default.LocationOn, contentDescription = "توجيه", tint = Color(0xFF00E5FF))
+                    Icon(Icons.Default.LocationOn, contentDescription = "فتح الملاحة الداخلية", tint = Color(0xFF00E5FF))
                 }
             }
         }

@@ -126,6 +126,78 @@ fun MapScreenContent(
         }
     }
 
+    val settingsState by viewModel.settings.collectAsState()
+    val adminRole by viewModel.adminRole.collectAsState()
+    val currentUserId by viewModel.currentUserId.collectAsState()
+    val isPrivilegedAdmin = adminRole in setOf("OWNER", "MAIN_ADMIN", "SUPER_ADMIN", "ADMIN", "SUPERVISOR")
+
+    val mapBlockedByAdmin = !settingsState.isMapFeatureEnabled && !isPrivilegedAdmin
+    val mapBlockedForGuest = !settingsState.showMapToVisitors && currentUserId == "guest" && !isPrivilegedAdmin
+
+    if (mapBlockedByAdmin || mapBlockedForGuest) {
+        Scaffold(
+            containerColor = themeColors.background,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        ) { pad ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(pad)
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = themeColors.surface,
+                    tonalElevation = 6.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = if (mapBlockedByAdmin) "🗺️ الخرائط متوقفة مؤقتاً" else "🔒 الخريطة مخصصة للأعضاء المسجلين",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = if (mapBlockedByAdmin) {
+                                "تم إيقاف عرض شاشة الخرائط والرادار مؤقتاً من قبل إدارة المنصة."
+                            } else {
+                                "يرجى تسجيل الدخول أو إنشاء حساب لعرض الخريطة التفاعلية والخدمات القريبة."
+                            },
+                            color = themeColors.textSecondary,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Button(
+                            onClick = onBackClick,
+                            colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
+                            modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
+                        ) {
+                            Text("العودة", color = Color.Black)
+                        }
+                    }
+                }
+            }
+        }
+        return
+    }
+
+    LaunchedEffect(settingsState.defaultMapBaseLayer) {
+        val defaultLayer = settingsState.defaultMapBaseLayer.ifBlank { "esri_world_imagery" }
+        if (state.currentMapMode != MapMode.NAVIGATION) {
+            state.currentMapLayer = defaultLayer
+        }
+    }
+
+    LaunchedEffect(settingsState.mapMaxDistanceKm) {
+        if (settingsState.mapMaxDistanceKm in 5..150) {
+            state.maxRangeKm = settingsState.mapMaxDistanceKm.toFloat()
+        }
+    }
+
     val providers by viewModel.providers.collectAsState()
     val stores by viewModel.stores.collectAsState()
     val properties by viewModel.properties.collectAsState()
@@ -202,14 +274,40 @@ fun MapScreenContent(
         onDispose { state.clearOffsets() }
     }
 
-    val filteredProviders = remember(providers, state.selectedCategory, state.selectedCity, state.searchQuery) {
-        MapScreenFilters.filterProviders(providers, state.selectedCategory, state.selectedCity, state.searchQuery)
+    val adminVisibleProviders = remember(providers, settingsState.showProvidersOnMap) {
+        if (settingsState.showProvidersOnMap) providers else emptyList()
     }
-    val filteredStores = remember(stores, state.selectedCategory, state.selectedCity, state.searchQuery) {
-        MapScreenFilters.filterStores(stores, state.selectedCategory, state.selectedCity, state.searchQuery)
+    val adminVisibleStores = remember(
+        stores,
+        settingsState.showStoresOnMap,
+        settingsState.showRestaurantsOnMap,
+        settingsState.showMedicalOnMap
+    ) {
+        stores.filter { store ->
+            val sec = store.sectionId.lowercase()
+            val cat = store.categoryId.lowercase()
+            val nm = store.name.lowercase()
+            val isMedical = sec.contains("medical") || cat.contains("medical") || nm.contains("طبي") || nm.contains("عياد") || nm.contains("مستشفى") || nm.contains("صيدلية")
+            val isRestaurant = !isMedical && (sec.contains("restaurant") || cat.contains("restaurant") || nm.contains("مطعم") || nm.contains("كافيه") || nm.contains("وجبات"))
+            when {
+                isMedical -> settingsState.showMedicalOnMap
+                isRestaurant -> settingsState.showRestaurantsOnMap
+                else -> settingsState.showStoresOnMap
+            }
+        }
     }
-    val filteredProperties = remember(properties, state.selectedCategory, state.selectedCity, state.searchQuery) {
-        MapScreenFilters.filterProperties(properties, state.selectedCategory, state.selectedCity, state.searchQuery)
+    val adminVisibleProperties = remember(properties, settingsState.showPropertiesOnMap) {
+        if (settingsState.showPropertiesOnMap) properties else emptyList()
+    }
+
+    val filteredProviders = remember(adminVisibleProviders, state.selectedCategory, state.selectedCity, state.searchQuery) {
+        MapScreenFilters.filterProviders(adminVisibleProviders, state.selectedCategory, state.selectedCity, state.searchQuery)
+    }
+    val filteredStores = remember(adminVisibleStores, state.selectedCategory, state.selectedCity, state.searchQuery) {
+        MapScreenFilters.filterStores(adminVisibleStores, state.selectedCategory, state.selectedCity, state.searchQuery)
+    }
+    val filteredProperties = remember(adminVisibleProperties, state.selectedCategory, state.selectedCity, state.searchQuery) {
+        MapScreenFilters.filterProperties(adminVisibleProperties, state.selectedCategory, state.selectedCity, state.searchQuery)
     }
     val radarPoints = remember(filteredProviders, filteredStores, filteredProperties, safeUserLat, safeUserLng) {
         MapScreenFilters.buildRadarPoints(
@@ -269,6 +367,9 @@ fun MapScreenContent(
                 .background(com.serviseyem.ui.theme.AppBackground)
                 .padding(paddingValues)
         ) {
+            val disabledLayers = remember(settingsState.disabledMapLayers) {
+                settingsState.disabledMapLayers.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
+            }
             MapMainViewport(
                 state = state,
                 radarPoints = radarPoints,
@@ -287,6 +388,9 @@ fun MapScreenContent(
                 coroutineScope = coroutineScope,
                 snackbarHostState = snackbarHostState,
                 haptic = haptic,
+                maxZoom = settingsState.mapMaxZoom.coerceIn(10, 22),
+                showSatMenu = settingsState.showSatMenuOnMap,
+                showMeasureTool = settingsState.showMeasureToolOnMap && ("MEASURE_RULER" !in disabledLayers),
                 themeColors = themeColors
             )
 
@@ -466,10 +570,12 @@ fun MapScreenContent(
                         webViewRef?.post { webViewRef?.evaluateJavascript("if (window.clearRoute) { window.clearRoute(); }", null) }
                     },
                     onCloseNavigation = {
+                        val fallbackLayer = settingsState.defaultMapBaseLayer.ifBlank { "esri_world_imagery" }
                         state.currentMapMode = MapMode.VELA_3D
-                        state.currentMapLayer = "google_satellite"
+                        state.currentMapLayer = fallbackLayer
                         state.pendingNavDestination = null
-                        val script = "if (window.clearRoute) { window.clearRoute(); } if (window.switchLayer) { window.switchLayer('google_satellite'); }"
+                        val quotedFallback = org.json.JSONObject.quote(fallbackLayer)
+                        val script = "if (window.clearRoute) { window.clearRoute(); } if (window.switchLayer) { window.switchLayer($quotedFallback); }"
                         webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
                     },
                     onPromptDownloadOffline = { showValhallaDialog = true },

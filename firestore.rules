@@ -95,6 +95,11 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update, delete: if isStaff() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
     }
+    match /job_seekers/{d} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isStaff() || (isSignedIn() && (resource.data.phone == request.auth.uid || resource.data.ownerId == request.auth.uid));
+    }
 
     // 3. مستخدمي الإدارة والمالك والمشرفين (ممنوع القراءة والكتابة والوصول السحابي المباشر منعاً تاماً)
     match /admin_users/{d} { allow read, write: if false; }

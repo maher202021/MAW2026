@@ -79,6 +79,8 @@ fun MapControls(
     onOpenGnssDiagnostics: () -> Unit = {},
     onExportGpx: () -> Unit = {},
     onPrintMapPdf: () -> Unit = {},
+    defaultBaseLayer: String = "esri_world_imagery",
+    orderedVisibleLayerIds: List<String> = com.serviseyem.data.models.MapLayersCatalog.ALL_LAYERS.map { it.id },
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
 ) {
@@ -115,18 +117,22 @@ fun MapControls(
                 }
             )
 
-            val isNavActive = currentLayer == "navigation"
-            MapControlItem(
-                icon = Icons.Default.Navigation,
-                label = "ملاحة",
-                isActive = isNavActive,
-                activeColor = Color(0xFF10B981),
-                inactiveColor = Color.White.copy(alpha = 0.8f),
-                onClick = {
-                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    if (isNavActive) onSwitchLayer("google_satellite") else onSwitchLayer("navigation")
-                }
-            )
+            val visibleSet = orderedVisibleLayerIds.toSet()
+
+            if ("NAVIGATION" in visibleSet) {
+                val isNavActive = currentLayer == "navigation"
+                MapControlItem(
+                    icon = Icons.Default.Navigation,
+                    label = "ملاحة",
+                    isActive = isNavActive,
+                    activeColor = Color(0xFF10B981),
+                    inactiveColor = Color.White.copy(alpha = 0.8f),
+                    onClick = {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        if (isNavActive) onSwitchLayer(defaultBaseLayer) else onSwitchLayer("navigation")
+                    }
+                )
+            }
 
             Divider(color = Color.White.copy(alpha = 0.12f), modifier = Modifier.width(28.dp))
 
@@ -151,220 +157,251 @@ fun MapControls(
                 }
             )
 
-            MapControlItem(
-                icon = if (isRadarMode) Icons.Default.Map else Icons.Default.Explore,
-                label = if (isRadarMode) "خريطة" else "رادار",
-                isActive = isRadarMode,
-                activeColor = Color(0xFF10B981),
-                onClick = {
-                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    onToggleRadarMode()
-                }
-            )
+            if ("RADAR" in visibleSet) {
+                MapControlItem(
+                    icon = if (isRadarMode) Icons.Default.Map else Icons.Default.Explore,
+                    label = if (isRadarMode) "خريطة" else "رادار",
+                    isActive = isRadarMode,
+                    activeColor = Color(0xFF10B981),
+                    onClick = {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        onToggleRadarMode()
+                    }
+                )
+            }
 
-            MapControlItem(
-                icon = Icons.Default.ViewInAr,
-                label = "3D",
-                isActive = tiltAngle > 0,
-                activeColor = Color(0xFF10B981),
-                onClick = onToggleTilt
-            )
+            if ("VELA_3D" in visibleSet) {
+                MapControlItem(
+                    icon = Icons.Default.ViewInAr,
+                    label = "3D",
+                    isActive = tiltAngle > 0,
+                    activeColor = Color(0xFF10B981),
+                    onClick = onToggleTilt
+                )
+            }
 
             MapControlItem(
                 icon = Icons.Default.Map,
                 label = "الأساس",
                 isActive = false,
                 onClick = {
-                    val nextLayer = when(currentLayer) {
-                        "google_satellite" -> "osm"
-                        "osm" -> "navigation"
-                        "navigation" -> "streets"
-                        else -> "google_satellite"
+                    val nextLayer = when (currentLayer) {
+                        "esri_world_imagery" -> "osm_ar"
+                        "osm_ar", "osm" -> "opentopomap"
+                        "opentopomap" -> "eox_cloudless"
+                        else -> "esri_world_imagery"
                     }
                     onSwitchLayer(nextLayer)
                 }
             )
 
-            MapControlItem(
-                icon = Icons.Default.DownloadForOffline,
-                label = "بلا نت",
-                isActive = false,
-                inactiveColor = Color(0xFF10B981),
-                onClick = {
-                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    onOpenRegionsDialog()
-                }
-            )
-
-            Divider(color = Color.White.copy(alpha = 0.12f), modifier = Modifier.width(28.dp))
-
-            // --- Section 3: Modes (Vela) ---
-            com.serviseyem.ui.screens.map.MapMode.values().forEach { mode ->
-                val isSelected = currentMode == mode
-                val modeLabel = when(mode) {
-                    com.serviseyem.ui.screens.map.MapMode.VELA_3D -> "فيلا"
-                    com.serviseyem.ui.screens.map.MapMode.AERIAL_OAM -> "أقمار"
-                    com.serviseyem.ui.screens.map.MapMode.AR_VPS -> "واقع معزز"
-                    com.serviseyem.ui.screens.map.MapMode.NAVIGATION -> "ملاحة"
-                    com.serviseyem.ui.screens.map.MapMode.ALEPH_AI -> "ألف"
-                }
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(vertical = 1.dp)
-                ) {
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                            if (mode == com.serviseyem.ui.screens.map.MapMode.ALEPH_AI) onOpenAleph() else onModeChange(mode)
-                        },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(34.dp)
-                                .background(
-                                    if (isSelected) Color(0xFF10B981).copy(alpha = 0.3f) else Color.Transparent,
-                                    CircleShape
-                                )
-                        ) {
-                            Text(text = mode.icon, fontSize = 16.sp)
-                        }
+            if ("OFFLINE_MAPS" in visibleSet) {
+                MapControlItem(
+                    icon = Icons.Default.DownloadForOffline,
+                    label = "بلا نت",
+                    isActive = false,
+                    inactiveColor = Color(0xFF10B981),
+                    onClick = {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        onOpenRegionsDialog()
                     }
-                    Text(
-                        text = modeLabel,
-                        fontSize = 8.5.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
-                        maxLines = 1
-                    )
-                }
+                )
             }
 
             Divider(color = Color.White.copy(alpha = 0.12f), modifier = Modifier.width(28.dp))
 
-            // --- Section 4: Advanced Local Map Tools (GNSS, DeadZone, Night HUD, GPX) ---
-            // 1. GNSS Live Satellites Signal Panel
-            MapControlItem(
-                icon = Icons.Default.SatelliteAlt,
-                label = "أقمار",
-                isActive = false,
-                inactiveColor = themeColors.accent,
-                onClick = onOpenGnssDiagnostics
+            // --- Section 3 & 4: Ordered Admin-Controlled Modes, Layers & Map Tools ---
+            val modeByLayerId = mapOf(
+                "VELA_3D" to MapMode.VELA_3D,
+                "AERIAL_OAM" to MapMode.AERIAL_OAM,
+                "AR_VPS" to MapMode.AR_VPS,
+                "NAVIGATION" to MapMode.NAVIGATION,
+                "ALEPH_AI" to MapMode.ALEPH_AI
             )
 
-            // 2. Dead Zone Service Heatmap Overlay
-            MapControlItem(
-                icon = if (isDeadZoneActive) Icons.Default.GridOff else Icons.Default.GridOn,
-                label = "تغطية",
-                isActive = isDeadZoneActive,
-                activeColor = Color(0xFFEF4444),
-                onClick = onToggleDeadZoneOverlay
-            )
-
-            // 🥇 الفكرة الأولى: "خريطة الموثوقية" (Reliability Layer)
-            MapControlItem(
-                icon = Icons.Default.VerifiedUser,
-                label = "موثوقية",
-                isActive = isReliabilityActive,
-                activeColor = Color(0xFF10B981),
-                onClick = onToggleReliability
-            )
-
-            // 🎖️ الفكرة الخامسة: "الخريطة كأداة تخطيط للمسارات والمحطات" (Multi-Stop Route Planner)
-            MapControlItem(
-                icon = Icons.Default.Polyline,
-                label = "مسار",
-                isActive = false,
-                inactiveColor = Color(0xFF00E5FF),
-                onClick = onOpenRoutePlanner
-            )
-
-            // طبقة سلامة الطريق وصعوبات الطرق اليمنية (Road Safety Layer)
-            MapControlItem(
-                icon = Icons.Default.Warning,
-                label = "سلامة",
-                isActive = isRoadSafetyActive,
-                activeColor = Color(0xFFF59E0B),
-                onClick = onToggleRoadSafety
-            )
-
-            // 🏅 الفكرة الرابعة: إضافة معلم لتوأمة OpenStreetMap (OSM Node)
-            MapControlItem(
-                icon = Icons.Default.AddLocationAlt,
-                label = "معلم",
-                isActive = false,
-                inactiveColor = Color(0xFF10B981),
-                onClick = onOpenAddOsmLandmark
-            )
-
-            // 🥉 الفكرة الثالثة: زر نجدة طوارئ ريفية بدون إنترنت (Rural Emergency SMS)
-            MapControlItem(
-                icon = Icons.Default.Sos,
-                label = "طوارئ",
-                isActive = false,
-                inactiveColor = Color(0xFFEF4444),
-                onClick = onTriggerRuralSos
-            )
-
-            // 3. Night Mode / HUD
-            MapControlItem(
-                icon = if (isNightMode) Icons.Default.Bedtime else Icons.Default.WbSunny,
-                label = "ليلي",
-                isActive = isNightMode,
-                activeColor = Color(0xFF818CF8),
-                onClick = onToggleNightMode
-            )
-
-            // 🛰️ NASA GIBS Live Satellites Layer (شبه فوري — نقر مطول لتبديل القمر)
-            MapControlItem(
-                icon = Icons.Default.Public,
-                label = "ناسا",
-                isActive = isNasaGibsActive,
-                activeColor = Color(0xFF38BDF8),
-                inactiveColor = Color(0xFF38BDF8).copy(alpha = 0.8f),
-                onClick = onToggleNasaGibs,
-                onLongClick = {
-                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    onLongPressNasaGibs()
+            orderedVisibleLayerIds.forEach { layerId ->
+                val mode = modeByLayerId[layerId]
+                if (mode != null) {
+                    val isSelected = currentMode == mode
+                    val modeLabel = when (mode) {
+                        MapMode.VELA_3D -> "فيلا"
+                        MapMode.AERIAL_OAM -> "أقمار"
+                        MapMode.AR_VPS -> "واقع معزز"
+                        MapMode.NAVIGATION -> "ملاحة"
+                        MapMode.ALEPH_AI -> "ألف"
+                    }
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(vertical = 1.dp)
+                    ) {
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                if (mode == MapMode.ALEPH_AI) onOpenAleph() else onModeChange(mode)
+                            },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .background(
+                                        if (isSelected) Color(0xFF10B981).copy(alpha = 0.3f) else Color.Transparent,
+                                        CircleShape
+                                    )
+                            ) {
+                                Text(text = mode.icon, fontSize = 16.sp)
+                            }
+                        }
+                        Text(
+                            text = modeLabel,
+                            fontSize = 8.5.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f),
+                            maxLines = 1
+                        )
+                    }
+                } else {
+                    when (layerId) {
+                        "GNSS" -> MapControlItem(
+                            icon = Icons.Default.SatelliteAlt,
+                            label = "أقمار",
+                            isActive = false,
+                            inactiveColor = themeColors.accent,
+                            onClick = onOpenGnssDiagnostics
+                        )
+                        "DEAD_ZONES" -> MapControlItem(
+                            icon = if (isDeadZoneActive) Icons.Default.GridOff else Icons.Default.GridOn,
+                            label = "تغطية",
+                            isActive = isDeadZoneActive,
+                            activeColor = Color(0xFFEF4444),
+                            onClick = onToggleDeadZoneOverlay
+                        )
+                        "RELIABILITY" -> MapControlItem(
+                            icon = Icons.Default.VerifiedUser,
+                            label = "موثوقية",
+                            isActive = isReliabilityActive,
+                            activeColor = Color(0xFF10B981),
+                            onClick = onToggleReliability
+                        )
+                        "HEATMAP" -> MapControlItem(
+                            icon = Icons.Default.LocalFireDepartment,
+                            label = "حرارية",
+                            isActive = isHeatmapActive,
+                            activeColor = Color(0xFFF97316),
+                            onClick = onToggleHeatmap
+                        )
+                        "ROAD_SAFETY" -> MapControlItem(
+                            icon = Icons.Default.Warning,
+                            label = "سلامة",
+                            isActive = isRoadSafetyActive,
+                            activeColor = Color(0xFFF59E0B),
+                            onClick = onToggleRoadSafety
+                        )
+                        "OSM_CONTRIBUTE" -> MapControlItem(
+                            icon = Icons.Default.AddLocationAlt,
+                            label = "معلم",
+                            isActive = false,
+                            inactiveColor = Color(0xFF10B981),
+                            onClick = onOpenAddOsmLandmark
+                        )
+                        "RURAL_SOS" -> MapControlItem(
+                            icon = Icons.Default.Sos,
+                            label = "طوارئ",
+                            isActive = false,
+                            inactiveColor = Color(0xFFEF4444),
+                            onClick = onTriggerRuralSos
+                        )
+                        "NIGHT_HUD" -> MapControlItem(
+                            icon = if (isNightMode) Icons.Default.Bedtime else Icons.Default.WbSunny,
+                            label = "ليلي",
+                            isActive = isNightMode,
+                            activeColor = Color(0xFF818CF8),
+                            onClick = onToggleNightMode
+                        )
+                        "NASA_GIBS" -> MapControlItem(
+                            icon = Icons.Default.Public,
+                            label = "ناسا",
+                            isActive = isNasaGibsActive,
+                            activeColor = Color(0xFF38BDF8),
+                            inactiveColor = Color(0xFF38BDF8).copy(alpha = 0.8f),
+                            onClick = onToggleNasaGibs,
+                            onLongClick = {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                onLongPressNasaGibs()
+                            }
+                        )
+                        "EOX_CLOUDLESS" -> MapControlItem(
+                            icon = Icons.Default.FilterHdr,
+                            label = "EOX دقيقة",
+                            isActive = isEoxCloudlessActive,
+                            activeColor = Color(0xFF10B981),
+                            inactiveColor = Color(0xFF10B981).copy(alpha = 0.8f),
+                            onClick = onToggleEoxCloudless
+                        )
+                        "ESRI_IMAGERY" -> MapControlItem(
+                            icon = Icons.Default.PhotoCamera,
+                            label = "Esri دقيقة",
+                            isActive = isEsriImageryActive,
+                            activeColor = Color(0xFFF59E0B),
+                            inactiveColor = Color(0xFFF59E0B).copy(alpha = 0.8f),
+                            onClick = onToggleEsriImagery
+                        )
+                        "EUMETSAT" -> MapControlItem(
+                            icon = Icons.Default.CloudQueue,
+                            label = "ميتيوسات",
+                            isActive = isEumetActive,
+                            activeColor = Color(0xFF00E5FF),
+                            inactiveColor = Color(0xFF00E5FF).copy(alpha = 0.8f),
+                            onClick = onToggleEumet,
+                            onLongClick = {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                onLongPressEumet()
+                            }
+                        )
+                        "EARTHQUAKES" -> MapControlItem(
+                            icon = Icons.Default.Sensors,
+                            label = "زلازل",
+                            isActive = isEarthquakeActive,
+                            activeColor = Color(0xFFEF4444),
+                            inactiveColor = Color(0xFFF97316),
+                            onClick = onToggleEarthquake
+                        )
+                        "GROUP_TRACK" -> MapControlItem(
+                            icon = Icons.Default.Group,
+                            label = "مجموعة",
+                            isActive = isGroupActive,
+                            activeColor = Color(0xFF10B981),
+                            onClick = onToggleGroupTracking
+                        )
+                        "GPX_EXPORT" -> MapControlItem(
+                            icon = Icons.Default.AltRoute,
+                            label = "GPX",
+                            isActive = false,
+                            inactiveColor = Color(0xFF38BDF8),
+                            onClick = onExportGpx
+                        )
+                        "PDF_EXPORT" -> MapControlItem(
+                            icon = Icons.Default.Print,
+                            label = "طباعة",
+                            isActive = false,
+                            inactiveColor = Color.White.copy(alpha = 0.8f),
+                            onClick = onPrintMapPdf
+                        )
+                    }
                 }
-            )
+            }
 
-            // 🛰️ EOX Cloudless 2016 (Sentinel-2 10m عالية الدقة)
-            MapControlItem(
-                icon = Icons.Default.FilterHdr,
-                label = "EOX دقيقة",
-                isActive = isEoxCloudlessActive,
-                activeColor = Color(0xFF10B981),
-                inactiveColor = Color(0xFF10B981).copy(alpha = 0.8f),
-                onClick = onToggleEoxCloudless
-            )
+            if ("NAVIGATION" in visibleSet) {
+                MapControlItem(
+                    icon = Icons.Default.Polyline,
+                    label = "مسار",
+                    isActive = false,
+                    inactiveColor = Color(0xFF00E5FF),
+                    onClick = onOpenRoutePlanner
+                )
+            }
 
-            // 🛰️ Esri World Imagery (فائقة الدقة بدون مفاتيح)
-            MapControlItem(
-                icon = Icons.Default.PhotoCamera,
-                label = "Esri دقيقة",
-                isActive = isEsriImageryActive,
-                activeColor = Color(0xFFF59E0B),
-                inactiveColor = Color(0xFFF59E0B).copy(alpha = 0.8f),
-                onClick = onToggleEsriImagery
-            )
-
-            // 🛰️ Meteosat Live Satellite Layer (سحب وغبار مباشر من EUMETSAT كل 15 دقيقة)
-            MapControlItem(
-                icon = Icons.Default.CloudQueue,
-                label = "ميتيوسات",
-                isActive = isEumetActive,
-                activeColor = Color(0xFF00E5FF),
-                inactiveColor = Color(0xFF00E5FF).copy(alpha = 0.8f),
-                onClick = onToggleEumet,
-                onLongClick = {
-                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    onLongPressEumet()
-                }
-            )
-
-            // 🛰️ طبقات إضافية (قائمة الأقمار الصناعية الموسعة)
             MapControlItem(
                 icon = Icons.Default.Layers,
                 label = "طبقات",
@@ -372,43 +409,6 @@ fun MapControls(
                 activeColor = Color(0xFF38BDF8),
                 inactiveColor = Color.White.copy(alpha = 0.75f),
                 onClick = onOpenMoreLayers
-            )
-
-            // 🌋 Earthquake Layer (مرصد الزلازل الحية)
-            MapControlItem(
-                icon = Icons.Default.Sensors,
-                label = "زلازل",
-                isActive = isEarthquakeActive,
-                activeColor = Color(0xFFEF4444),
-                inactiveColor = Color(0xFFF97316),
-                onClick = onToggleEarthquake
-            )
-
-            // 4. Group Members Tracking
-            MapControlItem(
-                icon = Icons.Default.Group,
-                label = "مجموعة",
-                isActive = isGroupActive,
-                activeColor = Color(0xFF10B981),
-                onClick = onToggleGroupTracking
-            )
-
-            // 5. GPX Track Export / Import
-            MapControlItem(
-                icon = Icons.Default.AltRoute,
-                label = "GPX",
-                isActive = false,
-                inactiveColor = Color(0xFF38BDF8),
-                onClick = onExportGpx
-            )
-
-            // 6. Printable Map PDF Summary
-            MapControlItem(
-                icon = Icons.Default.Print,
-                label = "طباعة",
-                isActive = false,
-                inactiveColor = Color.White.copy(alpha = 0.8f),
-                onClick = onPrintMapPdf
             )
         }
     }

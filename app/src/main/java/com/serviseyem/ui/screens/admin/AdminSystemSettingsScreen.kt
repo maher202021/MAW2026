@@ -54,21 +54,31 @@ fun AdminSystemSettingsScreenContent(
     var systemVersion by remember(settingsState.appVersion) {
         mutableStateOf(if (settingsState.appVersion.isNotBlank()) settingsState.appVersion else "2.6.0")
     }
-    var minRequiredVersion by remember { mutableStateOf("2.5.0") }
-    var forceUpdateEnabled by remember { mutableStateOf(false) }
+    var minRequiredVersion by remember(settingsState.minRequiredVersion) {
+        mutableStateOf(settingsState.minRequiredVersion.ifBlank { "2.5.0" })
+    }
+    var forceUpdateEnabled by remember(settingsState.forceUpdateEnabled) {
+        mutableStateOf(settingsState.forceUpdateEnabled)
+    }
     var updateDownloadUrl by remember(settingsState.appDownloadUrl) {
         mutableStateOf(if (settingsState.appDownloadUrl.isNotBlank()) settingsState.appDownloadUrl else "https://yemen-services.app/download")
     }
 
-    var defaultLanguage by remember { mutableStateOf("العربية") }
+    var defaultLanguage by remember(settingsState.appLanguage) {
+        mutableStateOf(if (settingsState.appLanguage.equals("en", ignoreCase = true) || settingsState.appLanguage == "English") "English" else "العربية")
+    }
     var showLanguageToggle by remember(settingsState.showLangIcon) { mutableStateOf(settingsState.showLangIcon) }
-    var autoDetectLanguage by remember { mutableStateOf(true) }
-    var forceRtlDirection by remember { mutableStateOf(true) }
+    var autoDetectLanguage by remember(settingsState.autoDetectLanguage) { mutableStateOf(settingsState.autoDetectLanguage) }
+    var forceRtlDirection by remember(settingsState.forceRtlDirection) { mutableStateOf(settingsState.forceRtlDirection) }
 
-    var defaultCurrency by remember { mutableStateOf("ريال يمني (YER)") }
+    var defaultCurrency by remember(settingsState.defaultCurrency) {
+        mutableStateOf(settingsState.defaultCurrency.ifBlank { "ريال يمني (YER)" })
+    }
     var appDisplayName by remember(settingsState.appName) { mutableStateOf(settingsState.appName) }
     var welcomeMessage by remember(settingsState.welcomeMessage) { mutableStateOf(settingsState.welcomeMessage) }
-    var defaultThemeMode by remember { mutableStateOf("الوضع الداكن (Dark)") }
+    var defaultThemeMode by remember(settingsState.defaultThemeMode) {
+        mutableStateOf(settingsState.defaultThemeMode.ifBlank { "الوضع الداكن (Dark)" })
+    }
 
     val languages = listOf("العربية", "English")
     val currencies = listOf("ريال يمني (YER)", "ريال سعودي (SAR)", "دولار أمريكي (USD)")
@@ -111,7 +121,11 @@ fun AdminSystemSettingsScreenContent(
                         Text("إلزام المستخدمين بالتحديث الفوري", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
                         Text("منع العملاء من استخدام الإصدارات الأقدم وإلزامهم بالترقية", fontSize = 10.sp, color = Color.Gray)
                     }
-                    Switch(checked = forceUpdateEnabled, onCheckedChange = { forceUpdateEnabled = it })
+                    Switch(
+                        checked = forceUpdateEnabled,
+                        onCheckedChange = { forceUpdateEnabled = it },
+                        colors = adminSwitchColors(themeColors)
+                    )
                 }
 
                 OutlinedTextField(
@@ -249,17 +263,17 @@ fun AdminSystemSettingsScreenContent(
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("إظهار زر تبديل اللغة في القائمة السفلية", fontSize = 12.sp, color = Color.White)
-                    Switch(checked = showLanguageToggle, onCheckedChange = { showLanguageToggle = it })
+                    Switch(checked = showLanguageToggle, onCheckedChange = { showLanguageToggle = it }, colors = adminSwitchColors(themeColors))
                 }
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("اكتشاف لغة الجهاز تلقائياً", fontSize = 12.sp, color = Color.White)
-                    Switch(checked = autoDetectLanguage, onCheckedChange = { autoDetectLanguage = it })
+                    Switch(checked = autoDetectLanguage, onCheckedChange = { autoDetectLanguage = it }, colors = adminSwitchColors(themeColors))
                 }
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("فرض الاتجاه من اليمين لليسار (RTL Support)", fontSize = 12.sp, color = Color.White)
-                    Switch(checked = forceRtlDirection, onCheckedChange = { forceRtlDirection = it })
+                    Switch(checked = forceRtlDirection, onCheckedChange = { forceRtlDirection = it }, colors = adminSwitchColors(themeColors))
                 }
             }
         }
@@ -333,34 +347,24 @@ fun AdminSystemSettingsScreenContent(
             onClick = {
                 if (isSavingSettings) return@Button
                 isSavingSettings = true
-                val st = settingsState
-                viewModel.updateBackdoorSettings(
-                    appDisplayName, welcomeMessage, st.footerMessage, st.activeThemeId,
-                    st.supportPhone, st.supportEmail, st.supportWhatsapp,
-                    st.isMaintenanceActive, st.hidePromoFooter, st.assistantHidden, st.assistantSize,
-                    st.chatHidden, st.chatSize, st.maxSearchRadiusKm, st.isSpeechSearchEnabled,
-                    false, 90
+                val langCode = if (defaultLanguage == "English") "en" else "ar"
+                val updated = settingsState.copy(
+                    appName = appDisplayName.trim(),
+                    welcomeMessage = welcomeMessage.trim(),
+                    appVersion = systemVersion.trim(),
+                    minRequiredVersion = minRequiredVersion.trim(),
+                    forceUpdateEnabled = forceUpdateEnabled,
+                    appDownloadUrl = updateDownloadUrl.trim(),
+                    appLanguage = langCode,
+                    showLangIcon = showLanguageToggle,
+                    autoDetectLanguage = autoDetectLanguage,
+                    forceRtlDirection = forceRtlDirection,
+                    defaultCurrency = defaultCurrency,
+                    defaultThemeMode = defaultThemeMode
                 )
-                viewModel.db.collection("settings").document("main_settings").set(
-                    mapOf(
-                        "appVersion" to systemVersion,
-                        "minRequiredVersion" to minRequiredVersion,
-                        "forceUpdateEnabled" to forceUpdateEnabled,
-                        "appDownloadUrl" to updateDownloadUrl,
-                        "defaultLanguage" to defaultLanguage,
-                        "showLangIcon" to showLanguageToggle,
-                        "defaultCurrency" to defaultCurrency,
-                        "defaultThemeMode" to defaultThemeMode,
-                        "updatedAt" to System.currentTimeMillis()
-                    ),
-                    com.google.firebase.firestore.SetOptions.merge()
-                ).addOnSuccessListener {
-                    isSavingSettings = false
-                    Toast.makeText(context, "✅ تم حفظ ومزامنة إعدادات وتفضيلات النظام سحابياً!", Toast.LENGTH_SHORT).show()
-                }.addOnFailureListener { err ->
-                    isSavingSettings = false
-                    Toast.makeText(context, "❌ فشل الحفظ: ${err.localizedMessage}", Toast.LENGTH_LONG).show()
-                }
+                viewModel.saveCustomSettingsState(updated)
+                isSavingSettings = false
+                Toast.makeText(context, "✅ تم حفظ ومزامنة إعدادات وتفضيلات النظام سحابياً!", Toast.LENGTH_SHORT).show()
             },
             enabled = !isSavingSettings,
             colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),

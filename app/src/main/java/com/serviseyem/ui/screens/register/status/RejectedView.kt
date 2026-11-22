@@ -71,12 +71,12 @@ fun RejectedView(
             Button(
                 onClick = onReapply,
                 colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(40.dp)
+                    .height(48.dp)
             ) {
-                Text("تعديل وإعادة تقديم الطلب 🔄", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                Text("تعديل وإعادة تقديم الطلب 🔄", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
     }

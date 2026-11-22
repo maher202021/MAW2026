@@ -44,6 +44,8 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,7 +60,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.serviseyem.data.AdminSettingsEntity
 import com.serviseyem.data.CustomProfileTabEntity
+import com.serviseyem.data.models.PlatformHomeSection
+import com.serviseyem.data.models.RegistrationCustomField
+import com.serviseyem.data.models.RegistrationFormsConfig
 import com.serviseyem.ui.*
+import com.serviseyem.ui.screens.admin.components.adminSwitchColors
 import com.serviseyem.utils.VisualThemePalette
 
 internal fun LazyListScope.adminCustomizationSections(
@@ -187,7 +193,8 @@ internal fun LazyListScope.adminCustomizationSections(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Switch(
                             checked = tab.isEnabled,
-                            onCheckedChange = { viewModel.toggleCustomProfileTab(tab.id) }
+                            onCheckedChange = { viewModel.toggleCustomProfileTab(tab.id) },
+                            colors = adminSwitchColors(themeColors)
                         )
                         IconButton(onClick = { viewModel.deleteCustomProfileTab(tab.id) }) {
                             Icon(Icons.Default.Delete, contentDescription = "حذف التبويب", tint = Color.Red)
@@ -303,13 +310,38 @@ internal fun LazyListScope.adminCustomizationSections(
         }
     } else if (activeSubTab == "CARD_CUSTOMIZER") {
         item {
+            val cardSettingsState by viewModel.cardSettings.collectAsState()
             var selectedCardSection by remember { mutableStateOf("SERVICES") }
-            var cardShape by remember { mutableStateOf("ROUNDED") }
-            var cardSize by remember { mutableStateOf("NORMAL") }
-            var btnWhatsAppEnabled by remember { mutableStateOf(settingsState.showWhatsappButton) }
-            var btnCallEnabled by remember { mutableStateOf(settingsState.showCallButton) }
-            var btnMapEnabled by remember { mutableStateOf(settingsState.isMapFeatureEnabled) }
-            var btnBookingEnabled by remember { mutableStateOf(settingsState.showBookButton) }
+            var cardShape by remember(cardSettingsState.cornerRadius) {
+                mutableStateOf(
+                    when {
+                        cardSettingsState.cornerRadius >= 24 -> "PILL"
+                        cardSettingsState.cornerRadius <= 4 -> "SQUARE"
+                        else -> "ROUNDED"
+                    }
+                )
+            }
+            var cardSize by remember(cardSettingsState.padding) {
+                mutableStateOf(
+                    when {
+                        cardSettingsState.padding <= 8 -> "COMPACT"
+                        cardSettingsState.padding >= 16 -> "LARGE"
+                        else -> "NORMAL"
+                    }
+                )
+            }
+            var btnWhatsAppEnabled by remember(settingsState.showWhatsappButton, cardSettingsState.showWhatsAppButton) {
+                mutableStateOf(settingsState.showWhatsappButton && cardSettingsState.showWhatsAppButton)
+            }
+            var btnCallEnabled by remember(settingsState.showCallButton, cardSettingsState.showCallButton) {
+                mutableStateOf(settingsState.showCallButton && cardSettingsState.showCallButton)
+            }
+            var btnMapEnabled by remember(settingsState.isMapFeatureEnabled) {
+                mutableStateOf(settingsState.isMapFeatureEnabled)
+            }
+            var btnBookingEnabled by remember(settingsState.showBookButton, cardSettingsState.showBookingButton) {
+                mutableStateOf(settingsState.showBookButton && cardSettingsState.showBookingButton)
+            }
 
             Card(
                 colors = CardDefaults.cardColors(containerColor = themeColors.surface),
@@ -357,23 +389,51 @@ internal fun LazyListScope.adminCustomizationSections(
                     }
 
                     Text("أزرار التفاعل الظاهرة بالبطاقة:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = btnWhatsAppEnabled, onCheckedChange = { btnWhatsAppEnabled = it }); Spacer(modifier = Modifier.width(8.dp)); Text("زر مراسلة واتساب 🟢", color = Color.White, fontSize = 11.sp) }
-                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = btnCallEnabled, onCheckedChange = { btnCallEnabled = it }); Spacer(modifier = Modifier.width(8.dp)); Text("زر الاتصال المباشر 📞", color = Color.White, fontSize = 11.sp) }
-                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = btnMapEnabled, onCheckedChange = { btnMapEnabled = it }); Spacer(modifier = Modifier.width(8.dp)); Text("زر الخريطة والموقع 🗺️", color = Color.White, fontSize = 11.sp) }
-                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = btnBookingEnabled, onCheckedChange = { btnBookingEnabled = it }); Spacer(modifier = Modifier.width(8.dp)); Text("زر الحجز أو الطلب الفوري 📅", color = Color.White, fontSize = 11.sp) }
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = btnWhatsAppEnabled, onCheckedChange = { btnWhatsAppEnabled = it }, colors = adminSwitchColors(themeColors)); Spacer(modifier = Modifier.width(8.dp)); Text("زر مراسلة واتساب 🟢", color = Color.White, fontSize = 11.sp) }
+                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = btnCallEnabled, onCheckedChange = { btnCallEnabled = it }, colors = adminSwitchColors(themeColors)); Spacer(modifier = Modifier.width(8.dp)); Text("زر الاتصال المباشر 📞", color = Color.White, fontSize = 11.sp) }
+                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = btnMapEnabled, onCheckedChange = { btnMapEnabled = it }, colors = adminSwitchColors(themeColors)); Spacer(modifier = Modifier.width(8.dp)); Text("زر الخريطة والموقع 🗺️", color = Color.White, fontSize = 11.sp) }
+                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = btnBookingEnabled, onCheckedChange = { btnBookingEnabled = it }, colors = adminSwitchColors(themeColors)); Spacer(modifier = Modifier.width(8.dp)); Text("زر الحجز أو الطلب الفوري 📅", color = Color.White, fontSize = 11.sp) }
                     }
 
                     Button(
                         onClick = {
+                            val newRadius = when (cardShape) {
+                                "PILL" -> 28
+                                "SQUARE" -> 4
+                                else -> 14
+                            }
+                            val newPadding = when (cardSize) {
+                                "COMPACT" -> 8
+                                "LARGE" -> 16
+                                else -> 12
+                            }
+                            val newSpacing = when (cardSize) {
+                                "COMPACT" -> 4
+                                "LARGE" -> 12
+                                else -> 8
+                            }
+                            viewModel.updateCardSettings(
+                                cardSettingsState.copy(
+                                    cornerRadius = newRadius,
+                                    padding = newPadding,
+                                    spacing = newSpacing,
+                                    imageShape = if (cardShape == "SQUARE") "square" else "circle",
+                                    showCallButton = btnCallEnabled,
+                                    showWhatsAppButton = btnWhatsAppEnabled,
+                                    showBookingButton = btnBookingEnabled
+                                )
+                            )
                             val updated = settingsState.copy(
                                 showWhatsappButton = btnWhatsAppEnabled,
                                 showCallButton = btnCallEnabled,
                                 isMapFeatureEnabled = btnMapEnabled,
-                                showBookButton = btnBookingEnabled
+                                showBookButton = btnBookingEnabled,
+                                cardPadding = newPadding,
+                                elementSpacing = newSpacing
                             )
-                            viewModel.updateAdminSettings(updated)
-                            Toast.makeText(context, "✨ تم حفظ ومزامنة إعدادات وشكل أزرار البطائق فورياً لكل الأجهزة!", Toast.LENGTH_SHORT).show()
+                            viewModel.saveCustomSettingsState(updated)
+                            Toast.makeText(context, "✨ تم حفظ ومزامنة إعدادات وشكل وأحجام البطائق فورياً لكل الأجهزة!", Toast.LENGTH_SHORT).show()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
@@ -385,6 +445,14 @@ internal fun LazyListScope.adminCustomizationSections(
         }
     } else if (activeSubTab == "NEW_SECTION_CREATOR") {
         item {
+            val platformSections by viewModel.platformHomeSections.collectAsState()
+            var editableSections by remember(platformSections) {
+                mutableStateOf(platformSections.sortedBy { it.order })
+            }
+            var editingSection by remember { mutableStateOf<PlatformHomeSection?>(null) }
+            var editTitleDraft by remember { mutableStateOf("") }
+            var editEmojiDraft by remember { mutableStateOf("") }
+
             var newSecName by remember { mutableStateOf("") }
             var newSecType by remember { mutableStateOf("DELIVERY") }
             var newSecIcon by remember { mutableStateOf("🚀") }
@@ -393,6 +461,167 @@ internal fun LazyListScope.adminCustomizationSections(
             var linkToPayment by remember { mutableStateOf(true) }
             var secNotifications by remember { mutableStateOf(true) }
             var secBookings by remember { mutableStateOf(true) }
+
+            if (editingSection != null) {
+                AlertDialog(
+                    onDismissRequest = { editingSection = null },
+                    title = { Text("✏️ تعديل القسم", color = Color.White, fontWeight = FontWeight.Bold) },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = editTitleDraft,
+                                onValueChange = { editTitleDraft = it },
+                                label = { Text("اسم القسم بالعربية") },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
+                            )
+                            OutlinedTextField(
+                                value = editEmojiDraft,
+                                onValueChange = { editEmojiDraft = it },
+                                label = { Text("الإيموجي / الأيقونة") },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                val target = editingSection ?: return@Button
+                                editableSections = editableSections.map {
+                                    if (it.id == target.id) {
+                                        it.copy(
+                                            titleAr = editTitleDraft.trim().ifBlank { it.titleAr },
+                                            emoji = editEmojiDraft.trim().ifBlank { it.emoji }
+                                        )
+                                    } else it
+                                }
+                                editingSection = null
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent)
+                        ) {
+                            Text("تطبيق", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { editingSection = null }) {
+                            Text("إلغاء", color = Color.LightGray)
+                        }
+                    }
+                )
+            }
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = themeColors.surface),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                border = BorderStroke(1.dp, themeColors.accent.copy(alpha = 0.3f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("🧭 إدارة وترتيب وإظهار أقسام الشاشة الرئيسية", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
+                    Text("رتّب الأقسام، أظهرها أو أخفِها، عدّل أسماءها، أو احذف الأقسام المضافة مع مزامنة فورية للرئيسية:", fontSize = 11.sp, color = themeColors.textSecondary)
+
+                    editableSections.forEachIndexed { idx, sec ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, if (sec.isVisible) themeColors.accent.copy(alpha = 0.35f) else Color.Gray.copy(alpha = 0.25f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("${sec.emoji} ${sec.titleAr}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    Text(
+                                        if (sec.isBuiltIn) "أساسي • ترتيب ${idx + 1}" else "قسم مضاف (${sec.sectionType}) • ترتيب ${idx + 1}",
+                                        fontSize = 9.5.sp,
+                                        color = themeColors.textSecondary
+                                    )
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    IconButton(
+                                        onClick = {
+                                            if (idx > 0) {
+                                                val m = editableSections.toMutableList()
+                                                val item = m.removeAt(idx)
+                                                m.add(idx - 1, item)
+                                                editableSections = m.mapIndexed { i, s -> s.copy(order = i) }
+                                            }
+                                        },
+                                        enabled = idx > 0,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Text("⬆️", fontSize = 12.sp)
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            if (idx < editableSections.lastIndex) {
+                                                val m = editableSections.toMutableList()
+                                                val item = m.removeAt(idx)
+                                                m.add(idx + 1, item)
+                                                editableSections = m.mapIndexed { i, s -> s.copy(order = i) }
+                                            }
+                                        },
+                                        enabled = idx < editableSections.lastIndex,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Text("⬇️", fontSize = 12.sp)
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            editingSection = sec
+                                            editTitleDraft = sec.titleAr
+                                            editEmojiDraft = sec.emoji
+                                        },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Edit, contentDescription = "تعديل القسم", tint = themeColors.accent, modifier = Modifier.size(16.dp))
+                                    }
+                                    if (!sec.isBuiltIn) {
+                                        IconButton(
+                                            onClick = {
+                                                editableSections = editableSections.filterNot { it.id == sec.id }.mapIndexed { i, s -> s.copy(order = i) }
+                                            },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(Icons.Default.Delete, contentDescription = "حذف القسم", tint = Color.Red, modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+                                    Switch(
+                                        checked = sec.isVisible,
+                                        onCheckedChange = { vis ->
+                                            editableSections = editableSections.map {
+                                                if (it.id == sec.id) it.copy(isVisible = vis) else it
+                                            }
+                                        },
+                                        colors = adminSwitchColors(themeColors),
+                                        modifier = Modifier.scale(0.8f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            val indexed = editableSections.mapIndexed { i, s -> s.copy(order = i) }
+                            viewModel.savePlatformSections(indexed) { ok ->
+                                Toast.makeText(
+                                    context,
+                                    if (ok) "✅ تم حفظ ومزامنة ترتيب وإظهار أقسام الرئيسية بنجاح!" else "❌ فشل مزامنة الأقسام",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
+                        modifier = Modifier.fillMaxWidth().height(46.dp)
+                    ) {
+                        Text("حفظ ترتيب وتعديلات أقسام الرئيسية 💾", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
 
             Card(
                 colors = CardDefaults.cardColors(containerColor = themeColors.surface),
@@ -433,25 +662,45 @@ internal fun LazyListScope.adminCustomizationSections(
 
                     Text("الربط والتحكم بالخدمات المرتبطة:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = linkToMap, onCheckedChange = { linkToMap = it }); Spacer(modifier = Modifier.width(8.dp)); Text("ربط القسم بشاشة الخرائط والمواقع 🗺️", color = Color.White, fontSize = 11.sp) }
-                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = linkToOrders, onCheckedChange = { linkToOrders = it }); Spacer(modifier = Modifier.width(8.dp)); Text("ربط القسم بشاشة الطلبات (طلباتي) 📦", color = Color.White, fontSize = 11.sp) }
-                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = linkToPayment, onCheckedChange = { linkToPayment = it }); Spacer(modifier = Modifier.width(8.dp)); Text("ربط القسم بشاشة الدفع والمحافظ والتحقق 💳", color = Color.White, fontSize = 11.sp) }
-                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = secNotifications, onCheckedChange = { secNotifications = it }); Spacer(modifier = Modifier.width(8.dp)); Text("تمكين إشعارات التنبيه المباشرة للقسم 🔔", color = Color.White, fontSize = 11.sp) }
-                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = secBookings, onCheckedChange = { secBookings = it }); Spacer(modifier = Modifier.width(8.dp)); Text("تمكين نظام الحجوزات وإدارة الطلبات للقسم 📅", color = Color.White, fontSize = 11.sp) }
+                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = linkToMap, onCheckedChange = { linkToMap = it }, colors = adminSwitchColors(themeColors)); Spacer(modifier = Modifier.width(8.dp)); Text("ربط القسم بشاشة الخرائط والمواقع 🗺️", color = Color.White, fontSize = 11.sp) }
+                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = linkToOrders, onCheckedChange = { linkToOrders = it }, colors = adminSwitchColors(themeColors)); Spacer(modifier = Modifier.width(8.dp)); Text("ربط القسم بشاشة الطلبات (طلباتي) 📦", color = Color.White, fontSize = 11.sp) }
+                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = linkToPayment, onCheckedChange = { linkToPayment = it }, colors = adminSwitchColors(themeColors)); Spacer(modifier = Modifier.width(8.dp)); Text("ربط القسم بشاشة الدفع والمحافظ والتحقق 💳", color = Color.White, fontSize = 11.sp) }
+                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = secNotifications, onCheckedChange = { secNotifications = it }, colors = adminSwitchColors(themeColors)); Spacer(modifier = Modifier.width(8.dp)); Text("تمكين إشعارات التنبيه المباشرة للقسم 🔔", color = Color.White, fontSize = 11.sp) }
+                        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = secBookings, onCheckedChange = { secBookings = it }, colors = adminSwitchColors(themeColors)); Spacer(modifier = Modifier.width(8.dp)); Text("تمكين نظام الحجوزات وإدارة الطلبات للقسم 📅", color = Color.White, fontSize = 11.sp) }
                     }
 
                     Button(
                         onClick = {
                             if (newSecName.isNotBlank()) {
+                                val secId = "custom_${System.currentTimeMillis()}"
+                                val newSection = PlatformHomeSection(
+                                    id = secId,
+                                    titleAr = newSecName.trim(),
+                                    titleEn = newSecName.trim(),
+                                    emoji = newSecIcon.trim().ifBlank { "✨" },
+                                    subtitleAr = "قسم ${newSecName.trim()} المضاف بواسطة الإدارة",
+                                    routeKey = "CUSTOM_$secId",
+                                    isVisible = true,
+                                    isBuiltIn = false,
+                                    order = editableSections.size,
+                                    linkToMap = linkToMap,
+                                    linkToOrders = linkToOrders,
+                                    linkToPayment = linkToPayment,
+                                    enableBookings = secBookings,
+                                    sectionType = newSecType
+                                )
+                                val updatedSections = (editableSections + newSection).mapIndexed { i, s -> s.copy(order = i) }
+                                editableSections = updatedSections
+                                viewModel.savePlatformSections(updatedSections)
                                 viewModel.addNewCategory(
                                     nameAr = newSecName.trim(),
                                     nameEn = newSecName.trim(),
-                                    icon = newSecIcon.trim(),
-                                    description = "",
+                                    icon = newSecIcon.trim().ifBlank { "✨" },
+                                    description = newSecType,
                                     parentId = "",
                                     isMainCategory = true
                                 )
-                                Toast.makeText(context, "🚀 تمت إضافة القسم الجديد ومزامرفته بنجاح تام!", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "🚀 تمت إضافة القسم الجديد ومزامنته للشاشة الرئيسية بنجاح تام!", Toast.LENGTH_LONG).show()
                                 newSecName = ""
                             } else {
                                 Toast.makeText(context, "⚠️ الرجاء إدخال اسم القسم الجديد", Toast.LENGTH_SHORT).show()
@@ -467,45 +716,88 @@ internal fun LazyListScope.adminCustomizationSections(
         }
     } else if (activeSubTab == "REG_FORMS_MANAGER") {
         item {
+            val formsConfig by viewModel.registrationFormsConfig.collectAsState()
             var targetRegSection by remember { mutableStateOf("SERVICES") }
             var customFieldTitle by remember { mutableStateOf("") }
             var customFieldType by remember { mutableStateOf("TEXT") }
+            var customFieldRequired by remember { mutableStateOf(false) }
             var newTermText by remember { mutableStateOf("") }
 
-            var registrationTermsMap by remember {
+            fun resolveLegacySectionKey(sec: String): String = when (sec) {
+                "SERVICES" -> "الفنيين والصيانة"
+                "STORES" -> "المحلات التجارية"
+                "RESTAURANTS" -> "المطاعم"
+                "MEDICAL" -> "المراكز الطبية"
+                "PROPERTIES" -> "العقارات"
+                "JOBS" -> "المراكز التجارية والأسواق"
+                else -> sec
+            }
+
+            fun defaultTermsFor(sec: String): List<String> = when (sec) {
+                "SERVICES" -> listOf(
+                    "الالتزام بالمواعيد المحددة مع العملاء والدقة في العمل",
+                    "تقديم أسعار عادلة ومطابقة لما تم الاتفاق عليه",
+                    "توفر المؤهل المهني أو الخبرة الكافية في التخصص",
+                    "الحفاظ على خصوصية العميل وحسن التعامل والأمانة"
+                )
+                "STORES" -> listOf(
+                    "صحة ودقة أسعار السلع والمنتجات المعروضة",
+                    "الالتزام بسياسة الاستبدال والاسترجاع القانونية",
+                    "تقديم عنوان دقيق ورقم هاتف نشط للتواصل"
+                )
+                "RESTAURANTS" -> listOf(
+                    "الالتزام التام بمعايير النظافة والجودة الغذائية",
+                    "تحديث قائمة الأسعار والوجبات المتاحة أولاً بأول",
+                    "سرعة الاستجابة لطلبات التوصيل والحجوزات"
+                )
+                "MEDICAL" -> listOf(
+                    "توفر التراخيص الطبية والمزاولة الرسمية المعتمدة",
+                    "الالتزام بأوقات الكشف والمواعيد المحجوزة بدقة",
+                    "توفير بيئة صحية وآمنة للمرضى والمراجعين"
+                )
+                "PROPERTIES" -> listOf(
+                    "صحة بيانات الملكية وتفاصيل العقارات المعروضة",
+                    "الشفافية في العمولات والأسعار دون مبالغة",
+                    "تحديد الموقع الدقيق والمساحة بوضوح تام"
+                )
+                else -> listOf(
+                    "جدية العرض الوظيفي ومصداقية الرواتب المحددة",
+                    "عدم طلب أي مبالغ مالية مسبقة من المتقدمين",
+                    "توضيح متطلبات الوظيفة وشروطها بكل شفافية"
+                )
+            }
+
+            var registrationTermsMap by remember(formsConfig) {
+                val keys = listOf("SERVICES", "STORES", "RESTAURANTS", "MEDICAL", "PROPERTIES", "JOBS")
                 mutableStateOf(
-                    mutableMapOf(
-                        "SERVICES" to mutableListOf(
-                            "الالتزام بالمواعيد المحددة مع العملاء والدقة في العمل",
-                            "تقديم أسعار عادلة ومطابقة لما تم الاتفاق عليه",
-                            "توفر المؤهل المهني أو الخبرة الكافية في التخصص",
-                            "الحفاظ على خصوصية العميل وحسن التعامل والأمانة"
-                        ),
-                        "STORES" to mutableListOf(
-                            "صحة ودقة أسعار السلع والمنتجات المعروضة",
-                            "الالتزام بسياسة الاستبدال والاسترجاع القانونية",
-                            "تقديم عنوان دقيق ورقم هاتف نشط للتواصل"
-                        ),
-                        "RESTAURANTS" to mutableListOf(
-                            "الالتزام التام بمعايير النظافة والجودة الغذائية",
-                            "تحديث قائمة الأسعار والوجبات المتاحة أولاً بأول",
-                            "سرعة الاستجابة لطلبات التوصيل والحجوزات"
-                        ),
-                        "MEDICAL" to mutableListOf(
-                            "توفر التراخيص الطبية والمزاولة الرسمية المعتمدة",
-                            "الالتزام بأوقات الكشف والمواعيد المحجوزة بدقة",
-                            "توفير بيئة صحية وآمنة للمرضى والمراجعين"
-                        ),
-                        "PROPERTIES" to mutableListOf(
-                            "صحة بيانات الملكية وتفاصيل العقارات المعروضة",
-                            "الشفافية في العمولات والأسعار دون مبالغة",
-                            "تحديد الموقع الدقيق والمساحة بوضوح تام"
-                        ),
-                        "JOBS" to mutableListOf(
-                            "جدية العرض الوظيفي ومصداقية الرواتب المحددة",
-                            "عدم طلب أي مبالغ مالية مسبقة من المتقدمين",
-                            "توضيح متطلبات الوظيفة وشروطها بكل شفافية"
-                        )
+                    keys.associateWith { k ->
+                        val raw = formsConfig.termsBySection[k]
+                            ?: formsConfig.termsBySection[resolveLegacySectionKey(k)]
+                        if (!raw.isNullOrBlank()) {
+                            raw.split("\n").map { it.trim() }.filter { it.isNotBlank() }.toMutableList()
+                        } else {
+                            defaultTermsFor(k).toMutableList()
+                        }
+                    }.toMutableMap()
+                )
+            }
+
+            var customFieldsList by remember(formsConfig) {
+                mutableStateOf(formsConfig.customFields)
+            }
+
+            fun persistFormsConfig(
+                termsMap: Map<String, MutableList<String>> = registrationTermsMap,
+                fields: List<RegistrationCustomField> = customFieldsList
+            ) {
+                val mergedTerms = formsConfig.termsBySection.toMutableMap()
+                termsMap.forEach { (k, lines) ->
+                    mergedTerms[k] = lines.joinToString("\n")
+                }
+                viewModel.saveRegistrationFormsConfig(
+                    RegistrationFormsConfig(
+                        termsBySection = mergedTerms,
+                        customFields = fields
                     )
                 )
             }
@@ -517,7 +809,7 @@ internal fun LazyListScope.adminCustomizationSections(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text("📋 تخصيص استمارات التسجيل وشروط الانضمام الشاملة", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
-                    Text("إدارة وتعديل وحذف وإضافة شروط التسجيل والحقول المخصصة لكل قسم مع المزامنة الفورية:", fontSize = 11.sp, color = themeColors.textSecondary)
+                    Text("إدارة وتعديل وحذف وإضافة شروط التسجيل والحقول المخصصة لكل قسم مع المزامنة الفورية للاستمارات:", fontSize = 11.sp, color = themeColors.textSecondary)
 
                     Text("اختر القسم المستهدف:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -539,8 +831,8 @@ internal fun LazyListScope.adminCustomizationSections(
                         Text("لا توجد شروط حالياً لهذا القسم. يمكنك إضافة شروط أدناه.", fontSize = 10.sp, color = Color.Gray)
                     } else {
                         currentTerms.forEachIndexed { index, term ->
-                            var termDraft by remember(term) { mutableStateOf(term) }
-                            var isEditingThisTerm by remember { mutableStateOf(false) }
+                            var termDraft by remember(targetRegSection, index, term) { mutableStateOf(term) }
+                            var isEditingThisTerm by remember(targetRegSection, index) { mutableStateOf(false) }
 
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.4f)),
@@ -559,10 +851,12 @@ internal fun LazyListScope.adminCustomizationSections(
                                             Button(
                                                 onClick = {
                                                     val updatedList = currentTerms.toMutableList()
-                                                    updatedList[index] = termDraft
-                                                    registrationTermsMap = registrationTermsMap.toMutableMap().apply { put(targetRegSection, updatedList) }
+                                                    updatedList[index] = termDraft.trim()
+                                                    val updatedMap = registrationTermsMap.toMutableMap().apply { put(targetRegSection, updatedList) }
+                                                    registrationTermsMap = updatedMap
+                                                    persistFormsConfig(termsMap = updatedMap)
                                                     isEditingThisTerm = false
-                                                    Toast.makeText(context, "✅ تم حفظ التعديل ومزامنته فورياً!", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(context, "✅ تم حفظ التعديل ومزامنته سحابياً!", Toast.LENGTH_SHORT).show()
                                                 },
                                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                                                 modifier = Modifier.height(34.dp)
@@ -591,8 +885,10 @@ internal fun LazyListScope.adminCustomizationSections(
                                                     onClick = {
                                                         val updatedList = currentTerms.toMutableList()
                                                         updatedList.removeAt(index)
-                                                        registrationTermsMap = registrationTermsMap.toMutableMap().apply { put(targetRegSection, updatedList) }
-                                                        Toast.makeText(context, "🗑️ تم حذف الشرط بنجاح!", Toast.LENGTH_SHORT).show()
+                                                        val updatedMap = registrationTermsMap.toMutableMap().apply { put(targetRegSection, updatedList) }
+                                                        registrationTermsMap = updatedMap
+                                                        persistFormsConfig(termsMap = updatedMap)
+                                                        Toast.makeText(context, "🗑️ تم حذف الشرط ومزامنته بنجاح!", Toast.LENGTH_SHORT).show()
                                                     },
                                                     modifier = Modifier.size(28.dp)
                                                 ) {
@@ -622,9 +918,11 @@ internal fun LazyListScope.adminCustomizationSections(
                             onClick = {
                                 if (newTermText.isNotBlank()) {
                                     val updatedList = currentTerms.toMutableList().apply { add(newTermText.trim()) }
-                                    registrationTermsMap = registrationTermsMap.toMutableMap().apply { put(targetRegSection, updatedList) }
+                                    val updatedMap = registrationTermsMap.toMutableMap().apply { put(targetRegSection, updatedList) }
+                                    registrationTermsMap = updatedMap
+                                    persistFormsConfig(termsMap = updatedMap)
                                     newTermText = ""
-                                    Toast.makeText(context, "✅ تمت إضافة ومزامنة الشرط بنجاح!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "✅ تمت إضافة ومزامنة الشرط سحابياً!", Toast.LENGTH_SHORT).show()
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
@@ -636,7 +934,44 @@ internal fun LazyListScope.adminCustomizationSections(
                     }
 
                     HorizontalDivider(color = themeColors.accent.copy(alpha = 0.3f))
-                    Text("➕ إضافة حقول مخصصة جديدة للاستمارة:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
+                    Text("➕ الحقول المخصصة الإضافية لاستمارة ($targetRegSection):", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
+
+                    val sectionFields = customFieldsList.filter { it.sectionKey == targetRegSection }
+                    if (sectionFields.isEmpty()) {
+                        Text("لا توجد حقول إضافية مخصصة لهذا القسم حالياً.", fontSize = 10.sp, color = Color.Gray)
+                    } else {
+                        sectionFields.forEach { fld ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.Black.copy(alpha = 0.35f))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(fld.label, fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        "النوع: ${fld.fieldType} • ${if (fld.isRequired) "إجباري *" else "اختياري"}",
+                                        fontSize = 9.5.sp,
+                                        color = if (fld.isRequired) Color(0xFFF59E0B) else Color(0xFF10B981)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        val updatedFields = customFieldsList.filterNot { it.id == fld.id }
+                                        customFieldsList = updatedFields
+                                        persistFormsConfig(fields = updatedFields)
+                                        Toast.makeText(context, "🗑️ تم حذف الحقل ومزامنته", Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.size(30.dp)
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = "حذف الحقل", tint = Color.Red, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
+                    }
 
                     OutlinedTextField(
                         value = customFieldTitle,
@@ -648,7 +983,7 @@ internal fun LazyListScope.adminCustomizationSections(
 
                     Text("نوع الحقل:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("TEXT" to "نص 📝", "PHONE" to "رقم هاتف 📞", "IMAGE" to "صورة / مستند 📷", "DROPDOWN" to "قائمة منسدلة 🔽").forEach { (t, lbl) ->
+                        listOf("TEXT" to "نص 📝", "PHONE" to "رقم هاتف 📞", "NUMBER" to "رقم 🔢").forEach { (t, lbl) ->
                             FilterChip(
                                 selected = customFieldType == t,
                                 onClick = { customFieldType = t },
@@ -658,10 +993,33 @@ internal fun LazyListScope.adminCustomizationSections(
                         }
                     }
 
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("هل هذا الحقل الإضافي مطلوب (إجباري)؟", color = Color.White, fontSize = 11.5.sp)
+                        Switch(
+                            checked = customFieldRequired,
+                            onCheckedChange = { customFieldRequired = it },
+                            colors = adminSwitchColors(themeColors)
+                        )
+                    }
+
                     Button(
                         onClick = {
                             if (customFieldTitle.isNotBlank()) {
-                                Toast.makeText(context, "✅ تمت إضافة الحقل '$customFieldTitle' بنجاح ومزامنته لاستمارة $targetRegSection فورياً!", Toast.LENGTH_LONG).show()
+                                val newField = RegistrationCustomField(
+                                    id = "fld_${System.currentTimeMillis()}",
+                                    sectionKey = targetRegSection,
+                                    label = customFieldTitle.trim(),
+                                    fieldType = customFieldType,
+                                    isRequired = customFieldRequired
+                                )
+                                val updatedFields = customFieldsList + newField
+                                customFieldsList = updatedFields
+                                persistFormsConfig(fields = updatedFields)
+                                Toast.makeText(context, "✅ تمت إضافة الحقل '$customFieldTitle' ومزامنته لاستمارة $targetRegSection سحابياً!", Toast.LENGTH_LONG).show()
                                 customFieldTitle = ""
                             } else {
                                 Toast.makeText(context, "⚠️ يرجى إدخال عنوان الحقل", Toast.LENGTH_SHORT).show()
@@ -785,6 +1143,7 @@ internal fun LazyListScope.adminCustomizationSections(
                             Switch(
                                 checked = state.isNewRequirementMandatory,
                                 onCheckedChange = { state.isNewRequirementMandatory = it },
+                                colors = adminSwitchColors(themeColors),
                                 modifier = Modifier.scale(0.8f)
                             )
                         }
@@ -843,7 +1202,11 @@ internal fun LazyListScope.adminCustomizationSections(
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 Text("شرط إلزامي للجميع؟")
-                                                Switch(checked = editItemMandatory, onCheckedChange = { editItemMandatory = it })
+                                                Switch(
+                                                    checked = editItemMandatory,
+                                                    onCheckedChange = { editItemMandatory = it },
+                                                    colors = adminSwitchColors(themeColors)
+                                                )
                                             }
                                         }
                                     },
@@ -921,17 +1284,17 @@ internal fun LazyListScope.adminCustomizationSections(
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("🏆 شارة VIP الذهبية والدرع المحيط بالكرت", fontSize = 11.sp, color = Color.White)
-                        Switch(checked = state.editShowVipBadge, onCheckedChange = { state.editShowVipBadge = it })
+                        Switch(checked = state.editShowVipBadge, onCheckedChange = { state.editShowVipBadge = it }, colors = adminSwitchColors(themeColors))
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("🔵 شارة التوثيق الزرقاء المعتمدة", fontSize = 11.sp, color = Color.White)
-                        Switch(checked = state.editShowVerifiedBadge, onCheckedChange = { state.editShowVerifiedBadge = it })
+                        Switch(checked = state.editShowVerifiedBadge, onCheckedChange = { state.editShowVerifiedBadge = it }, colors = adminSwitchColors(themeColors))
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("🟢 شارة نجمة التوصية (موصى به)", fontSize = 11.sp, color = Color.White)
-                        Switch(checked = state.editShowRecommendedBadge, onCheckedChange = { state.editShowRecommendedBadge = it })
+                        Switch(checked = state.editShowRecommendedBadge, onCheckedChange = { state.editShowRecommendedBadge = it }, colors = adminSwitchColors(themeColors))
                     }
                 }
             }
@@ -948,7 +1311,7 @@ internal fun LazyListScope.adminCustomizationSections(
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("🎁 تفعيل نقاط الولاء والمشاركة للمساعد الذكي", fontSize = 11.sp, color = Color.White)
-                        Switch(checked = state.editShowLoyaltyBanner, onCheckedChange = { state.editShowLoyaltyBanner = it })
+                        Switch(checked = state.editShowLoyaltyBanner, onCheckedChange = { state.editShowLoyaltyBanner = it }, colors = adminSwitchColors(themeColors))
                     }
 
                     Text("📂 أقصى حد لصور سابقة الأعمال التي يرفعها مقدم الخدمة: ${state.editMaxWorkPhotos.toInt()}", fontSize = 11.sp, color = Color.White)
@@ -974,7 +1337,7 @@ internal fun LazyListScope.adminCustomizationSections(
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("📞 تفعيل زر الاتصال الهاتفي المباشر", fontSize = 11.sp, color = Color.White)
-                            Switch(checked = state.editShowCallButton, onCheckedChange = { state.editShowCallButton = it })
+                            Switch(checked = state.editShowCallButton, onCheckedChange = { state.editShowCallButton = it }, colors = adminSwitchColors(themeColors))
                         }
                         if (state.editShowCallButton) {
                             OutlinedTextField(value = state.editCallButtonColorHex, onValueChange = { state.editCallButtonColorHex = it }, label = { Text("لون زر الاتصال (Hex)") }, modifier = Modifier.fillMaxWidth(), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White))
@@ -984,7 +1347,7 @@ internal fun LazyListScope.adminCustomizationSections(
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("💬 تفعيل زر المحادثة السريعة واتساب", fontSize = 11.sp, color = Color.White)
-                            Switch(checked = state.editShowWhatsappButton, onCheckedChange = { state.editShowWhatsappButton = it })
+                            Switch(checked = state.editShowWhatsappButton, onCheckedChange = { state.editShowWhatsappButton = it }, colors = adminSwitchColors(themeColors))
                         }
                         if (state.editShowWhatsappButton) {
                             OutlinedTextField(value = state.editWhatsappButtonColorHex, onValueChange = { state.editWhatsappButtonColorHex = it }, label = { Text("لون زر واتساب (Hex)") }, modifier = Modifier.fillMaxWidth(), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White))
@@ -994,7 +1357,7 @@ internal fun LazyListScope.adminCustomizationSections(
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("🔍 تفعيل زر عرض التفاصيل والتقييمات", fontSize = 11.sp, color = Color.White)
-                            Switch(checked = state.editShowDetailsButton, onCheckedChange = { state.editShowDetailsButton = it })
+                            Switch(checked = state.editShowDetailsButton, onCheckedChange = { state.editShowDetailsButton = it }, colors = adminSwitchColors(themeColors))
                         }
                         if (state.editShowDetailsButton) {
                             OutlinedTextField(value = state.editDetailsButtonColorHex, onValueChange = { state.editDetailsButtonColorHex = it }, label = { Text("لون زر التفاصيل (Hex)") }, modifier = Modifier.fillMaxWidth(), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White))
@@ -1004,7 +1367,7 @@ internal fun LazyListScope.adminCustomizationSections(
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("📅 تفعيل زر طلب الحجز المباشر", fontSize = 11.sp, color = Color.White)
-                            Switch(checked = state.editShowBookButton, onCheckedChange = { state.editShowBookButton = it })
+                            Switch(checked = state.editShowBookButton, onCheckedChange = { state.editShowBookButton = it }, colors = adminSwitchColors(themeColors))
                         }
                         if (state.editShowBookButton) {
                             OutlinedTextField(value = state.editBookButtonColorHex, onValueChange = { state.editBookButtonColorHex = it }, label = { Text("لون زر الحجز المباشر (Hex)") }, modifier = Modifier.fillMaxWidth(), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White))

@@ -34,7 +34,7 @@ class MapScreenState(
     var currentMapMode by mutableStateOf(initialMode)
     var isRadarMode by mutableStateOf(isRadarMode)
     var isSatelliteMode by mutableStateOf(true)
-    var currentMapLayer by mutableStateOf("google_satellite")
+    var currentMapLayer by mutableStateOf("esri_world_imagery")
     var isHeatmapActive by mutableStateOf(isHeatmapActive)
     var selectedCategory by mutableStateOf(selectedCategory)
     var selectedCity by mutableStateOf(selectedCity)
@@ -127,7 +127,7 @@ class MapScreenState(
                     maxRangeKm = (saved[5] as Number).toFloat(),
                     initialMode = mode
                 ).apply {
-                    currentMapLayer = (saved.getOrNull(7) as? String) ?: "google_satellite"
+                    currentMapLayer = (saved.getOrNull(7) as? String) ?: "esri_world_imagery"
                     tiltAngle = (saved.getOrNull(8) as? Number)?.toFloat() ?: 30f
                     is3DBuildingsActive = (saved.getOrNull(9) as? Boolean) ?: true
                     isNightModeActive = (saved.getOrNull(10) as? Boolean) ?: false

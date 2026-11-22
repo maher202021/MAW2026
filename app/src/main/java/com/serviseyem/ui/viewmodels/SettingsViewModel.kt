@@ -969,25 +969,177 @@ fun setSecondaryFirebaseConfig(projectId: String, apiKey: String, appId: String,
             "secondary_apiKey" to apiKey,
             "secondary_appId" to appId,
             "secondary_storageBucket" to storageBucket,
-            "secondary_enabled" to isEnabled
+            "secondary_enabled" to isEnabled,
+            "updatedAt" to System.currentTimeMillis()
         )
-        db.collection("admin_settings").document("secondary_firebase").set(map)
+        db.collection("admin_settings").document("secondary_firebase").set(map, SetOptions.merge())
         mainViewModel.triggerNotification(if (isEnabled) "🟢 تم تفعيل المزامنة المزدوجة مع حساب Firebase الثانوي بنجاح!" else "🔴 تم إيقاف المزامنة مع الحساب الثانوي")
     }
 
-fun saveCustomPermissionsMatrixToFirestore(permissions: List<String>) {
-        val payload = mapOf(
-            "activePermissions" to permissions,
+fun loadSecondaryFirebaseConfig(onLoaded: (String, String, String, String, Boolean) -> Unit) {
+        db.collection("admin_settings").document("secondary_firebase").get()
+            .addOnSuccessListener { doc ->
+                if (doc != null && doc.exists()) {
+                    onLoaded(
+                        doc.getString("secondary_projectId") ?: "",
+                        doc.getString("secondary_apiKey") ?: "",
+                        doc.getString("secondary_appId") ?: "",
+                        doc.getString("secondary_storageBucket") ?: "",
+                        doc.getBoolean("secondary_enabled") == true
+                    )
+                }
+            }
+    }
+
+fun saveCustomPermissionsMatrixToFirestore(permissions: List<String>, roleKey: String = "ADMIN") {
+        val cleanRole = roleKey.uppercase().trim().ifBlank { "ADMIN" }
+        val updatedRoleMap = appState._rolePermissionsMap.value.toMutableMap()
+        updatedRoleMap[cleanRole] = permissions
+        appState._rolePermissionsMap.value = updatedRoleMap
+        if (cleanRole == "ADMIN") {
+            appState._adminPermissionsMatrix.value = permissions
+        }
+
+        val payload = hashMapOf<String, Any>(
             "totalCount" to permissions.size,
-            "updatedAt" to System.currentTimeMillis()
+            "updatedAt" to System.currentTimeMillis(),
+            "roleMatrices" to updatedRoleMap
         )
-        db.collection("settings").document("admin_permissions_matrix").set(payload)
+        if (cleanRole == "ADMIN") {
+            payload["activePermissions"] = permissions
+        }
+
+        db.collection("settings").document("admin_permissions_matrix")
+            .set(payload, SetOptions.merge())
             .addOnSuccessListener {
-                mainViewModel.triggerNotification("💾 تم حفظ وتحديث مصفوفة الصلاحيات (${permissions.size} / 538) في قاعدة بيانات Firestore بنجاح!")
+                mainViewModel.triggerNotification("💾 تم حفظ وتحديث مصفوفة الصلاحيات للدور $cleanRole (${permissions.size} / 538) في Firestore بنجاح!")
             }
             .addOnFailureListener {
                 mainViewModel.triggerNotification("❌ تعذر حفظ مصفوفة الصلاحيات في Firestore: ${it.localizedMessage}")
             }
+    }
+
+fun saveRegistrationFormsConfig(config: RegistrationFormsConfig, onResult: (Boolean) -> Unit = {}) {
+        appState._registrationFormsConfig.value = config
+        val payload = hashMapOf<String, Any>(
+            "termsBySection" to config.termsBySection,
+            "customFields" to config.customFields.map { f ->
+                mapOf(
+                    "id" to f.id,
+                    "sectionKey" to f.sectionKey,
+                    "label" to f.label,
+                    "fieldType" to f.fieldType,
+                    "isRequired" to f.isRequired
+                )
+            },
+            "updatedAt" to System.currentTimeMillis()
+        )
+        db.collection("settings").document("registration_forms")
+            .set(payload)
+            .addOnSuccessListener {
+                mainViewModel.triggerNotification("✅ تم حفظ ومزامنة استمارات وشروط التسجيل سحابياً بنجاح!")
+                onResult(true)
+            }
+            .addOnFailureListener {
+                mainViewModel.triggerNotification("❌ تعذر مزامنة استمارات التسجيل: ${it.localizedMessage}")
+                onResult(false)
+            }
+    }
+
+fun savePlatformSections(sections: List<PlatformHomeSection>, onResult: (Boolean) -> Unit = {}) {
+        val normalized = sections.mapIndexed { idx, s -> s.copy(order = idx) }
+        appState._platformHomeSections.value = normalized
+        val payload = hashMapOf<String, Any>(
+            "sections" to normalized.map { s ->
+                mapOf(
+                    "id" to s.id,
+                    "titleAr" to s.titleAr,
+                    "titleEn" to s.titleEn,
+                    "emoji" to s.emoji,
+                    "subtitleAr" to s.subtitleAr,
+                    "routeKey" to s.routeKey,
+                    "isVisible" to s.isVisible,
+                    "isBuiltIn" to s.isBuiltIn,
+                    "order" to s.order,
+                    "linkToMap" to s.linkToMap,
+                    "linkToOrders" to s.linkToOrders,
+                    "linkToPayment" to s.linkToPayment,
+                    "enableBookings" to s.enableBookings,
+                    "sectionType" to s.sectionType
+                )
+            },
+            "updatedAt" to System.currentTimeMillis()
+        )
+        db.collection("settings").document("platform_sections")
+            .set(payload)
+            .addOnSuccessListener {
+                mainViewModel.triggerNotification("✅ تم تحديث ومزامنة أقسام وخدمات الواجهة الرئيسية سحابياً!")
+                onResult(true)
+            }
+            .addOnFailureListener {
+                mainViewModel.triggerNotification("❌ تعذر حفظ الأقسام: ${it.localizedMessage}")
+                onResult(false)
+            }
+    }
+
+fun adminOverrideWalletBalance(targetIdOrPhone: String, amount: Double, reason: String = "تعديل رصيد إداري") {
+        val cleanTarget = targetIdOrPhone.trim()
+        if (cleanTarget.isBlank()) {
+            mainViewModel.triggerNotification("⚠️ يرجى إدخال معرف المستخدم أو رقم الهاتف أولاً")
+            return
+        }
+        val normalizedPhone = com.serviseyem.ui.helpers.AppPreferenceHelper.normalizePhoneNumber(cleanTarget)
+        val wallets = appState._internalWallets.value
+        val existing = wallets.find {
+            it.id == cleanTarget ||
+                (normalizedPhone.isNotBlank() && (
+                    com.serviseyem.ui.helpers.AppPreferenceHelper.normalizePhoneNumber(it.ownerPhone) == normalizedPhone ||
+                        com.serviseyem.ui.helpers.AppPreferenceHelper.normalizePhoneNumber(it.id) == normalizedPhone
+                    ))
+        }
+        val docId = existing?.id ?: normalizedPhone.ifBlank { cleanTarget }
+        val newBalance = ((existing?.balance ?: 0.0) + amount).coerceAtLeast(0.0)
+        val now = System.currentTimeMillis()
+
+        val updatedWallet = (existing ?: InternalWalletEntity(
+            id = docId,
+            ownerType = "USER",
+            ownerName = cleanTarget,
+            ownerPhone = normalizedPhone.ifBlank { cleanTarget }
+        )).copy(balance = newBalance, updatedAt = now)
+
+        val txId = "tx_override_" + UUID.randomUUID().toString().take(8)
+        val tx = WalletTransactionEntity(
+            id = txId,
+            walletId = docId,
+            type = if (amount >= 0) "DEPOSIT" else "WITHDRAWAL",
+            amount = kotlin.math.abs(amount),
+            balanceAfter = newBalance,
+            note = reason,
+            performByAdmin = true,
+            timestamp = now,
+            adminName = mainViewModel.authViewModel._currentUserName.value.ifBlank { "الإدارة العليا" }
+        )
+
+        db.collection("internal_wallets").document(docId).set(updatedWallet, SetOptions.merge())
+        db.collection("wallet_transactions").document(txId).set(tx)
+
+        val logId = db.collection("activity_logs").document().id
+        db.collection("activity_logs").document(logId).set(
+            ActivityLogEntity(
+                id = logId,
+                action = "💳 تعديل رصيد محفظة ($docId) بمقدار $amount ر.ي — الرصيد الجديد: $newBalance ر.ي",
+                timestamp = now
+            )
+        )
+
+        val nextWallets = wallets.toMutableList()
+        val idx = nextWallets.indexOfFirst { it.id == docId }
+        if (idx >= 0) nextWallets[idx] = updatedWallet else nextWallets.add(0, updatedWallet)
+        appState._internalWallets.value = nextWallets
+        appState._walletTransactions.value = listOf(tx) + appState._walletTransactions.value
+
+        mainViewModel.triggerNotification("💳 تم تحديث المحفظة ($docId) وتسجيل الحركة بنجاح — الرصيد: $newBalance ر.ي")
     }
 
 fun addColorPalette(name: String, primaryHex: String, secondaryHex: String, backgroundHex: String = "#0A0F0D", surfaceHex: String = "#121D18") {

@@ -33,7 +33,7 @@ import com.serviseyem.utils.VisualThemePalette
 @Composable
 fun AdminMedicalPanel(
     onBack: () -> Unit = {},
-    viewModel: MainViewModel = viewModel(),
+    viewModel: MainViewModel,
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
 ) {
