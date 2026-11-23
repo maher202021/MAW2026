@@ -66,7 +66,14 @@ fun AssistantInputBar(
                 placeholder = { Text("اكتب سؤالك أو اطلب خدمة هنا...", fontSize = 11.sp, color = themeColors.textSecondary) },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(20.dp),
-                singleLine = true,
+                singleLine = false,
+                maxLines = 3,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Send
+                ),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                    onSend = { if (typedText.isNotBlank() && !isGenerating) onSend() }
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = themeColors.textPrimary,
                     unfocusedTextColor = themeColors.textPrimary,

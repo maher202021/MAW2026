@@ -154,6 +154,42 @@ class AdminViewModel @Inject constructor(
     internal val _supervisorPermissions = MutableStateFlow<List<String>>(emptyList())
     val supervisorPermissions: StateFlow<List<String>> = _supervisorPermissions.asStateFlow()
 
+    private suspend fun resolveEffectivePermissions(
+        role: String,
+        explicit: Collection<String>? = null
+    ): List<String> {
+        var roleMap: Map<String, List<String>> = appState._rolePermissionsMap.value
+        if (roleMap.isEmpty()) {
+            try {
+                val snap = db.collection("settings").document("admin_permissions_matrix").get().await()
+                if (snap.exists()) {
+                    val parsed = mutableMapOf<String, List<String>>()
+                    val rawMatrices = snap.get("roleMatrices") as? Map<*, *>
+                    rawMatrices?.forEach { (k, v) ->
+                        val rk = k?.toString()?.uppercase()?.trim().orEmpty()
+                        val lst = (v as? List<*>)?.mapNotNull { it?.toString() }.orEmpty()
+                        if (rk.isNotBlank()) parsed[rk] = lst
+                    }
+                    val activePerms = (snap.get("activePermissions") as? List<*>)
+                        ?.mapNotNull { it?.toString() }.orEmpty()
+                    if (!parsed.containsKey("ADMIN") && activePerms.isNotEmpty()) {
+                        parsed["ADMIN"] = activePerms
+                    }
+                    if (parsed.isNotEmpty()) {
+                        appState._rolePermissionsMap.value = parsed
+                        appState._adminPermissionsMatrix.value = parsed["ADMIN"] ?: activePerms
+                        roleMap = parsed
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+        return com.serviseyem.security.AdminPermissionResolver.resolve(
+            role = role,
+            explicit = explicit,
+            matrix = roleMap
+        ).toList()
+    }
+
     /**
      * 🔐 تسجيل دخول الأدمن الآمن
      * - يتحقق عبر Cloud Function
@@ -185,7 +221,11 @@ class AdminViewModel @Inject constructor(
 
                 if (verifiedRole == "ADMIN" || verifiedRole == "OWNER") {
                     val assignedRole = verifiedRole
-                    val perms = if (assignedRole == "OWNER") listOf("ALL") else emptyList()
+                    val matchingSup = supervisorsList.find {
+                        it.id.equals(trimmedEmail, ignoreCase = true) ||
+                            it.name.trim().equals(trimmedEmail, ignoreCase = true)
+                    }
+                    val perms = resolveEffectivePermissions(assignedRole, matchingSup?.permissions)
 
                     // 🔐 حفظ البيانات بشكل آمن للوصول الطارئ مستقبلاً
                     com.serviseyem.utils.SecureAdminStorage.storeCredentials(
@@ -247,7 +287,11 @@ class AdminViewModel @Inject constructor(
 
                 if (verifiedRole == "OWNER" || verifiedRole == "ADMIN") {
                     val assignedRole = verifiedRole
-                    val perms = if (assignedRole == "OWNER") listOf("ALL") else emptyList()
+                    val matchingSup = supervisorsList.find {
+                        it.id.equals(trimmedEmail, ignoreCase = true) ||
+                            it.name.trim().equals(trimmedEmail, ignoreCase = true)
+                    }
+                    val perms = resolveEffectivePermissions(assignedRole, matchingSup?.permissions)
 
                     com.serviseyem.utils.SecureAdminStorage.storeCredentials(
                         context = application,
@@ -311,9 +355,7 @@ class AdminViewModel @Inject constructor(
                         it.id.equals(trimmedUser, ignoreCase = true) ||
                                 it.name.trim().equals(trimmedUser, ignoreCase = true)
                     }
-                    val perms = matchingSup?.permissions?.ifEmpty {
-                        listOf("MANAGE_PROVIDERS", "MANAGE_BOOKINGS", "MANAGE_REQUESTS")
-                    } ?: if (verifiedRole == "OWNER") listOf("ALL") else emptyList()
+                    val perms = resolveEffectivePermissions(verifiedRole, matchingSup?.permissions)
 
                     if (rememberMe) {
                         secureStorage.saveAdminSession(
@@ -574,12 +616,41 @@ class AdminViewModel @Inject constructor(
     val jobApplications: StateFlow<List<com.serviseyem.data.JobApplicationEntity>> = _jobApplications.asStateFlow()
 
 fun approveRequest(request: PendingProviderEntity) {
-        val lowerArea = request.area.lowercase()
-        val finalCityId = when {
-            lowerArea.contains("عدن") || lowerArea.contains("aden") -> "ye_ade"
-            lowerArea.contains("تعز") || lowerArea.contains("taiz") -> "ye_tai"
-            lowerArea.contains("الحديدة") || lowerArea.contains("hodeidah") -> "ye_hod"
-            else -> "ye_san"
+        approveRequestValidated(request)
+    }
+
+fun approveRequestValidated(
+        request: PendingProviderEntity,
+        onValidationError: (List<com.serviseyem.utils.ApprovalValidator.Problem>) -> Unit = {}
+    ) {
+        val parsedFromString = request.gpsCoords.split(",").let { parts ->
+            val la = parts.getOrNull(0)?.trim()?.toDoubleOrNull() ?: 0.0
+            val lo = parts.getOrNull(1)?.trim()?.toDoubleOrNull() ?: 0.0
+            la to lo
+        }
+        val resolvedLat = if (com.serviseyem.utils.LandmarkAddress.isValid(request.latitude, request.longitude)) {
+            request.latitude
+        } else parsedFromString.first
+        val resolvedLng = if (com.serviseyem.utils.LandmarkAddress.isValid(request.latitude, request.longitude)) {
+            request.longitude
+        } else parsedFromString.second
+
+        val finalCityId = com.serviseyem.utils.CityIdResolver.resolve(request.area)
+        val isLocationlessActivity = request.profession.uppercase() in listOf("JOB_SEEKER", "CLIENT") ||
+            request.categoryId.uppercase() in listOf("JOB_SEEKER", "CLIENT")
+
+        val problems = com.serviseyem.utils.ApprovalValidator.validate(
+            lat = resolvedLat,
+            lng = resolvedLng,
+            cityId = finalCityId,
+            name = request.name,
+            phone = request.phone,
+            requireLocation = !isLocationlessActivity
+        )
+        if (problems.isNotEmpty() || finalCityId.isNullOrBlank()) {
+            mainViewModel.triggerNotification("⚠️ ${problems.firstOrNull()?.message ?: "يرجى استكمال بيانات الموقع والمدينة"}")
+            onValidationError(problems)
+            return
         }
 
         val cleanPhone = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(request.phone)
@@ -594,15 +665,7 @@ fun approveRequest(request: PendingProviderEntity) {
         }
 
         fun resolveDecryptedPhoto(raw: String): String {
-            val trimmed = raw.trim()
-            if (trimmed.isBlank()) return ""
-            return if (trimmed.startsWith("gcm:") || trimmed.startsWith("gcmx:") || trimmed.startsWith("enc::")) {
-                com.serviseyem.utils.SecurityCryptoUtils.decrypt(trimmed).ifBlank {
-                    com.serviseyem.utils.SecurityCryptoUtils.decryptCrossDevice(trimmed)
-                }
-            } else {
-                trimmed
-            }
+            return com.serviseyem.utils.RequestImages.decryptToString(raw)
         }
 
         // Helper to remove from pending_providers permanently
@@ -629,7 +692,8 @@ fun approveRequest(request: PendingProviderEntity) {
             "approvalStatus" to "APPROVED",
             "isActive" to true,
             "approvedAt" to now,
-            "updatedAt" to now
+            "updatedAt" to now,
+            "idCardImage" to ""
         )
         db.collection("join_requests").document(request.id).update(joinReqUpdates)
         if (cleanPhone.isNotEmpty() && cleanPhone != request.id) {
@@ -676,6 +740,8 @@ fun approveRequest(request: PendingProviderEntity) {
                     logoImage = resolvedLogoUrl,
                     images = request.workPhotosBase64,
                     workingHours = request.workingHours.ifBlank { "9:00 AM - 10:00 PM" },
+                    latitude = resolvedLat,
+                    longitude = resolvedLng,
                     isActive = true,
                     isApproved = true,
                     isPinned = false,
@@ -748,6 +814,8 @@ fun approveRequest(request: PendingProviderEntity) {
                     ownerName = resolvedOwnerName,
                     localNeighborhood = request.localNeighborhood,
                     cityId = finalCityId,
+                    latitude = resolvedLat,
+                    longitude = resolvedLng,
                     images = propImages,
                     isActive = true,
                     isApproved = true,
@@ -904,6 +972,8 @@ fun approveRequest(request: PendingProviderEntity) {
                     isAvailable = true,
                     cityId = finalCityId,
                     localNeighborhood = request.localNeighborhood,
+                    latitude = resolvedLat,
+                    longitude = resolvedLng,
                     profileImage = resolvedProfileUrl,
                     workPhotosBase64 = request.workPhotosBase64,
                     specialization = resolvedDescription.ifBlank { request.specialization },

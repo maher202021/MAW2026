@@ -83,7 +83,9 @@ object VoiceManager : TextToSpeech.OnInitListener {
                 }
                 val result = tts?.setLanguage(chosen ?: Locale.forLanguageTag("ar")) ?: TextToSpeech.LANG_NOT_SUPPORTED
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    tts?.setLanguage(Locale.getDefault())
+                    isInitialized = false
+                    Log.w("VoiceManager", "Arabic TTS not supported on this device; skipping audio to avoid corrupt output")
+                    return
                 }
                 tts?.setPitch(1.0f)
                 tts?.setSpeechRate(0.95f)

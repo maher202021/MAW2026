@@ -1598,34 +1598,6 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
         }
         "ROLES_PERMISSIONS" -> {
             item {
-                Text("🛡️ مصفوفة الصلاحيات والأدوار (538 صلاحية كاملة)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
-                Text("إدارة وتعيين الصلاحيات الـ 538 الموزعة على 18 قطاعاً لجميع المشرفين والإداريين ومزامنتها مع Firestore سحابياً:", fontSize = 11.sp, color = themeColors.textSecondary)
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            item {
-                val syncedMatrix by viewModel.adminPermissionsMatrix.collectAsState()
-                var adminCustomPermissions by remember {
-                    mutableStateOf(
-                        syncedMatrix.ifEmpty { AdminPermissionsRegistry.allPermissions.map { it.key } }
-                    )
-                }
-                LaunchedEffect(syncedMatrix) {
-                    if (syncedMatrix.isNotEmpty()) {
-                        adminCustomPermissions = syncedMatrix
-                    }
-                }
-                AdminPermissionsSelectorView(
-                    themeColors = themeColors,
-                    selectedPermissions = adminCustomPermissions,
-                    onPermissionsChanged = { adminCustomPermissions = it },
-                    onSaveRequested = {
-                        viewModel.saveCustomPermissionsMatrixToFirestore(adminCustomPermissions, "ADMIN")
-                    }
-                )
-            }
-
-            item {
                 AdminRolesPermissionsPanel(viewModel = viewModel, themeColors = themeColors)
             }
         }

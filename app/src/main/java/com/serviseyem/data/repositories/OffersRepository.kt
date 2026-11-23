@@ -46,6 +46,38 @@ class OffersRepository @Inject constructor(
         }
     }
 
+    suspend fun getOffersForProvider(providerId: String, limit: Long = 30): Result<List<SpecialOfferEntity>> {
+        val pid = providerId.trim()
+        if (pid.isBlank()) return Result.success(emptyList())
+        return try {
+            val snapshot = firestore.collection("special_offers")
+                .whereEqualTo("providerId", pid)
+                .limit(limit)
+                .get()
+                .await()
+            var list = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(SpecialOfferEntity::class.java)?.copy(id = doc.id)
+            }
+            if (list.isEmpty()) {
+                val legacySnapshot = firestore.collection("offers")
+                    .whereEqualTo("providerId", pid)
+                    .limit(limit)
+                    .get()
+                    .await()
+                list = legacySnapshot.documents.mapNotNull { doc ->
+                    doc.toObject(SpecialOfferEntity::class.java)?.copy(id = doc.id)
+                }
+            }
+            if (list.isEmpty()) {
+                list = readLocalCache().filter { it.providerId == pid }
+            }
+            Result.success(list)
+        } catch (_: Exception) {
+            val fallback = readLocalCache().filter { it.providerId == pid }
+            Result.success(fallback)
+        }
+    }
+
     private fun readLocalCache(): MutableList<SpecialOfferEntity> {
         val raw = cacheManager.getOffersCacheRaw()
         return if (raw.isNotBlank() && raw != "[]") {

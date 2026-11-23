@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -320,10 +321,137 @@ fun MapFilterBar(
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.FilterList,
+                            imageVector = Icons.Default.Tune,
                             contentDescription = "تصفية",
-                            tint = Color.White.copy(alpha = 0.8f),
+                            tint = Color.White.copy(alpha = 0.85f),
                             modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Google-Maps-style 1-Tap Quick City & Category Chips Row
+        val quickCategories = remember {
+            listOf(
+                Triple("ALL", "الكل", "🌐"),
+                Triple("PROVIDERS", "فنيون", "🔧"),
+                Triple("STORES", "متاجر", "🛒"),
+                Triple("RESTAURANTS", "مطاعم", "🍳"),
+                Triple("MEDICAL", "طبي", "💊"),
+                Triple("PROPERTIES", "عقارات", "🏠")
+            )
+        }
+        var showCityDropdown by remember { mutableStateOf(false) }
+
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 600.dp)
+                .align(Alignment.CenterHorizontally),
+            contentPadding = PaddingValues(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            item(key = "city_selector_chip") {
+                Box {
+                    Surface(
+                        onClick = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                            showCityDropdown = true
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color(0xFF0F172A).copy(alpha = 0.90f),
+                        border = BorderStroke(
+                            1.dp,
+                            if (selectedCity != "الكل" && selectedCity.isNotBlank()) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.18f)
+                        ),
+                        shadowElevation = 4.dp,
+                        modifier = Modifier
+                            .defaultMinSize(minHeight = 38.dp)
+                            .testTag("map_city_quick_chip")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = "المدينة",
+                                tint = Color(0xFF00E5FF),
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Text(
+                                text = if (selectedCity == "الكل" || selectedCity.isBlank()) "كل اليمن" else selectedCity,
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.7f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = showCityDropdown,
+                        onDismissRequest = { showCityDropdown = false },
+                        modifier = Modifier.background(Color(0xFF0F172A))
+                    ) {
+                        governorates.forEach { gov ->
+                            val isSelected = (gov == "الكل" && (selectedCity == "الكل" || selectedCity.isBlank())) || selectedCity == gov
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = if (gov == "الكل") "كل اليمن 🇾🇪" else gov,
+                                        color = if (isSelected) Color(0xFF10B981) else Color.White,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 13.sp
+                                    )
+                                },
+                                onClick = {
+                                    onCitySelected(gov)
+                                    showCityDropdown = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            items(quickCategories, key = { it.first }) { (catKey, catLabel, emoji) ->
+                val isSelected = selectedCategory == catKey
+                Surface(
+                    onClick = {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                        onCategorySelected(catKey)
+                    },
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (isSelected) Color(0xFF10B981) else Color(0xFF0F172A).copy(alpha = 0.88f),
+                    border = BorderStroke(
+                        1.dp,
+                        if (isSelected) Color(0xFF10B981) else Color.White.copy(alpha = 0.16f)
+                    ),
+                    shadowElevation = if (isSelected) 6.dp else 3.dp,
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = 38.dp)
+                        .testTag("map_cat_chip_$catKey")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(text = emoji, fontSize = 13.sp)
+                        Text(
+                            text = catLabel,
+                            color = if (isSelected) Color.Black else Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold
                         )
                     }
                 }

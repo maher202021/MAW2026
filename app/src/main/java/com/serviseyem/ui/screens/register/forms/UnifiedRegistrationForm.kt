@@ -34,8 +34,15 @@ import com.serviseyem.data.models.RegistrationFormsConfig
 import com.serviseyem.domain.YemenCities
 import com.serviseyem.ui.helpers.AppPreferenceHelper
 import com.serviseyem.ui.screens.admin.components.adminSwitchColors
+import android.Manifest
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.serviseyem.ui.components.MapPointPickerDialog
+import com.serviseyem.utils.LandmarkAddress
+import com.serviseyem.utils.LocationCapture
 import com.serviseyem.utils.SecurityCryptoUtils
 import com.serviseyem.utils.VisualThemePalette
+import java.util.Locale
 
 /**
  * UnifiedRegistrationForm - استمارة التسجيل الموحدة والمخصصة بالكامل لكل فئة من الفئات الـ 8
@@ -95,9 +102,14 @@ fun UnifiedRegistrationForm(
     var notesOrDescription by rememberSaveable(normalizedRole) { mutableStateOf(initialDraft["notesOrDescription"] ?: "") }
     var extraOption1 by rememberSaveable(normalizedRole) { mutableStateOf(initialDraft["extraOption1"] == "true") }
 
-    // الصور والشعارات (اختيارية)
+    // الصور والشعارات والموقع الجغرافي (اختيارية)
     var imageUri by rememberSaveable(normalizedRole) { mutableStateOf("") }
     var idCardUri by rememberSaveable(normalizedRole) { mutableStateOf("") }
+    var gpsCoords by rememberSaveable(normalizedRole) { mutableStateOf(initialDraft["gpsCoords"] ?: "") }
+    var isFetchingGps by remember { mutableStateOf(false) }
+    var gpsStatusMessage by remember { mutableStateOf<String?>(null) }
+    var showMapPointPicker by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     // التحكم في إظهار كلمات المرور والموافقة
     var passwordVisible by remember { mutableStateOf(false) }
@@ -169,6 +181,35 @@ fun UnifiedRegistrationForm(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         if (uri != null) idCardUri = uri.toString()
+    }
+
+    fun fetchDeviceLocation() {
+        coroutineScope.launch {
+            isFetchingGps = true
+            gpsStatusMessage = "جاري التقاط موقعك الحالي بدقة..."
+            val loc = LocationCapture.fresh(context)
+            isFetchingGps = false
+            if (loc != null) {
+                gpsCoords = String.format(Locale.US, "%.6f,%.6f", loc.latitude, loc.longitude)
+                gpsStatusMessage = "✅ تم تحديد موقعك الحالي بنجاح (±${loc.accuracy.toInt()} م)"
+            } else {
+                gpsStatusMessage = "تعذر تحديد موقعك. اختره من الخريطة"
+                showMapPointPicker = true
+            }
+        }
+    }
+
+    val gpsPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        val granted = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (granted) {
+            fetchDeviceLocation()
+        } else {
+            gpsStatusMessage = "تعذر تحديد موقعك بدون إذن الموقع. اختره من الخريطة"
+            showMapPointPicker = true
+        }
     }
 
     val cities = YemenCities.MAIN_CITIES
@@ -527,7 +568,7 @@ fun UnifiedRegistrationForm(
                 )
             }
 
-            // 🔟 الحي / العنوان (اختياري)
+            // 🔟 الحي / العنوان + تحديد الموقع الحقيقي (اختياري)
             OutlinedTextField(
                 value = address,
                 onValueChange = { address = it },
@@ -536,6 +577,69 @@ fun UnifiedRegistrationForm(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            if (normalizedRole != "CLIENT" && normalizedRole != "JOB_SEEKER") {
+                Card(
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+                    border = BorderStroke(
+                        1.dp,
+                        if (gpsCoords.isNotBlank()) Color(0xFF10B981).copy(alpha = 0.6f)
+                        else themeColors.accent.copy(alpha = 0.3f)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = if (gpsCoords.isNotBlank()) "📍 الإحداثيات المحددة: $gpsCoords"
+                            else "📍 الموقع الجغرافي على الخريطة (موصى به لسرعة الاعتماد)",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (gpsCoords.isNotBlank()) Color(0xFF34D399) else Color.White
+                        )
+                        gpsStatusMessage?.let { msg ->
+                            Text(
+                                text = msg,
+                                fontSize = 10.5.sp,
+                                color = if (msg.startsWith("✅")) Color(0xFF34D399) else Color(0xFFFBBF24)
+                            )
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    if (LocationCapture.hasLocationPermission(context)) {
+                                        fetchDeviceLocation()
+                                    } else {
+                                        gpsPermissionLauncher.launch(
+                                            arrayOf(
+                                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                                Manifest.permission.ACCESS_COARSE_LOCATION
+                                            )
+                                        )
+                                    }
+                                },
+                                enabled = !isFetchingGps,
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                modifier = Modifier.weight(1f).defaultMinSize(minHeight = 48.dp)
+                            ) {
+                                if (isFetchingGps) {
+                                    CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                                } else {
+                                    Text("📍 موقعي الحالي", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                }
+                            }
+                            OutlinedButton(
+                                onClick = { showMapPointPicker = true },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f).defaultMinSize(minHeight = 48.dp)
+                            ) {
+                                Text("🗺️ من الخريطة", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = themeColors.accent)
+                            }
+                        }
+                    }
+                }
+            }
 
             // 1️⃣1️⃣ خيارات إضافية خاصة (اختياري)
             if (normalizedRole == "RESTAURANT") {
@@ -757,6 +861,7 @@ fun UnifiedRegistrationForm(
                         "hasEmergency" to (normalizedRole == "MEDICAL" && extraOption1).toString(),
                         "imageUri" to imageUri,
                         "idCardUri" to idCardUri,
+                        "gpsCoords" to gpsCoords,
                         "customFieldsJson" to customJson
                     )
                     dynamicFields.forEach { fld ->
@@ -780,5 +885,25 @@ fun UnifiedRegistrationForm(
                 }
             }
         }
+    }
+
+    if (showMapPointPicker) {
+        val parts = gpsCoords.split(",")
+        val initLat = parts.getOrNull(0)?.trim()?.toDoubleOrNull() ?: 0.0
+        val initLng = parts.getOrNull(1)?.trim()?.toDoubleOrNull() ?: 0.0
+        MapPointPickerDialog(
+            initialLat = initLat,
+            initialLng = initLng,
+            initialCity = city,
+            themeColors = themeColors,
+            onDismiss = { showMapPointPicker = false },
+            onConfirm = { pickedLat, pickedLng ->
+                if (LandmarkAddress.isValid(pickedLat, pickedLng)) {
+                    gpsCoords = String.format(Locale.US, "%.6f,%.6f", pickedLat, pickedLng)
+                    gpsStatusMessage = "✅ تم تحديد النقطة من الخريطة"
+                }
+                showMapPointPicker = false
+            }
+        )
     }
 }

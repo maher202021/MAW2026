@@ -236,11 +236,24 @@ class MainViewModel @Inject constructor(
     var selectedNavigationTargetLng by androidx.compose.runtime.mutableDoubleStateOf(44.2066)
     var selectedNavigationTargetName by androidx.compose.runtime.mutableStateOf("الوجهة المحددة")
 
+    data class MapFocusTarget(val lat: Double, val lng: Double, val label: String = "")
+    private val _pendingMapFocus = MutableStateFlow<MapFocusTarget?>(null)
+    val pendingMapFocus: StateFlow<MapFocusTarget?> = _pendingMapFocus.asStateFlow()
+
     fun openNavigation(lat: Double, lng: Double, name: String) {
         selectedNavigationTargetLat = lat
         selectedNavigationTargetLng = lng
         selectedNavigationTargetName = name
         navigateToScreen(AppScreens.NAVIGATION)
+    }
+
+    fun openInAppMap(lat: Double, lng: Double, label: String = "") {
+        _pendingMapFocus.value = MapFocusTarget(lat, lng, label)
+        navigateToScreen(AppScreens.MAP_VIEW)
+    }
+
+    fun consumePendingMapFocus() {
+        _pendingMapFocus.value = null
     }
 
     internal val _userLatitude = MutableStateFlow(15.3694)

@@ -439,7 +439,240 @@ internal fun MapControlsDock(
         },
         defaultBaseLayer = settingsState.defaultMapBaseLayer,
         orderedVisibleLayerIds = orderedVisibleLayerIds,
+        hasBottomOverlay = state.selectedEntity != null || state.currentMapMode == MapMode.NAVIGATION,
         themeColors = themeColors,
         modifier = modifier
     )
+}
+
+internal object MapToolActions {
+    fun switchLayer(
+        state: MapScreenState,
+        layerKey: String,
+        webViewRef: WebView?,
+        onOpenDestChooser: () -> Unit
+    ) {
+        if (layerKey == "navigation") {
+            if (state.pendingNavDestination == null) {
+                onOpenDestChooser()
+            } else {
+                state.currentMapLayer = layerKey
+                state.currentMapMode = MapMode.NAVIGATION
+                webViewRef?.post { webViewRef.evaluateJavascript("if (window.switchLayer) { window.switchLayer('$layerKey'); }", null) }
+            }
+        } else {
+            state.currentMapLayer = layerKey
+            if (state.currentMapMode == MapMode.NAVIGATION) {
+                state.currentMapMode = MapMode.VELA_3D
+                webViewRef?.post { webViewRef.evaluateJavascript("if (window.clearRoute) { window.clearRoute(); }", null) }
+            }
+            val quoted = org.json.JSONObject.quote(layerKey)
+            webViewRef?.post { webViewRef.evaluateJavascript("if (window.switchLayer) { window.switchLayer($quoted); }", null) }
+        }
+    }
+
+    fun toggleDeadZones(
+        state: MapScreenState,
+        providers: List<ProviderEntity>,
+        webViewRef: WebView?,
+        coroutineScope: CoroutineScope,
+        snackbarHostState: SnackbarHostState
+    ) {
+        state.isDeadZoneOverlayActive = !state.isDeadZoneOverlayActive
+        val active = state.isDeadZoneOverlayActive
+        if (active) {
+            val weakZones = com.serviseyem.ui.screens.map.utils.OfflineMapManager.MAJOR_YEMENI_CITIES.mapNotNull { city ->
+                val nearbyCount = providers.count { p ->
+                    p.latitude != 0.0 && com.serviseyem.utils.CrossFuzzySearchEngine.computeHaversineKm(
+                        city.latitude, city.longitude, p.latitude, p.longitude
+                    ) <= 18.0
+                }
+                if (nearbyCount < 2) {
+                    org.json.JSONObject()
+                        .put("lat", city.latitude)
+                        .put("lng", city.longitude)
+                        .put("radiusMeters", 8500)
+                        .put("label", "نطاق تغطية ضعيفة: ${city.nameAr} (فنيون: $nearbyCount)")
+                } else null
+            }
+            val arr = JSONArray()
+            weakZones.forEach { arr.put(it) }
+            webViewRef?.post { webViewRef.evaluateJavascript("if (window.setDeadZones) { window.setDeadZones($arr); }", null) }
+        } else {
+            webViewRef?.post { webViewRef.evaluateJavascript("if (window.setDeadZones) { window.setDeadZones([]); }", null) }
+        }
+        coroutineScope.launch {
+            snackbarHostState.showSnackbar(if (active) "تم عرض مناطق التغطية الضعيفة 🔴" else "تم إخفاء التغطية الضعيفة")
+        }
+    }
+
+    fun toggleReliability(
+        state: MapScreenState,
+        providers: List<ProviderEntity>,
+        safeUserLat: Double,
+        safeUserLng: Double,
+        webViewRef: WebView?,
+        coroutineScope: CoroutineScope,
+        snackbarHostState: SnackbarHostState
+    ) {
+        state.isReliabilityLayerActive = !state.isReliabilityLayerActive
+        val active = state.isReliabilityLayerActive
+        if (active) {
+            val zones = providers.groupBy { it.area.ifBlank { it.cityId } }.map { (area, areaProviders) ->
+                val hasAvailable = areaProviders.any { it.isAvailable }
+                val isBusy = areaProviders.isNotEmpty() && !hasAvailable
+                val status = if (hasAvailable) "AVAILABLE" else (if (isBusy) "BUSY" else "UNCOVERED")
+                val firstProv = areaProviders.firstOrNull()
+                mapOf(
+                    "lat" to (firstProv?.latitude ?: safeUserLat),
+                    "lng" to (firstProv?.longitude ?: safeUserLng),
+                    "areaName" to (if (area.isNotBlank()) area else "المنطقة الحالية"),
+                    "status" to status,
+                    "details" to "عدد الفنيين: ${areaProviders.size} • المتاحين: ${areaProviders.count { it.isAvailable }}",
+                    "radius" to 1100
+                )
+            }
+            val jsonStr = JSONArray(zones).toString()
+            webViewRef?.post { webViewRef.evaluateJavascript("if (window.setReliabilityZones) { window.setReliabilityZones($jsonStr); }", null) }
+        } else {
+            webViewRef?.post { webViewRef.evaluateJavascript("if (window.setReliabilityZones) { window.setReliabilityZones([]); }", null) }
+        }
+        coroutineScope.launch {
+            snackbarHostState.showSnackbar(if (active) "تم تفعيل خريطة الموثوقية وتوافر الفنيين 🛡️" else "تم إيقاف خريطة الموثوقية")
+        }
+    }
+
+    fun toggleRoadSafety(
+        state: MapScreenState,
+        providers: List<ProviderEntity>,
+        webViewRef: WebView?,
+        coroutineScope: CoroutineScope,
+        snackbarHostState: SnackbarHostState
+    ) {
+        state.isRoadSafetyActive = !state.isRoadSafetyActive
+        val active = state.isRoadSafetyActive
+        if (active) {
+            val hazardsJson = providers.filter { it.roadDifficulty >= 2 }.map {
+                mapOf(
+                    "lat" to it.latitude,
+                    "lng" to it.longitude,
+                    "difficulty" to it.roadDifficulty,
+                    "title" to (if (it.roadHazardDescription.isNotBlank()) it.roadHazardDescription else "طريق جبلي / وعر"),
+                    "desc" to "فني المنطقة: ${it.name} • صعوبة: ${it.roadDifficulty}/5",
+                    "radius" to 600
+                )
+            }
+            val jsonStr = JSONArray(hazardsJson).toString()
+            webViewRef?.post { webViewRef.evaluateJavascript("if (window.setRoadSafetyHazards) { window.setRoadSafetyHazards($jsonStr); }", null) }
+        } else {
+            webViewRef?.post { webViewRef.evaluateJavascript("if (window.setRoadSafetyHazards) { window.setRoadSafetyHazards([]); }", null) }
+        }
+        coroutineScope.launch {
+            snackbarHostState.showSnackbar(if (active) "تم تفعيل طبقة سلامة الطريق ⚠️" else "تم إخفاء طبقة سلامة الطرق")
+        }
+    }
+
+    fun exportGpx(
+        context: Context,
+        state: MapScreenState,
+        safeUserLat: Double,
+        safeUserLng: Double,
+        coroutineScope: CoroutineScope,
+        snackbarHostState: SnackbarHostState
+    ) {
+        val routeCoords = buildList {
+            add(Pair(safeUserLat, safeUserLng))
+            state.pendingNavDestination?.let { add(Pair(it.lat, it.lng)) }
+                ?: add(Pair(safeUserLat + 0.01, safeUserLng + 0.01))
+        }
+        val result = GpxManager.exportRouteToGpx(context, "مسار_الخدمات_${state.selectedCity}", routeCoords)
+        result.onSuccess { gpxFile ->
+            try {
+                val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", gpxFile)
+                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "application/gpx+xml"
+                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                    putExtra(android.content.Intent.EXTRA_SUBJECT, gpxFile.name)
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(
+                    android.content.Intent.createChooser(shareIntent, "مشاركة ملف المسار GPX")
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            } catch (_: Exception) {}
+            coroutineScope.launch { snackbarHostState.showSnackbar("تم تصدير ومشاركة مسار GPX: ${gpxFile.name} 🛰️") }
+        }.onFailure {
+            coroutineScope.launch { snackbarHostState.showSnackbar("فشل تصدير مسار GPX") }
+        }
+    }
+
+    fun printMapPdf(
+        context: Context,
+        state: MapScreenState,
+        providers: List<ProviderEntity>,
+        safeUserLat: Double,
+        safeUserLng: Double,
+        coroutineScope: CoroutineScope,
+        snackbarHostState: SnackbarHostState
+    ) {
+        coroutineScope.launch {
+            val pdfResult = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    val exportDir = java.io.File(context.cacheDir, "map_exports").apply { mkdirs() }
+                    val pdfFile = java.io.File(exportDir, "YemenMap_${System.currentTimeMillis()}.pdf")
+                    val doc = android.graphics.pdf.PdfDocument()
+                    val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(595, 842, 1).create()
+                    val page = doc.startPage(pageInfo)
+                    val canvas = page.canvas
+                    val titlePaint = android.graphics.Paint().apply {
+                        color = android.graphics.Color.BLACK
+                        textSize = 20f
+                        isFakeBoldText = true
+                    }
+                    val bodyPaint = android.graphics.Paint().apply {
+                        color = android.graphics.Color.DKGRAY
+                        textSize = 13f
+                    }
+                    var y = 60f
+                    canvas.drawText("ملخص خريطة دليل اليمن الذكية", 48f, y, titlePaint); y += 34f
+                    canvas.drawText("المدينة المختارة: ${state.selectedCity}", 48f, y, bodyPaint); y += 24f
+                    canvas.drawText(
+                        "الإحداثيات: ${String.format(java.util.Locale.US, "%.5f, %.5f", safeUserLat, safeUserLng)}",
+                        48f, y, bodyPaint
+                    ); y += 24f
+                    canvas.drawText("طبقة الخريطة: ${state.currentMapLayer}", 48f, y, bodyPaint); y += 24f
+                    canvas.drawText("عدد الفنيين المعروضين: ${providers.size}", 48f, y, bodyPaint); y += 32f
+                    canvas.drawText("أقرب الفنيين ومزودي الخدمات:", 48f, y, titlePaint.apply { textSize = 15f }); y += 24f
+                    providers.take(18).forEach { prov ->
+                        canvas.drawText("• ${prov.name} (${prov.profession}) - ${prov.area}", 48f, y, bodyPaint)
+                        y += 20f
+                    }
+                    doc.finishPage(page)
+                    pdfFile.outputStream().use { out -> doc.writeTo(out) }
+                    doc.close()
+                    pdfFile
+                }
+            }
+            pdfResult.onSuccess { pdfFile ->
+                try {
+                    val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", pdfFile)
+                    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "application/pdf"
+                        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                        putExtra(android.content.Intent.EXTRA_SUBJECT, "ملخص الخريطة - ${state.selectedCity}")
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(
+                        android.content.Intent.createChooser(intent, "مشاركة / طباعة ملخص الخريطة PDF")
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                    snackbarHostState.showSnackbar("تم إنشاء ملف PDF جاهز للمشاركة والطباعة 📄")
+                } catch (_: Exception) {
+                    snackbarHostState.showSnackbar("تم حفظ ملف PDF في: ${pdfFile.name}")
+                }
+            }.onFailure {
+                snackbarHostState.showSnackbar("تعذر إنشاء ملف PDF")
+            }
+        }
+    }
 }

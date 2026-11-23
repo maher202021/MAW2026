@@ -219,6 +219,12 @@ class RegistrationHelper(
                 val resolvedOwnerId = currentAuthUid.ifBlank { cleanPhone }
                 val securedPasswordHash = if (password.isNotBlank()) com.serviseyem.utils.PasswordHasher.hash(password.trim()) else ""
                 val now = System.currentTimeMillis()
+                val coordParts = gpsCoords.split(",")
+                val parsedLat = coordParts.getOrNull(0)?.trim()?.toDoubleOrNull()?.takeIf { it in -90.0..90.0 } ?: 0.0
+                val parsedLng = coordParts.getOrNull(1)?.trim()?.toDoubleOrNull()?.takeIf { it in -180.0..180.0 } ?: 0.0
+                val normalizedCoords = if (com.serviseyem.utils.LandmarkAddress.isValid(parsedLat, parsedLng)) {
+                    "$parsedLat,$parsedLng"
+                } else ""
                 val newRequest = PendingProviderEntity(
                     id = requestDocId,
                     name = cleanName,
@@ -244,11 +250,11 @@ class RegistrationHelper(
                     experienceYears = experienceYears.trim(),
                     submittedAt = now,
                     ownerId = resolvedOwnerId,
-                    uid = currentAuthUid
+                    uid = currentAuthUid,
+                    gpsCoords = normalizedCoords,
+                    latitude = parsedLat,
+                    longitude = parsedLng
                 )
-                val coordParts = gpsCoords.split(",")
-                val parsedLat = coordParts.getOrNull(0)?.trim()?.toDoubleOrNull() ?: 15.3694
-                val parsedLng = coordParts.getOrNull(1)?.trim()?.toDoubleOrNull() ?: 44.1910
 
                 // Push to Cloud safely on IO dispatcher
                 val pendingDataMap = mapOf(

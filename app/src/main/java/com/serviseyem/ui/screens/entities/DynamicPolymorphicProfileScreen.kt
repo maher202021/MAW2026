@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -184,6 +185,7 @@ fun DynamicPolymorphicProfileScreen(
         }
     }
 
+    var previewAsCustomer by rememberSaveable { mutableStateOf(false) }
     // Load live Special Offers, Doctors (for Medical), and Gallery Albums (for Technician/RealEstate)
     var remoteOffers by remember(entityId) { mutableStateOf<List<SpecialOfferEntity>>(emptyList()) }
     LaunchedEffect(entityId) {
@@ -192,8 +194,8 @@ fun DynamicPolymorphicProfileScreen(
                 com.google.firebase.firestore.FirebaseFirestore.getInstance(),
                 LocalAppCacheManager(context)
             )
-            repo.getOffers().onSuccess { all ->
-                remoteOffers = all.filter { it.providerId == entityId && it.isEnabled }
+            repo.getOffersForProvider(entityId).onSuccess { list ->
+                remoteOffers = list.filter { it.isEnabled }
             }
         }
     }
@@ -286,6 +288,22 @@ fun DynamicPolymorphicProfileScreen(
                     }
                 },
                 actions = {
+                    if (isOwner || adminRole != "GUEST") {
+                        AssistChip(
+                            onClick = { previewAsCustomer = !previewAsCustomer },
+                            label = {
+                                Text(
+                                    if (previewAsCustomer) "إنهاء المعاينة ✕" else "معاينة كعميل 👁️",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = if (previewAsCustomer) Color(0xFFEF4444) else themeColors.accent.copy(alpha = 0.25f),
+                                labelColor = Color.White
+                            )
+                        )
+                    }
                     IconButton(onClick = {
                         val lat = liveStore?.latitude ?: liveProvider?.latitude ?: liveProperty?.latitude ?: 15.3547
                         val lng = liveStore?.longitude ?: liveProvider?.longitude ?: liveProperty?.longitude ?: 44.2066
@@ -328,7 +346,7 @@ fun DynamicPolymorphicProfileScreen(
                 entityName = entityName,
                 entityPhone = entityPhone,
                 entityType = entityType,
-                isOwner = isOwner,
+                isOwner = isOwner && !previewAsCustomer,
                 viewModel = viewModel,
                 themeColors = themeColors,
                 onOpenChat = onOpenChat,
@@ -392,7 +410,7 @@ fun DynamicPolymorphicProfileScreen(
             }
 
             // 2. PROMINENT DASHBOARD BUTTON FOR OWNER
-            if (isOwner) {
+            if (isOwner && !previewAsCustomer) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -430,7 +448,7 @@ fun DynamicPolymorphicProfileScreen(
             }
 
             // 3. OWNER CONTROL BAR
-            if (isOwner || adminRole != "GUEST") {
+            if ((isOwner || adminRole != "GUEST") && !previewAsCustomer) {
                 item {
                     ProfileOwnerAdminControlBar(
                         entityId = entityId,

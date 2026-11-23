@@ -8,18 +8,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Layers
-import androidx.compose.material.icons.filled.Satellite
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.serviseyem.ui.screens.map.MapMode
 import com.serviseyem.ui.screens.map.MapScreenState
 import com.serviseyem.utils.EumetViewCatalog
 import com.serviseyem.utils.VisualThemePalette
@@ -69,15 +69,36 @@ fun Row3(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MoreLayersSheet(
     state: MapScreenState,
     onDismiss: () -> Unit,
     disabledLayerIds: Set<String> = emptySet(),
+    onSwitchBaseLayer: (String) -> Unit = { state.currentMapLayer = it },
+    onToggleLabelsOverlay: (Boolean) -> Unit = {},
+    onToggleTilt: () -> Unit = { state.tiltAngle = if (state.tiltAngle > 0f) 0f else 32f },
+    onToggleNightMode: () -> Unit = { state.isNightModeActive = !state.isNightModeActive },
+    onToggleRadarMode: () -> Unit = { state.isRadarMode = !state.isRadarMode },
+    onModeChange: (MapMode) -> Unit = { state.currentMapMode = it },
+    onOpenAleph: () -> Unit = { state.isAlephDialogOpen = true },
+    onOpenRegionsDialog: () -> Unit = {},
+    onOpenRoutePlanner: () -> Unit = { state.isRoutePlannerOpen = true },
+    onOpenGnssDiagnostics: () -> Unit = { state.isGnssPanelOpen = true },
+    onOpenAddOsmLandmark: () -> Unit = { state.isAddOsmDialogOpen = true },
+    onTriggerRuralSos: () -> Unit = {},
+    onExportGpx: () -> Unit = {},
+    onPrintMapPdf: () -> Unit = {},
+    onToggleHeatmap: () -> Unit = { state.isHeatmapActive = !state.isHeatmapActive },
+    onToggleDeadZoneOverlay: () -> Unit = { state.isDeadZoneOverlayActive = !state.isDeadZoneOverlayActive },
+    onToggleReliability: () -> Unit = { state.isReliabilityLayerActive = !state.isReliabilityLayerActive },
+    onToggleRoadSafety: () -> Unit = { state.isRoadSafetyActive = !state.isRoadSafetyActive },
+    onToggleEarthquake: () -> Unit = { state.isEarthquakeBottomSheetOpen = true },
+    onToggleGroupTracking: () -> Unit = { state.isGroupTrackingActive = !state.isGroupTrackingActive },
     themeColors: VisualThemePalette
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var labelsOverlayEnabled by remember { mutableStateOf(true) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -99,13 +120,12 @@ fun MoreLayersSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Header
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -118,7 +138,7 @@ fun MoreLayersSheet(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "طبقات الأقمار الصناعية والطقس",
+                        text = "الخريطة والطبقات والأدوات",
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         color = Color.White
@@ -136,17 +156,285 @@ fun MoreLayersSheet(
                 }
             }
 
+            // Section 1: Base Map Style Selector
             Text(
-                text = "جميع الطبقات مجانية ومباشرة بدون الحاجة لأي مفاتيح أو اشتراكات 🛰️",
-                fontSize = 12.sp,
-                color = Color(0xFF38BDF8),
-                modifier = Modifier.padding(bottom = 16.dp)
+                text = "نوع الخريطة الأساسي",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF94A3B8)
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                BaseStyleTile(
+                    title = "هجين فضائي",
+                    subtitle = "قمر + أسماء",
+                    emoji = "🛰️",
+                    selected = state.currentMapLayer in setOf("esri_world_imagery", "eox_cloudless", "esri_wayback", "satellite", "imagery"),
+                    onClick = { onSwitchBaseLayer("esri_world_imagery") },
+                    modifier = Modifier.weight(1f)
+                )
+                BaseStyleTile(
+                    title = "خريطة شوارع",
+                    subtitle = "طرق ومعالم",
+                    emoji = "🗺️",
+                    selected = state.currentMapLayer in setOf("osm_ar", "osm", "navigation"),
+                    onClick = { onSwitchBaseLayer("osm_ar") },
+                    modifier = Modifier.weight(1f)
+                )
+                BaseStyleTile(
+                    title = "تضاريس وجبال",
+                    subtitle = "كنتور وارتفاعات",
+                    emoji = "⛰️",
+                    selected = state.currentMapLayer == "opentopomap",
+                    onClick = { onSwitchBaseLayer("opentopomap") },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Row3(
+                title = "تسميات الشوارع والمدن فوق الأقمار",
+                subtitle = "إظهار أسماء الشوارع والأحياء والمعالم بوضوح فوق الصور الفضائية",
+                checked = labelsOverlayEnabled
+            ) { enabled ->
+                labelsOverlayEnabled = enabled
+                onToggleLabelsOverlay(enabled)
+            }
+
+            // Quick View Modes
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if ("VELA_3D" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.ViewInAr,
+                        label = "منظور 3D",
+                        active = state.tiltAngle > 0f,
+                        activeColor = Color(0xFF10B981),
+                        onClick = onToggleTilt
+                    )
+                }
+                if ("NIGHT_HUD" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = if (state.isNightModeActive) Icons.Default.Bedtime else Icons.Default.WbSunny,
+                        label = "الوضع الليلي",
+                        active = state.isNightModeActive,
+                        activeColor = Color(0xFF818CF8),
+                        onClick = onToggleNightMode
+                    )
+                }
+                if ("RADAR" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.Explore,
+                        label = if (state.isRadarMode) "وضع الخريطة" else "الرادار الذكي",
+                        active = state.isRadarMode,
+                        activeColor = Color(0xFF10B981),
+                        onClick = {
+                            onToggleRadarMode()
+                            onDismiss()
+                        }
+                    )
+                }
+                if ("AR_VPS" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.CameraAlt,
+                        label = "واقع معزز AR",
+                        active = state.currentMapMode == MapMode.AR_VPS,
+                        activeColor = Color(0xFF00E5FF),
+                        onClick = {
+                            onModeChange(if (state.currentMapMode == MapMode.AR_VPS) MapMode.VELA_3D else MapMode.AR_VPS)
+                            onDismiss()
+                        }
+                    )
+                }
+                if ("ALEPH_AI" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.Visibility,
+                        label = "المساعد البصري",
+                        active = false,
+                        activeColor = Color(0xFF38BDF8),
+                        onClick = {
+                            onDismiss()
+                            onOpenAleph()
+                        }
+                    )
+                }
+            }
 
             HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
 
+            // Section 2: Navigation & Field Tools
+            Text(
+                text = "أدوات الملاحة والخدمات الميدانية",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF94A3B8)
+            )
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if ("OFFLINE_MAPS" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.DownloadForOffline,
+                        label = "خرائط بلا نت",
+                        active = false,
+                        activeColor = Color(0xFF10B981),
+                        onClick = {
+                            onDismiss()
+                            onOpenRegionsDialog()
+                        }
+                    )
+                }
+                if ("NAVIGATION" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.Polyline,
+                        label = "مخطط المسار",
+                        active = false,
+                        activeColor = Color(0xFF00E5FF),
+                        onClick = {
+                            onDismiss()
+                            onOpenRoutePlanner()
+                        }
+                    )
+                }
+                if ("GNSS" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.SatelliteAlt,
+                        label = "إشارة GNSS",
+                        active = false,
+                        activeColor = themeColors.accent,
+                        onClick = {
+                            onDismiss()
+                            onOpenGnssDiagnostics()
+                        }
+                    )
+                }
+                if ("OSM_CONTRIBUTE" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.AddLocationAlt,
+                        label = "أضف معلماً",
+                        active = false,
+                        activeColor = Color(0xFF10B981),
+                        onClick = {
+                            onDismiss()
+                            onOpenAddOsmLandmark()
+                        }
+                    )
+                }
+                if ("RURAL_SOS" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.Sos,
+                        label = "طوارئ ريفية",
+                        active = false,
+                        activeColor = Color(0xFFEF4444),
+                        onClick = {
+                            onDismiss()
+                            onTriggerRuralSos()
+                        }
+                    )
+                }
+                if ("HEATMAP" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.LocalFireDepartment,
+                        label = "خريطة حرارية",
+                        active = state.isHeatmapActive,
+                        activeColor = Color(0xFFF97316),
+                        onClick = onToggleHeatmap
+                    )
+                }
+                if ("DEAD_ZONES" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.GridOff,
+                        label = "ضعف التغطية",
+                        active = state.isDeadZoneOverlayActive,
+                        activeColor = Color(0xFFEF4444),
+                        onClick = onToggleDeadZoneOverlay
+                    )
+                }
+                if ("RELIABILITY" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.VerifiedUser,
+                        label = "موثوقية الفنيين",
+                        active = state.isReliabilityLayerActive,
+                        activeColor = Color(0xFF10B981),
+                        onClick = onToggleReliability
+                    )
+                }
+                if ("ROAD_SAFETY" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.Warning,
+                        label = "سلامة الطرق",
+                        active = state.isRoadSafetyActive,
+                        activeColor = Color(0xFFF59E0B),
+                        onClick = onToggleRoadSafety
+                    )
+                }
+                if ("EARTHQUAKES" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.Sensors,
+                        label = "الزلازل الحية",
+                        active = state.isEarthquakeLayerActive,
+                        activeColor = Color(0xFFEF4444),
+                        onClick = {
+                            onDismiss()
+                            onToggleEarthquake()
+                        }
+                    )
+                }
+                if ("GROUP_TRACK" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.Group,
+                        label = "تتبع المجموعة",
+                        active = state.isGroupTrackingActive,
+                        activeColor = Color(0xFF10B981),
+                        onClick = {
+                            onDismiss()
+                            onToggleGroupTracking()
+                        }
+                    )
+                }
+                if ("GPX_EXPORT" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.AltRoute,
+                        label = "تصدير GPX",
+                        active = false,
+                        activeColor = Color(0xFF38BDF8),
+                        onClick = {
+                            onDismiss()
+                            onExportGpx()
+                        }
+                    )
+                }
+                if ("PDF_EXPORT" !in disabledLayerIds) {
+                    SheetToolChip(
+                        icon = Icons.Default.Print,
+                        label = "طباعة PDF",
+                        active = false,
+                        activeColor = Color.White,
+                        onClick = {
+                            onDismiss()
+                            onPrintMapPdf()
+                        }
+                    )
+                }
+            }
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+            // Section 3: Satellite & Live Weather Overlays
+            Text(
+                text = "طبقات الأقمار الصناعية والطقس الحية (مجانية 100%)",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF38BDF8)
+            )
+
             if ("EUMETSAT" !in disabledLayerIds) {
-                // 1. Meteosat Live (EUMETSAT IODC 41.5°E)
                 var layers by remember { mutableStateOf<List<WmsLayerInfo>?>(null) }
                 var menu by remember { mutableStateOf(false) }
 
@@ -244,11 +532,10 @@ fun MoreLayersSheet(
                         }
                     }
                 }
-                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
             }
 
             if ("NASA_GIBS" !in disabledLayerIds) {
-                // 2. NASA GIBS Live Satellites
                 Row3(
                     title = "ناسا اليومية شبه الفورية (NASA GIBS)",
                     subtitle = "تأخير ≈ 3 ساعات • VIIRS NOAA-20 / SNPP / MODIS • دقة 250م",
@@ -260,11 +547,10 @@ fun MoreLayersSheet(
                         state.isEsriImageryActive = false
                     }
                 }
-                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
             }
 
             if ("EOX_CLOUDLESS" !in disabledLayerIds) {
-                // 3. EOX Cloudless 2023 Sentinel-2
                 Row3(
                     title = "EOX Cloudless (Sentinel-2)",
                     subtitle = "صور فضائية فائقة الدقة 10 أمتار بدون غيوم لعموم اليمن",
@@ -276,11 +562,10 @@ fun MoreLayersSheet(
                         state.isEsriImageryActive = false
                     }
                 }
-                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
             }
 
             if ("ESRI_IMAGERY" !in disabledLayerIds) {
-                // 4. Esri World Imagery
                 Row3(
                     title = "صور Esri الفضائية فائقة الدقة",
                     subtitle = "تغطية عالمية وتفصيلية للمدن والشوارع",
@@ -294,16 +579,7 @@ fun MoreLayersSheet(
                 }
             }
 
-            if (listOf("EUMETSAT", "NASA_GIBS", "EOX_CLOUDLESS", "ESRI_IMAGERY").all { it in disabledLayerIds }) {
-                Text(
-                    text = "تم تعطيل طبقات الأقمار الصناعية الإضافية من لوحة التحكم.",
-                    fontSize = 12.sp,
-                    color = Color(0xFFF59E0B),
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Attribution Footer
             Surface(
@@ -312,13 +588,96 @@ fun MoreLayersSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "حقوق البيانات والإسناد: © EUMETSAT (Meteosat IODC) • NASA EOSDIS GIBS • Sentinel-2 by EOX • Esri World Imagery",
+                    text = "حقوق البيانات والإسناد: © OpenStreetMap • Carto Labels • EUMETSAT • NASA GIBS • Sentinel-2 by EOX • Esri World Imagery",
                     fontSize = 10.5.sp,
                     color = Color(0xFF64748B),
                     modifier = Modifier.padding(12.dp),
                     lineHeight = 15.sp
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun BaseStyleTile(
+    title: String,
+    subtitle: String,
+    emoji: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = if (selected) Color(0xFF10B981).copy(alpha = 0.18f) else Color(0xFF1E293B),
+        border = BorderStroke(
+            1.5.dp,
+            if (selected) Color(0xFF10B981) else Color.White.copy(alpha = 0.12f)
+        ),
+        modifier = modifier.defaultMinSize(minHeight = 68.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Text(text = emoji, fontSize = 18.sp)
+            Text(
+                text = title,
+                color = if (selected) Color(0xFF10B981) else Color.White,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = subtitle,
+                color = Color(0xFF94A3B8),
+                fontSize = 9.5.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun SheetToolChip(
+    icon: ImageVector,
+    label: String,
+    active: Boolean,
+    activeColor: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = if (active) activeColor.copy(alpha = 0.22f) else Color(0xFF1E293B),
+        border = BorderStroke(
+            1.dp,
+            if (active) activeColor else Color.White.copy(alpha = 0.12f)
+        ),
+        modifier = Modifier.defaultMinSize(minHeight = 44.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (active) activeColor else Color.White.copy(alpha = 0.85f),
+                modifier = Modifier.size(17.dp)
+            )
+            Text(
+                text = label,
+                color = if (active) activeColor else Color.White,
+                fontSize = 12.sp,
+                fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
+            )
         }
     }
 }

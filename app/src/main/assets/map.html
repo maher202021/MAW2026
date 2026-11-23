@@ -386,10 +386,10 @@
                 </div>
             </div>
 
-            <div class="sat-menu-item" id="labelsToggleItem" onclick="toggleArabicLabelsOverlay(event)">
+            <div class="sat-menu-item active" id="labelsToggleItem" onclick="toggleArabicLabelsOverlay(event)">
                 <span class="sat-item-icon">🏷️</span>
                 <div class="sat-item-info">
-                    <div class="sat-item-title" id="labelsToggleTitle">تسميات الشوارع بالعربية: إيقاف</div>
+                    <div class="sat-item-title" id="labelsToggleTitle">تسميات الشوارع والمدن: مفعّل ✓</div>
                     <div class="sat-item-desc">إظهار أسماء المدن والشوارع فوق صور الأقمار</div>
                 </div>
             </div>
@@ -421,7 +421,7 @@
         var esriWaybackLayer = null;
         var openTopoLayer = null;
         var arabicLabelsOverlayLayer = null;
-        var isLabelsOverlayActive = false;
+        var isLabelsOverlayActive = true;
 
         var isMeasureMode = false;
         var measurePoints = [];
@@ -854,11 +854,7 @@
             }
         }
 
-        // 🏷️ طبقة تسميات المدن والشوارع بالعربية فوق أي طبقة فضائية
-        function toggleArabicLabelsOverlay(event) {
-            if (event) event.stopPropagation();
-            if (!map) return;
-            isLabelsOverlayActive = !isLabelsOverlayActive;
+        function ensureArabicLabelsLayerObject() {
             if (!arabicLabelsOverlayLayer) {
                 arabicLabelsOverlayLayer = L.tileLayer('https://a.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png', {
                     maxZoom: 22,
@@ -867,21 +863,43 @@
                     attribution: 'Carto Labels Overlay'
                 });
             }
-            if (isLabelsOverlayActive) {
-                if (!map.hasLayer(arabicLabelsOverlayLayer)) arabicLabelsOverlayLayer.addTo(map);
+            return arabicLabelsOverlayLayer;
+        }
+
+        function syncLabelsOverlayForCurrentBase(baseKey) {
+            if (!map) return;
+            var satelliteKeys = ['esri_world_imagery', 'eox_cloudless', 'esri_wayback', 'imagery', 'eox', 'esri', 'default'];
+            var isSatellite = satelliteKeys.indexOf(baseKey || currentLayerKey) !== -1;
+            var layer = ensureArabicLabelsLayerObject();
+            if (isLabelsOverlayActive && isSatellite) {
+                if (!map.hasLayer(layer)) layer.addTo(map);
             } else {
-                if (map.hasLayer(arabicLabelsOverlayLayer)) map.removeLayer(arabicLabelsOverlayLayer);
+                if (map.hasLayer(layer)) map.removeLayer(layer);
             }
             var titleEl = document.getElementById('labelsToggleTitle');
             var itemEl = document.getElementById('labelsToggleItem');
             if (titleEl) {
                 titleEl.textContent = isLabelsOverlayActive
-                    ? 'تسميات الشوارع بالعربية: مفعّل ✓'
-                    : 'تسميات الشوارع بالعربية: إيقاف';
+                    ? 'تسميات الشوارع والمدن: مفعّل ✓'
+                    : 'تسميات الشوارع والمدن: إيقاف';
             }
             if (itemEl) {
                 itemEl.classList.toggle('active', isLabelsOverlayActive);
             }
+        }
+
+        function setLabelsOverlay(enable) {
+            isLabelsOverlayActive = !!enable;
+            syncLabelsOverlayForCurrentBase(currentLayerKey);
+        }
+        window.setLabelsOverlay = setLabelsOverlay;
+
+        // 🏷️ طبقة تسميات المدن والشوارع بالعربية فوق أي طبقة فضائية
+        function toggleArabicLabelsOverlay(event) {
+            if (event) event.stopPropagation();
+            if (!map) return;
+            isLabelsOverlayActive = !isLabelsOverlayActive;
+            syncLabelsOverlayForCurrentBase(currentLayerKey);
         }
 
         // 📏 أداة قياس المسافة التفاعلية على الخريطة
@@ -1202,6 +1220,7 @@
                 bindTileStatusListeners(tileProviders['esri_world_imagery']);
                 currentTileLayer = tileProviders['esri_world_imagery'].addTo(map);
             }
+            syncLabelsOverlayForCurrentBase(currentLayerKey);
         }
 
         function setVelaMode(mode) {

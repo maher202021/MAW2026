@@ -29,7 +29,6 @@ import com.serviseyem.data.PropertyEntity
 import com.serviseyem.data.ProviderEntity
 import com.serviseyem.data.StoreEntity
 import com.serviseyem.ui.MainViewModel
-import com.serviseyem.ui.screens.map.components.ContextualSmartSuggestionsCard
 import com.serviseyem.ui.screens.map.components.MapFilterBar
 import com.serviseyem.ui.screens.map.components.SmartNavigationPanel
 import com.serviseyem.ui.screens.map.utils.OfflineMapManager
@@ -346,6 +345,30 @@ fun MapScreenContent(
         gpsFusionFilter.onLocationUpdate(loc)
     }
 
+    val pendingFocus by viewModel.pendingMapFocus.collectAsState()
+    LaunchedEffect(pendingFocus, webViewRef) {
+        val target = pendingFocus ?: return@LaunchedEffect
+        if (webViewRef != null && target.lat != 0.0 && target.lng != 0.0) {
+            state.isRadarMode = false
+            val markerArr = if (target.label.isNotBlank()) {
+                org.json.JSONArray().put(
+                    org.json.JSONObject()
+                        .put("name", target.label)
+                        .put("lat", target.lat)
+                        .put("lng", target.lng)
+                ).toString()
+            } else null
+            val markerScript = markerArr?.let { "if (window.setWaypointMarkers) { window.setWaypointMarkers($it); }" }.orEmpty()
+            webViewRef?.post {
+                webViewRef?.evaluateJavascript(
+                    "$markerScript if (window.flyToLocation) { window.flyToLocation(${target.lat}, ${target.lng}, 17); }",
+                    null
+                )
+            }
+            viewModel.consumePendingMapFocus()
+        }
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = Color(0xFF0B0F19),
@@ -412,9 +435,12 @@ fun MapScreenContent(
                     selectedCity = state.selectedCity,
                     onCitySelected = { city ->
                         state.selectedCity = city
-                        if (city != "الكل") {
-                            val coords = OfflineMapManager.getCityCoordinates(city)
-                            viewModel.updateUserLocation(coords.latitude, coords.longitude)
+                        val coords = OfflineMapManager.getCityCoordinates(city)
+                        webViewRef?.post {
+                            webViewRef?.evaluateJavascript(
+                                "if (window.flyToLocation) { window.flyToLocation(${coords.latitude}, ${coords.longitude}, ${coords.defaultZoom}); }",
+                                null
+                            )
                         }
                     },
                     searchQuery = state.searchQuery,
@@ -486,26 +512,6 @@ fun MapScreenContent(
                     },
                     themeColors = themeColors
                 )
-
-                MapGnssBadge(
-                    satelliteStatus = satelliteStatus,
-                    onClick = { state.isGnssPanelOpen = true },
-                    modifier = Modifier.padding(start = 12.dp)
-                )
-
-                if (state.isContextualSuggestionVisible) {
-                    ContextualSmartSuggestionsCard(
-                        isVisible = state.isContextualSuggestionVisible,
-                        currentCity = state.selectedCity,
-                        onApplySuggestion = { cat ->
-                            state.selectedCategory = cat
-                            state.isContextualSuggestionVisible = false
-                        },
-                        onDismiss = { state.isContextualSuggestionVisible = false },
-                        themeColors = themeColors,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
             }
 
             MapControlsDock(
@@ -524,9 +530,7 @@ fun MapScreenContent(
                 onOpenDestChooser = { showDestChooser = true },
                 onOpenValhallaDialog = { showValhallaDialog = true },
                 onOpenRegionsDialog = { showRegionsDialog = true },
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 12.dp)
+                modifier = Modifier.fillMaxSize()
             )
 
             BackHandler(enabled = state.currentMapMode == MapMode.NAVIGATION) {

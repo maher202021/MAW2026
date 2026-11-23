@@ -317,6 +317,58 @@ internal fun MapScreenDialogsHost(
             state = state,
             onDismiss = { state.isMoreLayersSheetOpen = false },
             disabledLayerIds = disabledSet,
+            onSwitchBaseLayer = { layerKey ->
+                MapToolActions.switchLayer(state, layerKey, webViewRef, onOpenDestChooser)
+            },
+            onToggleLabelsOverlay = { enabled ->
+                webViewRef?.post { webViewRef.evaluateJavascript("if (window.setLabelsOverlay) { window.setLabelsOverlay($enabled); }", null) }
+            },
+            onToggleTilt = {
+                state.tiltAngle = if (state.tiltAngle > 0f) 0f else 32f
+            },
+            onToggleNightMode = {
+                state.isNightModeActive = !state.isNightModeActive
+                val active = state.isNightModeActive
+                webViewRef?.post { webViewRef.evaluateJavascript("if (window.toggleNightMode) { window.toggleNightMode($active); }", null) }
+            },
+            onToggleRadarMode = { state.isRadarMode = !state.isRadarMode },
+            onModeChange = { mode -> state.currentMapMode = mode },
+            onOpenAleph = {
+                state.alephSelectedEntity = state.selectedEntity
+                state.isAlephDialogOpen = true
+            },
+            onOpenRegionsDialog = onOpenRegionsDialog,
+            onOpenRoutePlanner = { state.isRoutePlannerOpen = true },
+            onOpenGnssDiagnostics = { state.isGnssPanelOpen = true },
+            onOpenAddOsmLandmark = { state.isAddOsmDialogOpen = true },
+            onTriggerRuralSos = {
+                val packet = com.serviseyem.utils.RuralEmergencySosManager.EmergencyPacket(
+                    latitude = safeUserLat,
+                    longitude = safeUserLng,
+                    nearestTown = state.selectedCity
+                )
+                com.serviseyem.utils.RuralEmergencySosManager.sendEmergencySms(context, "199", packet) {
+                    coroutineScope.launch { snackbarHostState.showSnackbar("تم تجهيز رسالة النجدة الريفية عبر SMS 🚨") }
+                }
+            },
+            onExportGpx = {
+                MapToolActions.exportGpx(context, state, safeUserLat, safeUserLng, coroutineScope, snackbarHostState)
+            },
+            onPrintMapPdf = {
+                MapToolActions.printMapPdf(context, state, providers, safeUserLat, safeUserLng, coroutineScope, snackbarHostState)
+            },
+            onToggleHeatmap = { state.isHeatmapActive = !state.isHeatmapActive },
+            onToggleDeadZoneOverlay = {
+                MapToolActions.toggleDeadZones(state, providers, webViewRef, coroutineScope, snackbarHostState)
+            },
+            onToggleReliability = {
+                MapToolActions.toggleReliability(state, providers, safeUserLat, safeUserLng, webViewRef, coroutineScope, snackbarHostState)
+            },
+            onToggleRoadSafety = {
+                MapToolActions.toggleRoadSafety(state, providers, webViewRef, coroutineScope, snackbarHostState)
+            },
+            onToggleEarthquake = { state.isEarthquakeBottomSheetOpen = true },
+            onToggleGroupTracking = { state.isGroupTrackingActive = !state.isGroupTrackingActive },
             themeColors = themeColors
         )
     }

@@ -12,6 +12,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -20,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Reply
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
@@ -532,6 +534,9 @@ fun ChatBubbleItem(
                     MediaType.VIDEO -> {
                         if (message.mediaUrl.isNotBlank()) {
                             val context = LocalContext.current
+                            val isReady = message.mediaUrl.startsWith("http://", ignoreCase = true) ||
+                                message.mediaUrl.startsWith("https://", ignoreCase = true) ||
+                                message.mediaUrl.startsWith("content://", ignoreCase = true)
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -539,14 +544,18 @@ fun ChatBubbleItem(
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(Color.Black.copy(alpha = 0.5f))
                                     .clickable {
-                                        try {
-                                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                setDataAndType(Uri.parse(message.mediaUrl), "video/*")
-                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        if (isReady) {
+                                            try {
+                                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                    setDataAndType(Uri.parse(message.mediaUrl), "video/*")
+                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                }
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "تعذر تشغيل الفيديو: ${e.message}", Toast.LENGTH_SHORT).show()
                                             }
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "تعذر تشغيل الفيديو: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "جاري رفع الفيديو... يرجى الانتظار", Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                 contentAlignment = Alignment.Center
@@ -566,7 +575,7 @@ fun ChatBubbleItem(
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = "اضغط لتشغيل الفيديو 🎥",
+                                        text = if (isReady) "اضغط لتشغيل الفيديو 🎥" else "جاري رفع الفيديو... ⏳",
                                         color = Color.White,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
@@ -577,7 +586,44 @@ fun ChatBubbleItem(
                         }
                     }
                     MediaType.FILE -> {
-                        Text("📎 ${message.message.ifBlank { "ملف مرفق" }}", color = Color(0xFF90CAF9), fontSize = 12.sp)
+                        val context = LocalContext.current
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFF1E293B).copy(alpha = 0.7f),
+                            border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.4f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    if (message.mediaUrl.isNotBlank()) {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                setDataAndType(Uri.parse(message.mediaUrl), "*/*")
+                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                            context.startActivity(intent)
+                                        } catch (_: Exception) {
+                                            Toast.makeText(context, "لا يوجد تطبيق مناسب لفتح هذا الملف على هاتفك", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(Icons.Default.AttachFile, contentDescription = "ملف", tint = Color(0xFF38BDF8), modifier = Modifier.size(20.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = message.message.ifBlank { "مستند مرفق" },
+                                        color = Color(0xFF90CAF9),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text("انقر لفتح واستعراض الملف", fontSize = 10.sp, color = Color.LightGray)
+                                }
+                            }
+                        }
                         Spacer(modifier = Modifier.height(4.dp))
                     }
                     else -> {}

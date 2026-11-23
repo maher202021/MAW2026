@@ -538,10 +538,10 @@ fun ProfileOwnerAdminControlBar(
                                     val updated = provider.copy(name = editName, phone = editPhone, area = editArea, profession = editDesc)
                                     viewModel.updateProviderEntity(updated)
                                 } else if (store != null) {
-                                    val updated = store.copy(name = editName, phone = editPhone, cityId = editArea, description = editDesc)
+                                    val updated = store.copy(name = editName, phone = editPhone, localNeighborhood = editArea, description = editDesc)
                                     viewModel.updateStoreEntity(updated)
                                 } else if (property != null) {
-                                    val updated = property.copy(title = editName, phone = editPhone, cityId = editArea, description = editDesc)
+                                    val updated = property.copy(title = editName, phone = editPhone, localNeighborhood = editArea, description = editDesc)
                                     viewModel.updatePropertyEntity(updated)
                                 }
                                 Toast.makeText(context, "✅ تم حفظ التعديلات بنجاح!", Toast.LENGTH_SHORT).show()

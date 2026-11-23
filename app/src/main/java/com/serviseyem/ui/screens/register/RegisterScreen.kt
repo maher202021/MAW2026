@@ -181,7 +181,7 @@ fun RegisterScreen(
             neighborhood = address,
             photoPath = photoPath,
             idCardPath = idCardPath,
-            gpsCoords = "",
+            gpsCoords = (data["gpsCoords"] as? String)?.trim().orEmpty(),
             customCategoryName = customCategory,
             password = password,
             ownerName = fullName.ifBlank { displayName },

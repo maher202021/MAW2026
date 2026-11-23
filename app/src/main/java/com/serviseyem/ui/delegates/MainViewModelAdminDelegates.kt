@@ -7,6 +7,10 @@ import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.launch
 
 fun MainViewModel.approveRequest(request: PendingProviderEntity) = adminViewModel.approveRequest(request)
+fun MainViewModel.approveRequestValidated(
+    request: PendingProviderEntity,
+    onValidationError: (List<com.serviseyem.utils.ApprovalValidator.Problem>) -> Unit = {}
+) = adminViewModel.approveRequestValidated(request, onValidationError)
 fun MainViewModel.rejectRequest(request: PendingProviderEntity, reason: String) = adminViewModel.rejectRequest(request, reason)
 fun MainViewModel.approveTechnician(providerId: String) = adminViewModel.approveTechnician(providerId)
 fun MainViewModel.loadPendingTechnicians() = adminViewModel.loadPendingTechnicians()

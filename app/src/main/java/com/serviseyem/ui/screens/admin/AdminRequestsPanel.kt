@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,6 +49,7 @@ fun AdminRequestsPanel(
     var rejectingRequest by remember { mutableStateOf<PendingProviderEntity?>(null) }
     var rejectionReason by remember { mutableStateOf("") }
     var pendingDeletionTarget by remember { mutableStateOf<Triple<String, String, String>?>(null) } // type, id, title
+    var zoomedBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
 
     val pendingPropertiesList = properties.filter { !it.isApproved && !it.isDeleted }
     val pendingPropertiesFromProviders = pendingProviders.filter { 
@@ -452,12 +454,27 @@ fun AdminRequestsPanel(
     }
 
     rejectingRequest?.let { req ->
+        val quickReasons = listOf(
+            "المستندات غير واضحة",
+            "الموقع الجغرافي غير محدد",
+            "رقم الهاتف لا يجيب",
+            "بيانات ناقصة"
+        )
         AlertDialog(
             onDismissRequest = { rejectingRequest = null },
             title = { Text("رفض طلب الانضمام", color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("يرجى كتابة سبب الرفض لإشعار مقدم الطلب:", color = themeColors.textSecondary, fontSize = 12.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        quickReasons.forEach { r ->
+                            AssistChip(
+                                onClick = { rejectionReason = r },
+                                label = { Text(r, fontSize = 10.sp) },
+                                colors = AssistChipDefaults.assistChipColors(labelColor = Color.White)
+                            )
+                        }
+                    }
                     OutlinedTextField(
                         value = rejectionReason,
                         onValueChange = { rejectionReason = it },
@@ -481,6 +498,33 @@ fun AdminRequestsPanel(
             dismissButton = {
                 TextButton(onClick = { rejectingRequest = null }) {
                     Text("إلغاء", color = Color.White)
+                }
+            }
+        )
+    }
+
+    zoomedBitmap?.let { bmp ->
+        AlertDialog(
+            onDismissRequest = { zoomedBitmap = null },
+            title = { Text("معاينة المستند / الصورة", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(320.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.foundation.Image(
+                        bitmap = bmp.asImageBitmap(),
+                        contentDescription = "معاينة",
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = { zoomedBitmap = null }) {
+                    Text("إغلاق")
                 }
             }
         )

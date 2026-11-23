@@ -265,7 +265,7 @@ fun SmartAssistantDialogView(
                                                 color = themeColors.accent,
                                                 strokeWidth = 2.dp
                                             )
-                                            Text("جاري توليد الإجابة الذكية...", fontSize = 11.sp, color = themeColors.textSecondary)
+                                            Text("أبحث لك في الأدلة والخدمات…", fontSize = 11.sp, color = themeColors.textSecondary)
                                         }
                                     }
                                 }

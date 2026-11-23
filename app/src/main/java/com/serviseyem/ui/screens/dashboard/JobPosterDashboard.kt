@@ -182,12 +182,112 @@ fun JobPosterDashboard(
                         }
                     }
                     1 -> {
-                        UnifiedEmptyState(
-                            title = "لا يوجد متقدمين جدد",
-                            description = "تظهر طلبات التقديم وسير المتقدمين هنا فور إرسالها من الباحثين عن عمل.",
-                            iconText = "📄",
-                            themeColors = themeColors
-                        )
+                        val allJobApplications by viewModel.jobApplications.collectAsState()
+                        val relevantApplications = remember(allJobApplications, jobs, account.id, account.name) {
+                            val myJobIds = jobs.map { it.id }.toSet()
+                            allJobApplications.filter {
+                                it.jobId in myJobIds ||
+                                    it.companyName.equals(account.name, ignoreCase = true)
+                            }
+                        }
+                        if (relevantApplications.isEmpty()) {
+                            UnifiedEmptyState(
+                                title = "لا يوجد متقدمين جدد",
+                                description = "تظهر طلبات التقديم وسير المتقدمين هنا فور إرسالها من الباحثين عن عمل.",
+                                iconText = "📄",
+                                themeColors = themeColors
+                            )
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                items(relevantApplications, key = { it.id }) { app ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(containerColor = themeColors.surface),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(app.applicantName, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = themeColors.textPrimary)
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = when (app.status.uppercase()) {
+                                                        "ACCEPTED" -> Color(0xFF10B981).copy(alpha = 0.2f)
+                                                        "REJECTED" -> Color(0xFFEF4444).copy(alpha = 0.2f)
+                                                        else -> Color(0xFFF59E0B).copy(alpha = 0.2f)
+                                                    }
+                                                ) {
+                                                    Text(
+                                                        text = when (app.status.uppercase()) {
+                                                            "ACCEPTED" -> "مقبول ✓"
+                                                            "REJECTED" -> "مرفوض ✕"
+                                                            else -> "قيد المراجعة ⏳"
+                                                        },
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = when (app.status.uppercase()) {
+                                                            "ACCEPTED" -> Color(0xFF10B981)
+                                                            "REJECTED" -> Color(0xFFEF4444)
+                                                            else -> Color(0xFFF59E0B)
+                                                        },
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                            Text("الوظيفة: ${app.jobTitle}", fontSize = 11.5.sp, color = themeColors.accent)
+                                            if (app.applicantPhone.isNotBlank()) {
+                                                Text("الهاتف: ${app.applicantPhone}", fontSize = 11.sp, color = themeColors.textSecondary)
+                                            }
+                                            if (app.applicantQuals.isNotBlank()) {
+                                                Text("المؤهلات: ${app.applicantQuals}", fontSize = 11.sp, color = Color.White)
+                                            }
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                if (app.applicantPhone.isNotBlank()) {
+                                                    OutlinedButton(
+                                                        onClick = {
+                                                            val intent = android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:${app.applicantPhone}"))
+                                                            context.startActivity(intent)
+                                                        },
+                                                        modifier = Modifier.weight(1f)
+                                                    ) {
+                                                        Text("اتصال 📞", fontSize = 11.sp)
+                                                    }
+                                                }
+                                                Button(
+                                                    onClick = {
+                                                        viewModel.updateJobApplicationStatus(app.id, "ACCEPTED")
+                                                        Toast.makeText(context, "تم قبول المتقدم بنجاح ✅", Toast.LENGTH_SHORT).show()
+                                                    },
+                                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                                    modifier = Modifier.weight(1f)
+                                                ) {
+                                                    Text("قبول ✓", fontSize = 11.sp, color = Color.White)
+                                                }
+                                                Button(
+                                                    onClick = {
+                                                        viewModel.updateJobApplicationStatus(app.id, "REJECTED")
+                                                        Toast.makeText(context, "تم رفض الطلب", Toast.LENGTH_SHORT).show()
+                                                    },
+                                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                                                    modifier = Modifier.weight(1f)
+                                                ) {
+                                                    Text("رفض ✕", fontSize = 11.sp, color = Color.White)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     2 -> {
                         TabProfileEdit(

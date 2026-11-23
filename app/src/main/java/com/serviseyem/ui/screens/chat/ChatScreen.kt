@@ -371,6 +371,10 @@ fun ChatScreen(
                         )
                     }
                 } else {
+                    // Smart conversation summary card when opening a busy chat
+                    val smartSummary = remember(filteredMessages) {
+                        ChatSmartSuggestionsEngine.summarizeMessages(filteredMessages)
+                    }
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
@@ -395,8 +399,6 @@ fun ChatScreen(
                             }
                         }
 
-                        // Smart conversation summary card when opening a busy chat
-                        val smartSummary = ChatSmartSuggestionsEngine.summarizeMessages(filteredMessages)
                         if (smartSummary != null) {
                             item(key = "conversation_summary_card") {
                                 Surface(

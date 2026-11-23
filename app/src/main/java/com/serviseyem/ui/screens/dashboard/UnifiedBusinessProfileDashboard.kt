@@ -29,6 +29,10 @@ fun UnifiedBusinessProfileDashboard(
     viewModel: MainViewModel,
     themeColors: VisualThemePalette
 ) {
+    androidx.activity.compose.BackHandler {
+        viewModel.goBack()
+    }
+
     val providers by viewModel.providers.collectAsState()
     val stores by viewModel.stores.collectAsState()
     val properties by viewModel.properties.collectAsState()

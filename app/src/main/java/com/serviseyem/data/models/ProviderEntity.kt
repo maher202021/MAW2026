@@ -86,7 +86,10 @@ data class PendingProviderEntity(
     val submittedAt: Long = 0L,
     val ownerId: String = "",
     val uid: String = "",
-    val keywords: List<String> = emptyList()
+    val keywords: List<String> = emptyList(),
+    val gpsCoords: String = "",
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0
 ) {
     @get:com.google.firebase.firestore.Exclude
     val password: String get() = passwordHash

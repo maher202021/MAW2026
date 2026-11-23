@@ -53,7 +53,7 @@ fun JobSeekerForm(
                 neighborhood = address,
                 photoPath = data["imageUri"] ?: "",
                 idCardPath = data["idCardUri"] ?: "",
-                gpsCoords = "",
+                gpsCoords = (data["gpsCoords"] ?: "").trim(),
                 customCategoryName = craftType,
                 password = password,
                 ownerName = fullName,

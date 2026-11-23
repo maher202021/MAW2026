@@ -201,17 +201,24 @@ object PermissionGuard {
         val categoryTabKey = tabCategoryMap[tabId] ?: tabId
         val roleEnum = RoleManager.fromRoleString(normalizedRole)
         if (roleEnum == AdminRole.ADMIN) {
-            if (adminMatrix.isEmpty()) return true
-            if (adminMatrix.contains(tabId) || adminMatrix.contains(categoryTabKey)) return true
+            val effectiveAdminPerms = com.serviseyem.security.AdminPermissionResolver.resolve(
+                role = "ADMIN",
+                explicit = supervisorPermissions,
+                matrix = if (adminMatrix.isNotEmpty()) mapOf("ADMIN" to adminMatrix) else emptyMap()
+            ).toList()
+            if (com.serviseyem.security.AdminPermissionResolver.hasAccess(effectiveAdminPerms, tabId) ||
+                com.serviseyem.security.AdminPermissionResolver.hasAccess(effectiveAdminPerms, categoryTabKey)
+            ) return true
             return AdminPermissionsRegistry.allPermissions.any {
-                it.category.tabKey == categoryTabKey && adminMatrix.contains(it.key)
+                it.category.tabKey == categoryTabKey && effectiveAdminPerms.contains(it.key)
             }
         }
 
         // Strict check for SUPERVISOR and other roles
         if (supervisorPermissions.isEmpty()) return false
-        if (supervisorPermissions.contains("ALL") || supervisorPermissions.contains("ALL_538")) return true
-        if (supervisorPermissions.contains(tabId) || supervisorPermissions.contains(categoryTabKey)) return true
+        if (com.serviseyem.security.AdminPermissionResolver.hasAccess(supervisorPermissions, tabId) ||
+            com.serviseyem.security.AdminPermissionResolver.hasAccess(supervisorPermissions, categoryTabKey)
+        ) return true
         return AdminPermissionsRegistry.allPermissions.any {
             it.category.tabKey == categoryTabKey && supervisorPermissions.contains(it.key)
         }
