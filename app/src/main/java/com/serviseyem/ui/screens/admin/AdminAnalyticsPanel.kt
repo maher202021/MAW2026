@@ -43,11 +43,34 @@ fun AdminAnalyticsPanel(
     var selectedPeriod by remember { mutableStateOf("MONTH") } // TODAY, WEEK, MONTH, YEAR
 
     if (adminViewModel == null) return
-    val stats = adminViewModel.getSystemStats()
-    val revenueStats = adminViewModel.getRevenueStats()
-    val bookingStats = adminViewModel.getBookingStats()
-    val categoryStats = adminViewModel.getCategoryStats()
-    val cityStats = adminViewModel.getCityStats()
+    val allBookings = adminViewModel.appState._bookings.collectAsState().value
+    val allPayments = adminViewModel.appState._payments.collectAsState().value
+    val allProviders = adminViewModel.appState._providers.collectAsState().value
+    val allStores = adminViewModel.appState._stores.collectAsState().value
+    val allUsersCount = adminViewModel.appState._registeredUsersCount.collectAsState().value
+
+    val now = System.currentTimeMillis()
+    val periodStartTimestamp = remember(selectedPeriod) {
+        when (selectedPeriod) {
+            "TODAY" -> now - (now % (24 * 60 * 60 * 1000L))
+            "WEEK" -> now - (7L * 24 * 60 * 60 * 1000L)
+            "MONTH" -> now - (30L * 24 * 60 * 60 * 1000L)
+            "YEAR" -> now - (365L * 24 * 60 * 60 * 1000L)
+            else -> 0L
+        }
+    }
+
+    val filteredBookings = remember(allBookings, periodStartTimestamp) {
+        if (periodStartTimestamp == 0L) allBookings else allBookings.filter { it.createdAt >= periodStartTimestamp }
+    }
+    val periodBookingsCount = filteredBookings.size
+    val periodRevenue = remember(allPayments, periodStartTimestamp) {
+        val list = if (periodStartTimestamp == 0L) allPayments else allPayments.filter { it.createdAt >= periodStartTimestamp }
+        list.sumOf { it.amount }
+    }
+
+    val totalProvidersCount = allProviders.size
+    val totalDisplayUsers = if (allUsersCount > 0) allUsersCount else (allProviders.size + allStores.size)
 
     Column(
         modifier = modifier
@@ -138,7 +161,7 @@ fun AdminAnalyticsPanel(
                 // إجمالي المستخدمين
                 StatMetricCard(
                     title = "إجمالي المستخدمين",
-                    value = "${stats.totalUsers}",
+                    value = "$totalDisplayUsers",
                     trend = "",
                     icon = Icons.Default.Person,
                     bgColor = Color(0xFFE0F2FE),
@@ -148,7 +171,7 @@ fun AdminAnalyticsPanel(
                 // الفنيين المعتمدين
                 StatMetricCard(
                     title = "الفنيين المعتمدين",
-                    value = "${stats.totalProviders}",
+                    value = "$totalProvidersCount",
                     trend = "",
                     icon = Icons.Default.CheckCircle,
                     bgColor = Color(0xFFE8F5E9),
@@ -158,20 +181,20 @@ fun AdminAnalyticsPanel(
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                // إجمالي الحجوزات والطلبات
+                // إجمالي الحجوزات والطلبات للفترة
                 StatMetricCard(
-                    title = "إجمالي الحجوزات",
-                    value = "${bookingStats.total}",
+                    title = "حجوزات الفترة",
+                    value = "$periodBookingsCount",
                     trend = "",
                     icon = Icons.Default.List,
                     bgColor = Color(0xFFFFF3E0),
                     iconColor = Color(0xFFE65100),
                     modifier = Modifier.weight(1f)
                 )
-                // الإيرادات والعمولات
+                // الإيرادات والعمولات للفترة
                 StatMetricCard(
-                    title = "إجمالي الإيرادات",
-                    value = "${numberFormat.format(revenueStats.totalRevenue)} ر.ي",
+                    title = "إيرادات الفترة",
+                    value = "${numberFormat.format(periodRevenue)} ر.ي",
                     trend = "",
                     icon = Icons.Default.Star,
                     bgColor = Color(0xFFF3E5F5),
@@ -200,17 +223,27 @@ fun AdminAnalyticsPanel(
                         fontSize = 13.5.sp,
                         color = Color.White
                     )
-                    Text("النشاط الأعلى", fontSize = 11.sp, color = Color(0xFFF59E0B), fontWeight = FontWeight.SemiBold)
+                    Text("بيانات فعلية حية", fontSize = 11.sp, color = Color(0xFFF59E0B), fontWeight = FontWeight.SemiBold)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                val allCityOccurrences = (allProviders.map { it.area.ifBlank { it.cityId } } +
+                    allStores.map { it.cityId.ifBlank { it.localNeighborhood } }).filter { it.isNotBlank() }
+                val totalLocCount = allCityOccurrences.size.coerceAtLeast(1)
+
+                val sanaaCount = allCityOccurrences.count { it.contains("صنعاء", ignoreCase = true) || it.contains("sana", ignoreCase = true) }
+                val adenCount = allCityOccurrences.count { it.contains("عدن", ignoreCase = true) || it.contains("aden", ignoreCase = true) }
+                val taizCount = allCityOccurrences.count { it.contains("تعز", ignoreCase = true) || it.contains("taiz", ignoreCase = true) }
+                val ibbCount = allCityOccurrences.count { it.contains("إب", ignoreCase = true) || it.contains("اب", ignoreCase = true) }
+                val hadhramoutCount = allCityOccurrences.count { it.contains("حضرموت", ignoreCase = true) || it.contains("المكلا", ignoreCase = true) || it.contains("سيئون", ignoreCase = true) }
+
                 val governorates = listOf(
-                    Triple("أمانة العاصمة / صنعاء", 0.42f, "42%"),
-                    Triple("عدن", 0.24f, "24%"),
-                    Triple("تعز", 0.16f, "16%"),
-                    Triple("إب", 0.10f, "10%"),
-                    Triple("حضرموت (المكلا / سيئون)", 0.08f, "8%")
+                    Triple("أمانة العاصمة / صنعاء", (sanaaCount.toFloat() / totalLocCount).coerceIn(0f, 1f), "${((sanaaCount.toFloat() / totalLocCount) * 100).toInt()}%"),
+                    Triple("عدن", (adenCount.toFloat() / totalLocCount).coerceIn(0f, 1f), "${((adenCount.toFloat() / totalLocCount) * 100).toInt()}%"),
+                    Triple("تعز", (taizCount.toFloat() / totalLocCount).coerceIn(0f, 1f), "${((taizCount.toFloat() / totalLocCount) * 100).toInt()}%"),
+                    Triple("إب", (ibbCount.toFloat() / totalLocCount).coerceIn(0f, 1f), "${((ibbCount.toFloat() / totalLocCount) * 100).toInt()}%"),
+                    Triple("حضرموت (المكلا / سيئون)", (hadhramoutCount.toFloat() / totalLocCount).coerceIn(0f, 1f), "${((hadhramoutCount.toFloat() / totalLocCount) * 100).toInt()}%")
                 )
 
                 governorates.forEach { (city, progress, percent) ->
@@ -254,11 +287,18 @@ fun AdminAnalyticsPanel(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                val catStats = adminViewModel.getCategoryStats()
+                val maintCount = catStats.maintenanceCount
+                val storeCount = catStats.storeCount
+                val restCount = catStats.restaurantCount
+                val medCount = catStats.medicalCount
+                val totalCat = (maintCount + storeCount + restCount + medCount).coerceAtLeast(1)
+
                 val categories = listOf(
-                    Triple("خدمات الصيانة والكهرباء ⚡", 0.35f, Color(0xFF38BDF8)),
-                    Triple("المتاجر وقطع الغيار 🛍️", 0.25f, Color(0xFF4ADE80)),
-                    Triple("المطاعم وتوصيل الوجبات 🍽️", 0.22f, Color(0xFFFB923C)),
-                    Triple("الرعاية الصحية والمراكز 🏥", 0.18f, Color(0xFFF87171))
+                    Triple("خدمات الصيانة والكهرباء ⚡", (maintCount.toFloat() / totalCat).coerceIn(0f, 1f), Color(0xFF38BDF8)),
+                    Triple("المتاجر وقطع الغيار 🛍️", (storeCount.toFloat() / totalCat).coerceIn(0f, 1f), Color(0xFF4ADE80)),
+                    Triple("المطاعم وتوصيل الوجبات 🍽️", (restCount.toFloat() / totalCat).coerceIn(0f, 1f), Color(0xFFFB923C)),
+                    Triple("الرعاية الصحية والمراكز 🏥", (medCount.toFloat() / totalCat).coerceIn(0f, 1f), Color(0xFFF87171))
                 )
 
                 categories.forEach { (cat, progress, color) ->

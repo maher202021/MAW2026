@@ -392,7 +392,7 @@ fun initColorSync(context: android.content.Context) {
                         }
                 }
             }
-        firestoreListeners.add(colorSchemeListener!!)
+        colorSchemeListener?.let { firestoreListeners.add(it) }
 
         // 3. Real-time Firestore listener for Personal User Colors
         viewModelScope.launch {
@@ -424,7 +424,7 @@ fun initColorSync(context: android.content.Context) {
                                 }
                             }
                         }
-                    firestoreListeners.add(userColorsListener!!)
+                    userColorsListener?.let { firestoreListeners.add(it) }
                 }
             }
         }
@@ -942,19 +942,39 @@ fun exportSelectedCollectionsAsJson(selectedCollections: List<String>, onResult:
         }
     }
 
-fun saveBackupToLocalStorage(context: android.content.Context, jsonStr: String, fileName: String): String {
+    fun saveBackupToLocalStorage(context: android.content.Context, jsonStr: String, fileName: String): String {
+        val safeFileName = if (fileName.endsWith(".json")) fileName else "$fileName.json"
         return try {
-            val downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-            val backupFolder = java.io.File(downloadDir, "YemenServicesBackups")
-            if (!backupFolder.exists()) {
-                backupFolder.mkdirs()
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                val contentValues = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, safeFileName)
+                    put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                    put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, "${android.os.Environment.DIRECTORY_DOWNLOADS}/YemenServicesBackups")
+                }
+                val uri = context.contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                if (uri != null) {
+                    context.contentResolver.openOutputStream(uri)?.use { stream ->
+                        stream.write(jsonStr.toByteArray(Charsets.UTF_8))
+                    }
+                    uri.toString()
+                } else {
+                    val targetFile = java.io.File(context.getExternalFilesDir(null), safeFileName)
+                    targetFile.writeText(jsonStr, Charsets.UTF_8)
+                    targetFile.absolutePath
+                }
+            } else {
+                val downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+                val backupFolder = java.io.File(downloadDir, "YemenServicesBackups")
+                if (!backupFolder.exists()) {
+                    backupFolder.mkdirs()
+                }
+                val targetFile = java.io.File(backupFolder, safeFileName)
+                targetFile.writeText(jsonStr, Charsets.UTF_8)
+                targetFile.absolutePath
             }
-            val targetFile = java.io.File(backupFolder, if (fileName.endsWith(".json")) fileName else "$fileName.json")
-            targetFile.writeText(jsonStr, Charsets.UTF_8)
-            targetFile.absolutePath
         } catch (e: Exception) {
             try {
-                val targetFile = java.io.File(context.getExternalFilesDir(null), fileName)
+                val targetFile = java.io.File(context.getExternalFilesDir(null), safeFileName)
                 targetFile.writeText(jsonStr, Charsets.UTF_8)
                 targetFile.absolutePath
             } catch (e2: Exception) {
@@ -1161,59 +1181,45 @@ fun deleteColorPalette(id: String) {
     }
 
 fun resetAccountPassword(entityType: String, phoneOrId: String, newPass: String) {
-        val cleanPhone = phoneOrId.trim().replace(" ", "").replace("+967", "").replace("967", "").replace("+", "")
+        val cleanPhone = phoneOrId.trim().replace(" ", "").replace("+967", "").replace("967", "").replace("+", "").filter { it.isDigit() }
         val hashedPass = com.serviseyem.utils.PasswordHasher.hash(newPass.trim())
-        val passUpdate = mapOf("password" to hashedPass, "passwordHash" to hashedPass)
+        val passUpdate = mapOf("password" to "", "passwordHash" to hashedPass)
+        val phoneVariants = listOf(cleanPhone, "0$cleanPhone", "967$cleanPhone", "+967$cleanPhone").distinct()
         
         // Update Firestore
         when (entityType) {
             "PROVIDER", "TECHNICIAN", "TECH" -> {
-                db.collection("providers").get().addOnSuccessListener { qs ->
+                db.collection("providers").whereIn("phone", phoneVariants).get().addOnSuccessListener { qs ->
                     for (doc in qs.documents) {
-                        val p = doc.getString("phone") ?: ""
-                        if (p.contains(cleanPhone)) {
-                            db.collection("providers").document(doc.id).update(passUpdate)
-                        }
+                        doc.reference.update(passUpdate)
                     }
                 }
                 mainViewModel.homeViewModel._providers.value = mainViewModel.homeViewModel._providers.value.map { if (it.phone.contains(cleanPhone)) it.copy(passwordHash = hashedPass) else it }
             }
             "STORE", "RESTAURANT", "MEDICAL", "CENTER" -> {
-                db.collection("stores").get().addOnSuccessListener { qs ->
+                db.collection("stores").whereIn("phone", phoneVariants).get().addOnSuccessListener { qs ->
                     for (doc in qs.documents) {
-                        val p = doc.getString("phone") ?: ""
-                        if (p.contains(cleanPhone)) {
-                            db.collection("stores").document(doc.id).update(passUpdate)
-                        }
+                        doc.reference.update(passUpdate)
                     }
                 }
                 mainViewModel.adminViewModel._stores.value = mainViewModel.adminViewModel._stores.value.map { if (it.phone.contains(cleanPhone)) it.copy(passwordHash = hashedPass) else it }
             }
             "JOB" -> {
-                db.collection("jobs").get().addOnSuccessListener { qs ->
+                db.collection("jobs").whereIn("phone", phoneVariants).get().addOnSuccessListener { qs ->
                     for (doc in qs.documents) {
-                        val p = doc.getString("phone") ?: ""
-                        if (p.contains(cleanPhone)) {
-                            db.collection("jobs").document(doc.id).update(passUpdate)
-                        }
+                        doc.reference.update(passUpdate)
                     }
                 }
             }
             "USER" -> {
-                db.collection("registered_users").get().addOnSuccessListener { qs ->
+                db.collection("registered_users").whereIn("phone", phoneVariants).get().addOnSuccessListener { qs ->
                     for (doc in qs.documents) {
-                        val p = doc.getString("phone") ?: ""
-                        if (p.contains(cleanPhone)) {
-                            db.collection("registered_users").document(doc.id).update(passUpdate)
-                        }
+                        doc.reference.update(passUpdate)
                     }
                 }
-                db.collection("users").get().addOnSuccessListener { qs ->
+                db.collection("users").whereIn("phone", phoneVariants).get().addOnSuccessListener { qs ->
                     for (doc in qs.documents) {
-                        val p = doc.getString("phone") ?: ""
-                        if (p.contains(cleanPhone)) {
-                            db.collection("users").document(doc.id).update(passUpdate)
-                        }
+                        doc.reference.update(passUpdate)
                     }
                 }
             }
@@ -1309,7 +1315,7 @@ fun approvePasswordReset(phone: String, onResult: (Boolean, String) -> Unit) {
         val notif = NotificationEntity(
             id = notifId,
             title = "🔑 تم إعادة تعيين كلمة المرور",
-            message = "تمت الموافقة على طلبك لإعادة تعيين كلمة المرور. كلمة المرور المؤقتة الجديدة هي: $tempPassword  يرجى تغييرها بعد تسجيل الدخول حفاظاً على خصوصيتك.",
+            message = "تمت الموافقة على طلبك لإعادة تعيين كلمة المرور بنجاح. يرجى استخدام كلمة المرور المؤقتة المسلمة لك وتسجيل الدخول وتغييرها فوراً.",
             targetType = "USER",
             targetValue = cleanPhone,
             notificationType = "PASSWORD_RESET_APPROVED",
@@ -1350,11 +1356,9 @@ fun adminResetAccountPassword(phone: String, newPassword: String, notifyAction: 
 
         val collections = listOf("providers", "pending_providers", "stores", "properties", "registered_users", "users", "join_requests")
         for (col in collections) {
-            for (ph in phoneVariants) {
-                db.collection(col).whereEqualTo("phone", ph).get().addOnSuccessListener { snap ->
-                    for (doc in snap.documents) {
-                        doc.reference.update(passUpdate)
-                    }
+            db.collection(col).whereIn("phone", phoneVariants.take(10)).get().addOnSuccessListener { snap ->
+                for (doc in snap.documents) {
+                    doc.reference.update(passUpdate)
                 }
             }
             db.collection(col).document(cleanPhone).get().addOnSuccessListener { doc ->
@@ -1451,41 +1455,50 @@ fun requestPasswordRecoveryGeneral(accountName: String, phone: String, accountTy
         mainViewModel.requestPasswordRecovery(cleanPhone, accountName, accountType)
     }
 
-fun wipeAllDatabaseData(password: String): Boolean {
-        if (mainViewModel.verifyAdminOrOwnerPassword(password)) {
+    fun wipeAllDatabaseData(password: String): Boolean {
+        val currentRole = getAdminViewModel?.invoke()?.adminRole?.value.orEmpty()
+        if (com.serviseyem.utils.AdminSecurityManager.hasOwnerPermission(currentRole) && mainViewModel.verifyAdminOrOwnerPassword(password)) {
             val collections = listOf("categories", "providers", "pending_providers", "banners", "settings", "reports", "bookings", "notifications", "chat_channels", "cities", "stores", "medical", "restaurants", com.serviseyem.utils.AppConstants.COL_JOBS, "job_applications", "properties", "products", "reviews")
             collections.forEach { col ->
                 db.collection(col).get().addOnSuccessListener { snapshot ->
-                    snapshot.documents.forEach { doc -> doc.reference.delete() }
+                    val docs = snapshot.documents
+                    docs.chunked(400).forEach { chunk ->
+                        val batch = db.batch()
+                        chunk.forEach { doc -> batch.delete(doc.reference) }
+                        batch.commit()
+                    }
                 }
             }
             mainViewModel.triggerNotification("💥 تم مسح كامل قاعدة البيانات المحددة بنجاح وإعادتها إلى الصفر!")
             return true
         } else {
-            mainViewModel.triggerNotification("❌ كلمة المرور غير صحيحة! فشل تطهير البيانات.")
+            mainViewModel.triggerNotification("❌ غير مصرح أو كلمة المرور غير صحيحة! فشل تطهير البيانات.")
             return false
         }
     }
 
-fun wipeSelectedDatabaseData(password: String, selectedCollections: List<String>): Boolean {
-        if (mainViewModel.verifyAdminOrOwnerPassword(password)) {
+    fun wipeSelectedDatabaseData(password: String, selectedCollections: List<String>): Boolean {
+        val currentRole = getAdminViewModel?.invoke()?.adminRole?.value.orEmpty()
+        if (com.serviseyem.utils.AdminSecurityManager.hasOwnerPermission(currentRole) && mainViewModel.verifyAdminOrOwnerPassword(password)) {
             selectedCollections.forEach { col ->
                 db.collection(col).get().addOnSuccessListener { snapshot ->
-                    snapshot.documents.forEach { doc ->
-                        // If mainViewModel.homeViewModel.providers is selected, check if we keep our default user p_maher/amin_alghorbani if needed
-                        doc.reference.delete()
+                    val docs = snapshot.documents
+                    docs.chunked(400).forEach { chunk ->
+                        val batch = db.batch()
+                        chunk.forEach { doc -> batch.delete(doc.reference) }
+                        batch.commit()
                     }
                 }
             }
             mainViewModel.triggerNotification("🧹 تم مسح الفئات المحددة وإعادتها إلى الصفر بنجاح!")
             return true
         } else {
-            mainViewModel.triggerNotification("❌ كلمة المرور غير صحيحة! فشل تطهير البيانات.")
+            mainViewModel.triggerNotification("❌ غير مصرح أو كلمة المرور غير صحيحة! فشل تطهير البيانات.")
             return false
         }
     }
 
-fun wipeAllMockAndTemporaryData() {
+    fun wipeAllMockAndTemporaryData() {
         viewModelScope.launch {
             try {
                 val mockPrefixes = listOf("mock_", "test_", "demo_", "temp_", "sample_")
@@ -1500,13 +1513,19 @@ fun wipeAllMockAndTemporaryData() {
 
                 for (col in listOf("notifications", "chat_channels", "reports", "bookings", "providers")) {
                     db.collection(col).whereEqualTo("isMock", true).get().addOnSuccessListener { snapshot ->
-                        snapshot?.documents?.forEach { doc ->
-                            if (isMockDoc(doc)) doc.reference.delete()
+                        val docs = snapshot?.documents?.filter { isMockDoc(it) } ?: emptyList()
+                        docs.chunked(400).forEach { chunk ->
+                            val batch = db.batch()
+                            chunk.forEach { doc -> batch.delete(doc.reference) }
+                            batch.commit()
                         }
                     }
                     db.collection(col).whereEqualTo("isTest", true).get().addOnSuccessListener { snapshot ->
-                        snapshot?.documents?.forEach { doc ->
-                            if (isMockDoc(doc)) doc.reference.delete()
+                        val docs = snapshot?.documents?.filter { isMockDoc(it) } ?: emptyList()
+                        docs.chunked(400).forEach { chunk ->
+                            val batch = db.batch()
+                            chunk.forEach { doc -> batch.delete(doc.reference) }
+                            batch.commit()
                         }
                     }
                 }
@@ -1518,13 +1537,18 @@ fun wipeAllMockAndTemporaryData() {
         }
     }
 
-fun autoCleanupData(daysToKeep: Int = 30) {
+    fun autoCleanupData(daysToKeep: Int = 30) {
         viewModelScope.launch {
             try {
                 val cutoffTime = System.currentTimeMillis() - (daysToKeep * 24L * 60 * 60 * 1000)
                 db.collection("notifications").whereLessThan("timestamp", cutoffTime).get()
                     .addOnSuccessListener { snapshot ->
-                        snapshot?.documents?.forEach { doc -> doc.reference.delete() }
+                        val docs = snapshot?.documents ?: emptyList()
+                        docs.chunked(400).forEach { chunk ->
+                            val batch = db.batch()
+                            chunk.forEach { doc -> batch.delete(doc.reference) }
+                            batch.commit()
+                        }
                     }
             } catch (e: Exception) {
                 android.util.Log.e("SettingsViewModel", "Error in autoCleanupData", e)
@@ -1532,8 +1556,11 @@ fun autoCleanupData(daysToKeep: Int = 30) {
         }
     }
 
-fun scheduleAutoCleanup(days: Int = 30) {
-        viewModelScope.launch {
+    private var autoCleanupJob: kotlinx.coroutines.Job? = null
+
+    fun scheduleAutoCleanup(days: Int = 30) {
+        autoCleanupJob?.cancel()
+        autoCleanupJob = viewModelScope.launch {
             while (true) {
                 kotlinx.coroutines.delay(24 * 60 * 60 * 1000L)
                 try {
@@ -1586,8 +1613,11 @@ fun scheduleAutoCleanup(days: Int = 30) {
 
     override fun onCleared() {
         super.onCleared()
+        autoCleanupJob?.cancel()
         cardSettingsListener?.remove()
         colorSchemeListener?.remove()
         userColorsListener?.remove()
+        firestoreListeners.forEach { it.remove() }
+        firestoreListeners.clear()
     }
 }

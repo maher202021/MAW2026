@@ -8,10 +8,14 @@ package com.serviseyem.ui.screens.map
 import android.content.Context
 import android.webkit.WebView
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.GpsNotFixed
+import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.SatelliteAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -19,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -26,6 +31,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.serviseyem.utils.LocationStatus
 import com.serviseyem.data.PropertyEntity
 import com.serviseyem.data.ProviderEntity
 import com.serviseyem.data.StoreEntity
@@ -52,7 +58,10 @@ internal fun MapMainViewport(
     filteredProperties: List<PropertyEntity>,
     pickingDestination: Boolean,
     pickedPoint: Pair<Double, Double>?,
+    longPressDraftPoint: Pair<Double, Double>? = null,
     onPickedPointChange: (Pair<Double, Double>) -> Unit,
+    onMapLongPress: (Double, Double) -> Unit = { _, _ -> },
+    onMapTap: () -> Unit = {},
     onShowMapErrorChange: (Boolean) -> Unit,
     onWebViewCreated: (WebView?) -> Unit,
     webViewRef: WebView?,
@@ -185,13 +194,25 @@ internal fun MapMainViewport(
                         }
                     }
                 },
+                isDataSaverActive = state.isDataSaverActive,
                 pickMode = pickingDestination,
                 onMapPicked = { la, lo ->
                     if (pickingDestination) onPickedPointChange(la to lo)
                 },
-                waypointMarkers = pickedPoint?.takeIf { pickingDestination }?.let {
-                    listOf(Triple("الوجهة المختارة", it.first, it.second))
-                }.orEmpty(),
+                onMapLongPress = { la, lo ->
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onMapLongPress(la, lo)
+                },
+                onMapTap = {
+                    onMapTap()
+                },
+                waypointMarkers = when {
+                    pickingDestination && pickedPoint != null ->
+                        listOf(Triple("الوجهة المختارة", pickedPoint.first, pickedPoint.second))
+                    longPressDraftPoint != null ->
+                        listOf(Triple("نقطة محددة", longPressDraftPoint.first, longPressDraftPoint.second))
+                    else -> emptyList()
+                },
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -239,6 +260,68 @@ internal fun MapGnssBadge(
     }
 }
 
+// [نظام خرائط وملاحة عالمي - ملكنا]
+@Composable
+internal fun LocationStatusPill(
+    status: LocationStatus,
+    onActionClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (status is LocationStatus.Good) return
+    val (label, accent, icon, clickable) = when (status) {
+        is LocationStatus.NoPermission -> Quad("فعّل إذن الموقع للخريطة والملاحة", Color(0xFFF59E0B), Icons.Default.LocationOff, true)
+        is LocationStatus.ProviderOff -> Quad("خدمة GPS متوقفة — اضغط للتشغيل", Color(0xFFEF4444), Icons.Default.LocationOff, true)
+        is LocationStatus.Searching -> Quad("جاري التقاط إشارة GPS...", Color(0xFF00E5FF), Icons.Default.GpsNotFixed, false)
+        is LocationStatus.Weak -> Quad("إشارة GPS ضعيفة (±${status.accuracyM.toInt()}م)", Color(0xFFF59E0B), Icons.Default.GpsFixed, false)
+        is LocationStatus.Good -> return
+    }
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = Color(0xFF0B1220).copy(alpha = 0.92f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.55f)),
+        shadowElevation = 8.dp,
+        modifier = modifier
+            .defaultMinSize(minHeight = 40.dp)
+            .let { if (clickable) it.clickable(onClick = onActionClick) else it }
+            .testTag("map_location_status_pill")
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = accent,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = label,
+                color = Color.White,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            if (clickable) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = accent.copy(alpha = 0.22f)
+                ) {
+                    Text(
+                        text = "تفعيل",
+                        color = accent,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+
 @Composable
 internal fun MapPickDestinationBar(
     context: Context,
@@ -248,10 +331,10 @@ internal fun MapPickDestinationBar(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = Color(0xF50F172A),
-        border = BorderStroke(1.5.dp, Color(0xFF00E5FF)),
-        shadowElevation = 10.dp,
+        shape = RoundedCornerShape(20.dp),
+        color = Color(0xF50B1220),
+        border = BorderStroke(1.5.dp, Color(0xFF3A6BFF)),
+        shadowElevation = 12.dp,
         modifier = modifier.testTag("map_pick_confirm_card")
     ) {
         if (pickedPoint == null) {
@@ -297,18 +380,26 @@ internal fun MapPickDestinationBar(
                     fontSize = 11.5.sp
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = { onConfirmDestination(label, la, lo) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                    Box(
                         modifier = Modifier
                             .weight(1f)
                             .defaultMinSize(minHeight = 48.dp)
-                            .testTag("map_pick_start_nav_button")
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    listOf(Color(0xFF5B86FF), Color(0xFF3A6BFF), Color(0xFF2851D8))
+                                ),
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .clickable { onConfirmDestination(label, la, lo) }
+                            .testTag("map_pick_start_nav_button"),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("ابدأ الملاحة", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text("ابدأ الملاحة", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
                     }
                     OutlinedButton(
                         onClick = onCancel,
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
                         modifier = Modifier
                             .defaultMinSize(minHeight = 48.dp)
                             .testTag("map_pick_cancel_button")

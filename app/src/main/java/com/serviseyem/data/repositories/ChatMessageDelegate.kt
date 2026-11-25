@@ -209,6 +209,23 @@ internal class ChatMessageDelegate(
         }
     }
 
+    suspend fun updateMessageMediaUrl(
+        channelId: String,
+        messageId: String,
+        mediaUrl: String
+    ): AppResult<Unit> = withContext(Dispatchers.IO) {
+        if (channelId.isBlank() || messageId.isBlank() || mediaUrl.isBlank()) {
+            return@withContext AppResult.Success(Unit)
+        }
+        try {
+            val msgRef = channelsCollection.document(channelId).collection("messages").document(messageId)
+            msgRef.update("mediaUrl", mediaUrl).await()
+            AppResult.Success(Unit)
+        } catch (e: Exception) {
+            AppResult.Error(AppError.NetworkError(e))
+        }
+    }
+
     suspend fun deleteMessage(
         channelId: String,
         messageId: String,

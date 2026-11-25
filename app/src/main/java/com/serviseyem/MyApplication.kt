@@ -36,6 +36,15 @@ class MyApplication : Application() {
 
         firebaseAnalytics = AppFirebaseAndSyncInitializer.initializeFirebaseServices(this)
         AppFirebaseAndSyncInitializer.initializeNotificationChannelsAndSync(this)
+
+        // [نظام خرائط وملاحة عالمي - ملكنا]
+        Thread {
+            try {
+                com.serviseyem.utils.OfflineTileInterceptor.migrateCacheIfNeeded(this)
+                com.serviseyem.utils.BundledPacks.installIfNeeded(this)
+            } catch (_: Throwable) {
+            }
+        }.start()
     }
 
     @Suppress("unused")

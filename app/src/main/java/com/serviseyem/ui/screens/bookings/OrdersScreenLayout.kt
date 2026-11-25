@@ -53,6 +53,7 @@ fun OrdersScreenLayout(viewModel: MainViewModel, themeColors: VisualThemePalette
     val instantRequests by viewModel.instantRequests.collectAsState()
     val currentUserPhone by viewModel.currentUserPhone.collectAsState()
     val currentUserId by viewModel.currentUserId.collectAsState()
+    val adminRole by viewModel.adminRole.collectAsState()
     val context = LocalContext.current
 
     // Allow user to query by phone if currentUserPhone is empty
@@ -67,19 +68,32 @@ fun OrdersScreenLayout(viewModel: MainViewModel, themeColors: VisualThemePalette
 
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Instant Requests (اطلب خدمتك الآن), 1: Store Orders (المشتريات)
 
-    val myInstantRequests = remember(instantRequests, cleanActivePhone, currentUserId) {
-        instantRequests.filter { req ->
-            val reqPhoneClean = req.userPhone.trim().replace(" ", "").replace("+967", "").replace("00967", "")
-            cleanActivePhone.isBlank() || reqPhoneClean == cleanActivePhone || (currentUserId.isNotBlank() && req.userId == currentUserId)
-        }.sortedByDescending { it.createdAt }
+    val isAdmin = adminRole.uppercase() in setOf("OWNER", "SUPER_ADMIN", "MAIN_ADMIN", "ADMIN")
+
+    val myInstantRequests = remember(instantRequests, cleanActivePhone, currentUserId, isAdmin) {
+        if (isAdmin) {
+            instantRequests.sortedByDescending { it.createdAt }
+        } else if (cleanActivePhone.isBlank() && (currentUserId.isBlank() || currentUserId == "guest")) {
+            emptyList()
+        } else {
+            instantRequests.filter { req ->
+                val reqPhoneClean = req.userPhone.trim().replace(" ", "").replace("+967", "").replace("00967", "")
+                (cleanActivePhone.isNotBlank() && reqPhoneClean == cleanActivePhone) ||
+                (currentUserId.isNotBlank() && currentUserId != "guest" && req.userId == currentUserId)
+            }.sortedByDescending { it.createdAt }
+        }
     }
 
-    val myOrders = remember(orders, activePhone) {
-        if (activePhone.isBlank()) {
+    val myOrders = remember(orders, activePhone, currentUserId, isAdmin) {
+        if (isAdmin) {
             orders.sortedByDescending { it.timestamp }
+        } else if (activePhone.isBlank() && (currentUserId.isBlank() || currentUserId == "guest")) {
+            emptyList()
         } else {
+            val cleanP = activePhone.filter { it.isDigit() }.takeLast(9)
             orders.filter { 
-                it.customerPhone.trim() == activePhone.trim()
+                (cleanP.isNotBlank() && it.customerPhone.filter { ch -> ch.isDigit() }.takeLast(9) == cleanP) ||
+                (currentUserId.isNotBlank() && currentUserId != "guest" && it.storeId == currentUserId)
             }.sortedByDescending { it.timestamp }
         }
     }

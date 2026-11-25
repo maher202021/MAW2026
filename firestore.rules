@@ -140,6 +140,59 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isStaff() || isOwnerOrAdmin();
     }
+    match /app_settings/{d} {
+      allow read: if true;
+      allow write: if isStaff() || isOwnerOrAdmin();
+    }
+    match /admin_settings/{d} {
+      allow read: if isSignedIn();
+      allow write: if isStaff() || isOwnerOrAdmin();
+    }
+    match /admin_secrets/{d} {
+      allow read, write: if false;
+    }
+    match /color_themes/{d} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /coupons/{d} {
+      allow read: if isSignedIn();
+      allow write: if isStaff();
+    }
+    match /loyalty_programs/{d} {
+      allow read: if isSignedIn();
+      allow write: if isStaff();
+    }
+    match /favorites/{d} {
+      allow read, write: if isSignedIn();
+    }
+    match /galleries/{d} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+    match /doctors/{d} {
+      allow read: if true;
+      allow write: if isStaff() || isSignedIn();
+    }
+    match /inventory/{d} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+    match /special_offers/{d} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+    match /request_offers/{d} {
+      allow read, create, update: if isSignedIn();
+      allow delete: if isStaff() || isSignedIn();
+    }
+    match /ai_guides/{d} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /ai_assistant_sessions/{d} {
+      allow read, write: if isSignedIn();
+    }
 
     // 6. استعادة الحسابات وكلمات المرور
     match /password_resets/{d} {
@@ -265,7 +318,14 @@ service cloud.firestore {
         allow create: if isSignedIn() && (
           request.auth.uid in get(/databases/$(db)/documents/chat_channels/$(channelId)).data.participants
         );
-        allow update, delete: if isStaff();
+        allow update: if isStaff() || (
+          isSignedIn() &&
+          request.auth.uid in get(/databases/$(db)/documents/chat_channels/$(channelId)).data.participants && (
+            resource.data.senderId == request.auth.uid ||
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'readAt', 'status', 'reactions', 'deletedForUsers'])
+          )
+        );
+        allow delete: if isStaff();
       }
     }
     match /chat_rooms/{roomId} {
@@ -284,6 +344,38 @@ service cloud.firestore {
     }
     match /presence/{d} {
       allow read, write: if isSignedIn();
+    }
+    match /user_presence/{d} {
+      allow read, write: if isSignedIn();
+    }
+    match /fcm_tokens/{d} {
+      allow read: if isStaff() || (isSignedIn() && d == request.auth.uid);
+      allow write: if isSignedIn() && (d == request.auth.uid || isStaff());
+    }
+    match /devices/{d} {
+      allow read, write: if isSignedIn();
+    }
+    match /calls/{d} {
+      allow read, write: if isSignedIn();
+    }
+    match /internal_wallets/{d} {
+      allow read: if isSignedIn() && (isStaff() || resource.data.ownerId == request.auth.uid || d == request.auth.uid);
+      allow write: if isStaff() || (isSignedIn() && d == request.auth.uid);
+    }
+    match /payment_wallets/{d} {
+      allow read: if isSignedIn();
+      allow write: if isStaff();
+    }
+    match /payment_gateways/{d} {
+      allow read: if isSignedIn();
+      allow write: if isStaff() || isOwnerOrAdmin();
+    }
+    match /job_listings/{d} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+    match /job_applications/{d} {
+      allow read, create, update, delete: if isSignedIn();
     }
 
     // 9. التقييمات والمراجعات وسجلات النظام
@@ -306,6 +398,34 @@ service cloud.firestore {
     }
     match /system_logs/{d} {
       allow read, write: if isStaff();
+    }
+    match /activity_logs/{d} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if isStaff();
+    }
+    match /admin_audit_logs/{d} {
+      allow read, write: if isStaff();
+    }
+    match /security_audit_logs/{d} {
+      allow read, write: if isStaff();
+    }
+    match /reports/{d} {
+      allow read: if isStaff() || isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isStaff();
+    }
+    match /database_backups/{d} {
+      allow read, write: if isOwnerOrAdmin() || isStaff();
+    }
+    match /settings_backups/{d} {
+      allow read, write: if isOwnerOrAdmin() || isStaff();
+    }
+    match /system_stats/{d} {
+      allow read: if isSignedIn();
+      allow write: if isStaff();
+    }
+    match /staff/{d} {
+      allow read, write: if isOwnerOrAdmin() || isStaff();
     }
 
     // 10. الحظر والرفض الافتراضي العام لجميع المجموعات الأخرى (Deny by default)

@@ -318,17 +318,19 @@ fun MedicalDashboard(
                             },
                             onSaveProfile = { name, _, city, desc, hours, available ->
                                 if (isProviderBacked) {
-                                    val baseProv = account.rawProvider!!
-                                    viewModel.updateProviderEntity(
-                                        baseProv.copy(
-                                            name = name,
-                                            localNeighborhood = city,
-                                            area = city,
-                                            profession = desc,
-                                            specialization = desc,
-                                            isAvailable = available
+                                    val baseProv = account.rawProvider ?: viewModel.providers.value.find { it.id == account.id }
+                                    if (baseProv != null) {
+                                        viewModel.updateProviderEntity(
+                                            baseProv.copy(
+                                                name = name,
+                                                localNeighborhood = city,
+                                                area = city,
+                                                profession = desc,
+                                                specialization = desc,
+                                                isAvailable = available
+                                            )
                                         )
-                                    )
+                                    }
                                 } else {
                                     val currentStore = account.rawStore ?: viewModel.stores.value.find { it.id == account.id }
                                         ?: com.serviseyem.data.StoreEntity(

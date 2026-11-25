@@ -162,4 +162,10 @@ class ChatMessagesManager(
             if (it.id == messageId) it.copy(status = status) else it
         }
     }
+
+    fun updateLocalMessageMediaUrl(messageId: String, mediaUrl: String) {
+        _messages.value = _messages.value.map {
+            if (it.id == messageId) it.copy(mediaUrl = mediaUrl) else it
+        }
+    }
 }

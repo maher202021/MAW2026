@@ -472,8 +472,9 @@ fun AdminPaymentPanel(
         )
     }
 
-    if (showEditGatewayDialog && editingGateway != null) {
-        val gateway = editingGateway!!
+    val currentEditingGateway = editingGateway
+    if (showEditGatewayDialog && currentEditingGateway != null) {
+        val gateway = currentEditingGateway
         AlertDialog(
             onDismissRequest = { showEditGatewayDialog = false },
             title = { Text("تعديل إعدادات بوابة ${gateway.name}") },

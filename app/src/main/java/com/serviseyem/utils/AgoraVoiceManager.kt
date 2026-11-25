@@ -177,7 +177,7 @@ class AgoraVoiceManager(private val context: Context) {
         stopDurationTimer()
         _callDuration.value = 0
 
-        durationRunnable = object : Runnable {
+        val r = object : Runnable {
             override fun run() {
                 val current = _callDuration.value + 1
                 _callDuration.value = current
@@ -190,7 +190,8 @@ class AgoraVoiceManager(private val context: Context) {
                 }
             }
         }
-        handler.postDelayed(durationRunnable!!, 1000)
+        durationRunnable = r
+        handler.postDelayed(r, 1000)
     }
 
     private fun stopDurationTimer() {

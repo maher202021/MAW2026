@@ -135,29 +135,6 @@ open class HomeViewModel @Inject constructor(
             userLng
         )
 
-        cachedFilteredResults[cacheKey]?.let {
-            _filteredProviders.value = it
-            return
-        }
-
-        var filtered = allProviders
-
-        if (!selectedCat.isNullOrBlank() && selectedCat != "ALL" && selectedCat != "الكل") {
-            filtered = filtered.filter { it.categoryId == selectedCat }
-        }
-        if (query.isNotEmpty()) {
-            filtered = filtered.filter { 
-                it.name.lowercase().contains(query) || 
-                it.profession.lowercase().contains(query) ||
-                it.specialization.lowercase().contains(query) ||
-                it.customCategoryName.lowercase().contains(query) ||
-                it.area.lowercase().contains(query) || 
-                it.localNeighborhood.lowercase().contains(query) ||
-                it.phone.contains(query)
-            }
-        }
-        _filteredProviders.value = filtered.take(100)
-
         // Store and Property filtering
         val allStores = appState._stores.value
         val allProperties = appState._properties.value
@@ -183,6 +160,28 @@ open class HomeViewModel @Inject constructor(
             p.localNeighborhood.lowercase().contains(query) ||
             p.propertyType.lowercase().contains(query)
         }.take(50)
+
+        cachedFilteredResults[cacheKey]?.let {
+            _filteredProviders.value = it
+            return
+        }
+
+        var filtered = allProviders
+
+        if (!selectedCat.isNullOrBlank() && selectedCat != "ALL" && selectedCat != "الكل") {
+            filtered = filtered.filter { it.categoryId == selectedCat }
+        }
+        if (query.isNotEmpty()) {
+            filtered = filtered.filter { 
+                it.name.lowercase().contains(query) || 
+                it.profession.lowercase().contains(query) ||
+                it.specialization.lowercase().contains(query) ||
+                it.customCategoryName.lowercase().contains(query) ||
+                it.area.lowercase().contains(query) || 
+                it.localNeighborhood.lowercase().contains(query) ||
+                it.phone.contains(query)
+            }
+        }
 
         if (vipOnly) {
             filtered = filtered.filter { it.isVip || it.subscriptionStatus == "APPROVED" || it.subscriptionStatus == "ACCEPTED" }

@@ -3,5 +3,7 @@
 -keep class com.google.firebase.** { *; }
 -keep class com.serviseyem.models.** { *; }
 -keepclassmembers class com.serviseyem.models.** { *; }
+-keep class com.serviseyem.data.** { *; }
+-keepclassmembers class com.serviseyem.data.** { *; }
 -dontwarn com.google.firebase.**
 -dontnote com.google.firebase.**

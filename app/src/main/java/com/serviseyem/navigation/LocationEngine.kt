@@ -48,14 +48,17 @@ class LocationEngine(private val context: Context) : SensorEventListener {
 
     private val engineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
+    // [نظام خرائط وملاحة عالمي - ملكنا]
     private val _locationFlow = MutableStateFlow(
         LocationFix(
-            latitude = 15.3694,
-            longitude = 44.1910,
-            accuracyMeters = 15f,
+            latitude = 0.0,
+            longitude = 0.0,
+            accuracyMeters = Float.MAX_VALUE,
             speedKmh = 0f,
             bearingDegrees = 0f,
-            timestamp = System.currentTimeMillis()
+            timestamp = 0L,
+            isDeadReckoning = false,
+            isGpsWeak = true
         )
     )
     val locationFlow: StateFlow<LocationFix> = _locationFlow.asStateFlow()
@@ -67,7 +70,8 @@ class LocationEngine(private val context: Context) : SensorEventListener {
     val isGpsLostFlow: StateFlow<Boolean> = _isGpsLostFlow.asStateFlow()
 
     // Configuration
-    private val maxAcceptableAccuracy = 50f // meters
+    private val maxAcceptableAccuracy = 500f // meters
+    private val weakAccuracyThreshold = 100f // meters
     private val maxSpeedMetersPerSec = 70f // ~252 km/h
     private val speedDeadbandKmh = 1.5f
 
@@ -123,6 +127,14 @@ class LocationEngine(private val context: Context) : SensorEventListener {
                 }
             }
             fusedClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
+            if (lastRawLocation == null) {
+                engineScope.launch {
+                    val fresh = com.serviseyem.utils.LocationCapture.fresh(context, 8_000L, maxAcceptableAccuracy)
+                    if (fresh != null && lastRawLocation == null) {
+                        processNewLocation(fresh)
+                    }
+                }
+            }
             startGpsWatchdog()
         } catch (_: SecurityException) {
             isTracking = false
@@ -144,6 +156,14 @@ class LocationEngine(private val context: Context) : SensorEventListener {
 
         try {
             fusedClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
+            if (lastRawLocation == null) {
+                engineScope.launch {
+                    val fresh = com.serviseyem.utils.LocationCapture.fresh(context, 8_000L, maxAcceptableAccuracy)
+                    if (fresh != null && lastRawLocation == null) {
+                        processNewLocation(fresh)
+                    }
+                }
+            }
         } catch (_: SecurityException) {
             isTracking = false
         }
@@ -165,7 +185,9 @@ class LocationEngine(private val context: Context) : SensorEventListener {
     }
 
     private fun processNewLocation(raw: Location) {
-        // 1. Accuracy filtering
+        // 1. Accuracy & coordinate sanity filtering
+        if (raw.latitude == 0.0 && raw.longitude == 0.0) return
+        if (raw.latitude.isNaN() || raw.longitude.isNaN()) return
         if (raw.accuracy <= 0f || raw.accuracy > maxAcceptableAccuracy) return
 
         // 2. Unrealistic jump filtering (impossible speed)
@@ -220,7 +242,7 @@ class LocationEngine(private val context: Context) : SensorEventListener {
             bearingDegrees = heading,
             timestamp = raw.time,
             isDeadReckoning = false,
-            isGpsWeak = false
+            isGpsWeak = raw.accuracy > weakAccuracyThreshold
         )
     }
 

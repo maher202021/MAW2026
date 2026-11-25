@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.serviseyem.utils.LocationStatus
 import com.serviseyem.utils.OfflinePlacesDb
 
 @Composable
@@ -51,7 +52,9 @@ internal fun NavigationTopHudColumn(
     onSearchQueryChange: (String) -> Unit,
     onClearSearch: () -> Unit,
     onSelectSearchResult: (NavigationSearchResult) -> Unit,
-    onOpenPlacesDownload: () -> Unit
+    onOpenPlacesDownload: () -> Unit,
+    locationStatus: LocationStatus? = null,
+    onLocationStatusAction: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -69,17 +72,17 @@ internal fun NavigationTopHudColumn(
             IconButton(
                 onClick = onBackClick,
                 modifier = Modifier
-                    .size(44.dp)
-                    .background(Color(0xFF131C2E).copy(alpha = 0.92f), RoundedCornerShape(12.dp))
+                    .size(48.dp)
+                    .background(Color(0xFF0B1220).copy(alpha = 0.92f), RoundedCornerShape(14.dp))
             ) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع", tint = Color.White)
             }
 
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = if (hasValhallaFiles) Color(0xFF064E3B).copy(alpha = 0.85f) else Color(0xFF0C4A6E).copy(alpha = 0.85f),
-                border = BorderStroke(1.dp, if (hasValhallaFiles) Color(0xFF10B981) else Color(0xFF0284C7)),
-                modifier = Modifier.clickable(onClick = onOpenValhallaDialog)
+                color = if (hasValhallaFiles) Color(0xFF064E3B).copy(alpha = 0.85f) else Color(0xFF1E3A8A).copy(alpha = 0.85f),
+                border = BorderStroke(1.dp, if (hasValhallaFiles) Color(0xFF10B981) else Color(0xFF5B86FF)),
+                modifier = Modifier.defaultMinSize(minHeight = 40.dp).clickable(onClick = onOpenValhallaDialog)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -90,7 +93,7 @@ internal fun NavigationTopHudColumn(
                         modifier = Modifier
                             .size(8.dp)
                             .clip(CircleShape)
-                            .background(if (hasValhallaFiles) Color(0xFF10B981) else Color(0xFF38BDF8))
+                            .background(if (hasValhallaFiles) Color(0xFF10B981) else Color(0xFF00E5FF))
                     )
                     Text(
                         text = if (hasValhallaFiles) "ملاحة أوفلاين (فالدالا)" else "تقريبي • أضف أوفلاين 📥",
@@ -105,21 +108,21 @@ internal fun NavigationTopHudColumn(
                 IconButton(
                     onClick = onOpenDestChooser,
                     modifier = Modifier
-                        .size(44.dp)
-                        .background(Color(0xFF131C2E).copy(alpha = 0.92f), RoundedCornerShape(12.dp))
+                        .size(48.dp)
+                        .background(Color(0xFF0B1220).copy(alpha = 0.92f), RoundedCornerShape(14.dp))
                 ) {
                     Icon(
                         imageVector = Icons.Default.AltRoute,
                         contentDescription = "تغيير الوجهة",
-                        tint = Color(0xFF10B981)
+                        tint = Color(0xFF5B86FF)
                     )
                 }
 
                 IconButton(
                     onClick = onToggleMute,
                     modifier = Modifier
-                        .size(44.dp)
-                        .background(Color(0xFF131C2E).copy(alpha = 0.92f), RoundedCornerShape(12.dp))
+                        .size(48.dp)
+                        .background(Color(0xFF0B1220).copy(alpha = 0.92f), RoundedCornerShape(14.dp))
                 ) {
                     Icon(
                         imageVector = if (isVoiceMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
@@ -149,8 +152,35 @@ internal fun NavigationTopHudColumn(
             }
         }
 
-        // GPS Signal Loss Warning Banner
-        AnimatedVisibility(visible = isGpsWeak) {
+        // GPS / LocationHealth Status Warning Banner
+        if (locationStatus != null && locationStatus !is LocationStatus.Good) {
+            val (msg, bg, clickable) = when (locationStatus) {
+                is LocationStatus.NoPermission -> Triple("فعّل إذن الموقع للانطلاق من موقعك الفعلي", Color(0xFFB45309), true)
+                is LocationStatus.ProviderOff -> Triple("خدمة GPS متوقفة — اضغط لتشغيلها", Color(0xFFB91C1C), true)
+                is LocationStatus.Searching -> Triple("جاري البحث عن إشارة GPS لتحديد نقطة البداية...", Color(0xFF1E3A8A), false)
+                is LocationStatus.Weak -> Triple("إشارة GPS ضعيفة (±${locationStatus.accuracyM.toInt()}م)", Color(0xFFB45309), false)
+                is LocationStatus.Good -> Triple("", Color.Transparent, false)
+            }
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = bg.copy(alpha = 0.92f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .let { if (clickable) it.clickable(onClick = onLocationStatusAction) else it }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.GpsNotFixed, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Text(msg, color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    if (clickable) {
+                        Text("تفعيل", color = Color(0xFF00E5FF), fontSize = 11.5.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+        } else if (isGpsWeak) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = Color(0xFFEF4444).copy(alpha = 0.9f),
@@ -170,8 +200,8 @@ internal fun NavigationTopHudColumn(
         // Search Bar
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF131C2E).copy(alpha = 0.95f),
-            border = BorderStroke(1.dp, Color(0xFF2563EB).copy(alpha = 0.4f)),
+            color = Color(0xFF0B1220).copy(alpha = 0.95f),
+            border = BorderStroke(1.dp, Color(0xFF3A6BFF).copy(alpha = 0.45f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column {
@@ -275,8 +305,8 @@ internal fun NavigationTopHudColumn(
         // Dynamic Turn-by-Turn Card
         Surface(
             shape = RoundedCornerShape(18.dp),
-            color = Color(0xFF0F172A).copy(alpha = 0.96f),
-            border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.5f)),
+            color = Color(0xFF0B1220).copy(alpha = 0.96f),
+            border = BorderStroke(1.dp, Color(0xFF3A6BFF).copy(alpha = 0.55f)),
             shadowElevation = 8.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -289,7 +319,7 @@ internal fun NavigationTopHudColumn(
                     modifier = Modifier
                         .size(52.dp)
                         .background(
-                            Brush.linearGradient(listOf(Color(0xFF059669), Color(0xFF10B981))),
+                            Brush.verticalGradient(listOf(Color(0xFF5B86FF), Color(0xFF3A6BFF), Color(0xFF2851D8))),
                             RoundedCornerShape(14.dp)
                         ),
                     contentAlignment = Alignment.Center
@@ -367,11 +397,11 @@ internal fun NavigationFloatingWidgets(
         IconButton(
             onClick = onRecenterClick,
             modifier = Modifier
-                .size(46.dp)
-                .background(Color(0xFF0F172A).copy(alpha = 0.9f), CircleShape)
+                .size(48.dp)
+                .background(Color(0xFF0B1220).copy(alpha = 0.92f), CircleShape)
                 .clip(CircleShape)
         ) {
-            Icon(imageVector = Icons.Default.MyLocation, contentDescription = "موقعي", tint = Color.White)
+            Icon(imageVector = Icons.Default.MyLocation, contentDescription = "موقعي", tint = Color(0xFF00E5FF))
         }
     }
 }

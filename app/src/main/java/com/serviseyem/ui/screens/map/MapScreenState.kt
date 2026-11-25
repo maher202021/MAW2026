@@ -60,6 +60,8 @@ class MapScreenState(
     var isEsriImageryActive by mutableStateOf(false)
     var eumetEnabled by mutableStateOf(false)
     var eumetLayerName by mutableStateOf("")
+    // [نظام خرائط وملاحة عالمي - ملكنا]
+    var isDataSaverActive by mutableStateOf(false)
     var isMoreLayersSheetOpen by mutableStateOf(false)
     var isEarthquakeLayerActive by mutableStateOf(false)
     var lastEarthquakeUpdateTime by mutableStateOf<Long?>(null)
@@ -113,7 +115,8 @@ class MapScreenState(
                     it.isDeadZoneOverlayActive,
                     it.isReliabilityLayerActive,
                     it.isRoadSafetyActive,
-                    it.isContextualSuggestionVisible
+                    it.isContextualSuggestionVisible,
+                    it.isDataSaverActive
                 )
             },
             restore = { saved ->
@@ -142,6 +145,7 @@ class MapScreenState(
                     isReliabilityLayerActive = (saved.getOrNull(19) as? Boolean) ?: false
                     isRoadSafetyActive = (saved.getOrNull(20) as? Boolean) ?: false
                     isContextualSuggestionVisible = (saved.getOrNull(21) as? Boolean) ?: true
+                    isDataSaverActive = (saved.getOrNull(22) as? Boolean) ?: false
                 }
             }
         )

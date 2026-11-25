@@ -10,12 +10,8 @@ internal fun buildNavigationLeafletHtml(
     destName: String,
     preferOsmOffline: Boolean = false
 ): String {
-    val primaryTileUrl = if (preferOsmOffline) {
-        "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-    } else {
-        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-    }
-    val subdomainsValue = if (preferOsmOffline) "abc" else "abcd"
+    val primaryTileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    val subdomainsValue = "abc"
     val safeDestJson = JSONObject.quote(destName)
     return """
     <!DOCTYPE html>
@@ -26,9 +22,9 @@ internal fun buildNavigationLeafletHtml(
         <link rel="stylesheet" href="file:///android_asset/leaflet.css" />
         <script src="file:///android_asset/leaflet.js"></script>
         <style>
-            html, body, #map { width: 100%; height: 100%; margin: 0; padding: 0; background: #070B14; }
+            html, body, #map { width: 100%; height: 100%; margin: 0; padding: 0; background: #14202E; }
             #map.no-tiles {
-                background: #131B26;
+                background: #14202E;
                 background-image:
                     linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
                     linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
@@ -41,9 +37,9 @@ internal fun buildNavigationLeafletHtml(
                 left: 50%;
                 transform: translateX(-50%);
                 z-index: 900;
-                background: rgba(15, 23, 42, 0.92);
+                background: rgba(11, 18, 32, 0.94);
                 color: #FCD34D;
-                border: 1px solid rgba(252, 211, 77, 0.4);
+                border: 1px solid rgba(252, 211, 77, 0.45);
                 border-radius: 999px;
                 padding: 6px 14px;
                 font-size: 11px;
@@ -55,7 +51,7 @@ internal fun buildNavigationLeafletHtml(
                 bottom: 8px;
                 right: 8px;
                 z-index: 900;
-                background: rgba(15, 23, 42, 0.78);
+                background: rgba(11, 18, 32, 0.82);
                 color: #CBD5E1;
                 border-radius: 8px;
                 padding: 2px 7px;
@@ -83,18 +79,38 @@ internal fun buildNavigationLeafletHtml(
         <div id="offline-tiles-banner">الخريطة تحتاج إنترنت أو حزمة عرض</div>
         <div id="osm-attribution">© مساهمو OpenStreetMap</div>
         <script>
+            // [نظام خرائط وملاحة عالمي - ملكنا]
+            function isValidGps(lat, lng) {
+                return isFinite(lat) && isFinite(lng) && !(lat === 0 && lng === 0) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+            }
+            var initStartValid = isValidGps($startLat, $startLon);
+            var initCenter = initStartValid ? [$startLat, $startLon] : [$endLat, $endLon];
+
             var map = L.map('map', {
-                center: [$startLat, $startLon],
-                zoom: 15,
-                zoomControl: false
+                center: initCenter,
+                zoom: initStartValid ? 15 : 14,
+                zoomControl: false,
+                zoomSnap: 1,
+                zoomDelta: 1,
+                preferCanvas: true,
+                fadeAnimation: false,
+                markerZoomAnimation: false
             });
 
+            var TRANSPARENT_TILE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
             var baseLayer = L.tileLayer('$primaryTileUrl', {
                 maxZoom: 19,
-                subdomains: '$subdomainsValue'
+                subdomains: '$subdomainsValue',
+                updateWhenIdle: true,
+                updateWhenZooming: false,
+                keepBuffer: 4,
+                detectRetina: false,
+                crossOrigin: false,
+                errorTileUrl: TRANSPARENT_TILE
             }).addTo(map);
 
             var tileErrCount = 0;
+            var notifiedTilesLoaded = false;
             function notifyNavTiles(failing) {
                 var el = document.getElementById('map');
                 var b = document.getElementById('offline-tiles-banner');
@@ -108,25 +124,40 @@ internal fun buildNavigationLeafletHtml(
                     return;
                 }
                 tileErrCount++;
-                if (tileErrCount >= 4) notifyNavTiles(true);
+                if (tileErrCount >= 5) {
+                    notifyNavTiles(true);
+                    if (window.NavBridge && window.NavBridge.onTilesFailed) {
+                        window.NavBridge.onTilesFailed();
+                    }
+                }
             });
-            baseLayer.on('tileload', function() { tileErrCount = 0; notifyNavTiles(false); });
+            baseLayer.on('tileload', function() {
+                tileErrCount = 0;
+                notifyNavTiles(false);
+                if (!notifiedTilesLoaded) {
+                    notifiedTilesLoaded = true;
+                    if (window.NavBridge && window.NavBridge.onTilesLoaded) {
+                        window.NavBridge.onTilesLoaded();
+                    }
+                }
+            });
 
             function makeUserHtml(deg) {
                 var rot = isFinite(deg) ? deg : 0;
                 return '<div class="user-nav-arrow" style="transform:rotate(' + rot + 'deg)">' +
                     '<svg width="30" height="30" viewBox="0 0 30 30">' +
-                    '<circle cx="15" cy="15" r="12" fill="rgba(0,229,255,0.22)" />' +
+                    '<circle cx="15" cy="15" r="12" fill="rgba(58,107,255,0.28)" />' +
                     '<path d="M15 3 L23 24 L15 19 L7 24 Z" fill="#00E5FF" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/>' +
                     '</svg></div>';
             }
             var userIcon = L.divIcon({ className: '', html: makeUserHtml(0), iconSize: [30, 30], iconAnchor: [15, 15] });
             var destIcon = L.divIcon({ className: 'dest-pulse', iconSize: [26, 26], iconAnchor: [13, 13] });
 
-            var userMarker = L.marker([$startLat, $startLon], { icon: userIcon }).addTo(map);
+            var userMarker = initStartValid ? L.marker([$startLat, $startLon], { icon: userIcon }).addTo(map) : null;
             var destMarker = L.marker([$endLat, $endLon], { icon: destIcon }).addTo(map).bindPopup('');
             destMarker.getPopup().setContent($safeDestJson);
 
+            var routeGlow = null;
             var routePolyline = null;
             var pickMode = false;
             window.setPickMode = function(on) {
@@ -146,33 +177,54 @@ internal fun buildNavigationLeafletHtml(
             };
 
             window.renderNavigationRoute = function(sLat, sLng, eLat, eLng, coords, title) {
-                userMarker.setLatLng([sLat, sLng]);
-                destMarker.setLatLng([eLat, eLng]);
+                if (isValidGps(sLat, sLng)) {
+                    if (!userMarker) {
+                        userMarker = L.marker([sLat, sLng], { icon: userIcon }).addTo(map);
+                    } else {
+                        userMarker.setLatLng([sLat, sLng]);
+                    }
+                }
+                if (isValidGps(eLat, eLng)) {
+                    destMarker.setLatLng([eLat, eLng]);
+                }
                 destMarker.setPopupContent(String(title || ''));
 
-                if (routePolyline) {
-                    map.removeLayer(routePolyline);
-                }
+                if (routeGlow) { map.removeLayer(routeGlow); routeGlow = null; }
+                if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; }
 
                 var latlngs = [];
                 for (var i = 0; i < coords.length; i++) {
-                    latlngs.push([coords[i][0], coords[i][1]]);
+                    if (isValidGps(coords[i][0], coords[i][1])) {
+                        latlngs.push([coords[i][0], coords[i][1]]);
+                    }
                 }
 
-                routePolyline = L.polyline(latlngs, {
-                    color: '#00E5FF',
-                    weight: 6,
-                    opacity: 0.9,
-                    lineJoin: 'round'
-                }).addTo(map);
-
                 if (latlngs.length > 0) {
+                    routeGlow = L.polyline(latlngs, {
+                        color: '#1D4ED8',
+                        weight: 12,
+                        opacity: 0.35,
+                        lineJoin: 'round'
+                    }).addTo(map);
+                    routePolyline = L.polyline(latlngs, {
+                        color: '#00E5FF',
+                        weight: 6,
+                        opacity: 0.95,
+                        lineJoin: 'round'
+                    }).addTo(map);
                     map.fitBounds(routePolyline.getBounds(), { padding: [80, 80] });
+                } else if (isValidGps(eLat, eLng)) {
+                    map.setView([eLat, eLng], 15, { animate: true });
                 }
             };
 
             window.updateUserPosition = function(lat, lng, heading) {
-                userMarker.setLatLng([lat, lng]);
+                if (!isValidGps(lat, lng)) return;
+                if (!userMarker) {
+                    userMarker = L.marker([lat, lng], { icon: userIcon }).addTo(map);
+                } else {
+                    userMarker.setLatLng([lat, lng]);
+                }
                 var arrow = userMarker.getElement() && userMarker.getElement().querySelector('.user-nav-arrow');
                 if (arrow && isFinite(heading)) {
                     arrow.style.transform = 'rotate(' + heading + 'deg)';
@@ -188,7 +240,13 @@ internal fun buildNavigationLeafletHtml(
             };
 
             window.centerOnUser = function(lat, lng) {
+                if (!isValidGps(lat, lng)) return;
                 map.setView([lat, lng], 17, { animate: true });
+            };
+
+            window.centerOnDestination = function(lat, lng) {
+                if (!isValidGps(lat, lng)) return;
+                map.setView([lat, lng], 15, { animate: true });
             };
         </script>
     </body>

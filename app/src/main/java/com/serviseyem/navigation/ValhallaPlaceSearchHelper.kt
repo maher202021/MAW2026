@@ -29,24 +29,34 @@ internal object ValhallaPlaceSearchHelper {
         val t = "$type $category $name".lowercase(Locale.US)
         return when {
             t.contains("bureau_de_change") || t.contains("bank") || t.contains("صراف") || t.contains("كريمي") || t.contains("عمقي") -> "💱"
-            t.contains("mosque") || t.contains("place_of_worship") || t.contains("مسجد") || t.contains("جامع") -> "🕌"
-            t.contains("school") || t.contains("college") || t.contains("university") || t.contains("مدرس") || t.contains("جامع") -> "🎓"
+            t.contains("university") || t.contains("college") || t.contains("جامعة") || t.contains("كلية") -> "🎓"
+            t.contains("mosque") || t.contains("place_of_worship") || t.contains("مسجد") || (t.contains("جامع") && !t.contains("جامعة")) -> "🕌"
+            t.contains("school") || t.contains("مدرس") || t.contains("معهد") -> "🎓"
             t.contains("hospital") || t.contains("clinic") || t.contains("pharmacy") || t.contains("مستشف") || t.contains("صيدلي") -> "🏥"
+            t.contains("restaurant") || t.contains("cafe") || t.contains("fast_food") || t.contains("مطعم") || t.contains("كافيه") || t.contains("بوفيه") -> "🍽️"
+            t.contains("shop") || t.contains("marketplace") || t.contains("supermarket") || t.contains("متجر") || t.contains("سوق") || t.contains("بقالة") -> "🛍️"
+            t.contains("events_venue") || t.contains("wedding") || t.contains("صالة") || t.contains("قاعة") || t.contains("عرس") -> "🎊"
             t.contains("roundabout") || t.contains("جول") || t.contains("دوار") -> "🔄"
             t.contains("fuel") || t.contains("وقود") || t.contains("بترول") -> "⛽"
             t.contains("city") || t.contains("town") -> "🏙️"
             t.contains("village") || t.contains("hamlet") -> "🏡"
-            t.contains("road") || t.contains("street") || t.contains("residential") || t.contains("primary") || t.contains("secondary") || t.contains("tertiary") || t.contains("شارع") -> "🛣️"
+            t.contains("road") || t.contains("street") || t.contains("شارع") -> "🛣️"
             else -> "📍"
         }
     }
 
-    private fun fetchNominatim(q: String, anchorLat: Double, anchorLng: Double): List<RealValhallaNavigator.SearchAddressResult> {
+    // [نظام خرائط وملاحة عالمي - ملكنا]
+    private fun fetchNominatim(
+        q: String,
+        anchorLat: Double,
+        anchorLng: Double,
+        useViewbox: Boolean = true
+    ): List<RealValhallaNavigator.SearchAddressResult> {
         var conn: HttpURLConnection? = null
         return try {
             val encoded = URLEncoder.encode(q, "UTF-8")
-            val viewboxParam = if (isValidLatLng(anchorLat, anchorLng)) {
-                "&viewbox=${anchorLng - 0.6},${anchorLat + 0.6},${anchorLng + 0.6},${anchorLat - 0.6}"
+            val viewboxParam = if (useViewbox && isValidLatLng(anchorLat, anchorLng)) {
+                "&viewbox=${anchorLng - 0.6},${anchorLat + 0.6},${anchorLng + 0.6},${anchorLat - 0.6}&bounded=0"
             } else ""
             val url = URL("https://nominatim.openstreetmap.org/search?format=json&q=$encoded&countrycodes=ye&limit=15&addressdetails=1&accept-language=ar$viewboxParam")
             conn = (url.openConnection() as HttpURLConnection).apply {
@@ -64,11 +74,25 @@ internal object ValhallaPlaceSearchHelper {
                 val lat = obj.optString("lat", "0").toDoubleOrNull() ?: obj.optDouble("lat", 0.0)
                 val lon = obj.optString("lon", "0").toDoubleOrNull() ?: obj.optDouble("lon", 0.0)
                 if (lat != 0.0 && lon != 0.0 && !lat.isNaN() && !lon.isNaN()) {
-                    val short = displayName.split(",").firstOrNull()?.trim().orEmpty().ifBlank { displayName }
+                    val addr = obj.optJSONObject("address")
+                    val house = addr?.optString("house_number", "").orEmpty()
+                    val road = addr?.optString("road", "").orEmpty()
+                    val suburb = addr?.optString("suburb", "").orEmpty().ifBlank { addr?.optString("neighbourhood", "").orEmpty() }
+                    val city = addr?.optString("city", "").orEmpty().ifBlank { addr?.optString("state", "").orEmpty() }
+                    val baseShort = displayName.split(",").firstOrNull()?.trim().orEmpty().ifBlank { displayName }
+                    val short = when {
+                        house.isNotBlank() && road.isNotBlank() -> "$road — مبنى $house"
+                        else -> baseShort
+                    }
+                    val richDisplay = listOfNotNull(
+                        short.takeIf { it.isNotBlank() },
+                        suburb.takeIf { it.isNotBlank() && !short.contains(it) },
+                        city.takeIf { it.isNotBlank() && !short.contains(it) }
+                    ).joinToString(" — ").ifBlank { displayName }
                     val type = obj.optString("type", "place")
                     out.add(
                         RealValhallaNavigator.SearchAddressResult(
-                            displayName = displayName,
+                            displayName = richDisplay,
                             shortName = short,
                             latitude = lat,
                             longitude = lon,
@@ -78,7 +102,11 @@ internal object ValhallaPlaceSearchHelper {
                     )
                 }
             }
-            out
+            if (out.isEmpty() && useViewbox && isValidLatLng(anchorLat, anchorLng)) {
+                fetchNominatim(q, anchorLat, anchorLng, useViewbox = false)
+            } else {
+                out
+            }
         } catch (e: Exception) {
             Log.d(TAG, "Nominatim search error: ${e.message}")
             emptyList()
@@ -145,16 +173,28 @@ internal object ValhallaPlaceSearchHelper {
         return when {
             normQuery.contains("صراف") || normQuery.contains("حوال") || normQuery.contains("بنك") || normQuery.contains("مصرف") || normQuery.contains("كريمي") || normQuery.contains("عمقي") ->
                 """node["amenity"~"bureau_de_change|bank|atm"]"""
+            normQuery.contains("جامعة") || normQuery.contains("كلية") || normQuery.contains("اكاديمية") ->
+                """nwr["amenity"~"college|university"]"""
             normQuery.contains("جامع") || normQuery.contains("مسجد") || normQuery.contains("مصلى") ->
                 """nwr["amenity"="place_of_worship"]"""
             normQuery.contains("مدرس") || normQuery.contains("ثانوي") || normQuery.contains("معهد") ->
-                """nwr["amenity"~"school|college|university"]"""
+                """nwr["amenity"="school"]"""
+            normQuery.contains("مطعم") || normQuery.contains("كافيه") || normQuery.contains("بوفيه") || normQuery.contains("اكل") ->
+                """nwr["amenity"~"restaurant|cafe|fast_food"]"""
+            normQuery.contains("محل") || normQuery.contains("متجر") || normQuery.contains("سوق") || normQuery.contains("بقالة") || normQuery.contains("سوبرماركت") ->
+                """nwr["shop"~"supermarket|convenience|general|mall|marketplace"]"""
+            normQuery.contains("صالة") || normQuery.contains("قاعة") || normQuery.contains("افراح") || normQuery.contains("عرس") ->
+                """nwr["amenity"~"events_venue|community_centre|social_centre"]"""
             normQuery.contains("جول") || normQuery.contains("دوار") ->
                 """nwr["junction"="roundabout"]"""
             normQuery.contains("مستشف") || normQuery.contains("مستوصف") || normQuery.contains("صيدلي") || normQuery.contains("عياد") ->
                 """nwr["amenity"~"hospital|clinic|pharmacy"]"""
             normQuery.contains("محط") || normQuery.contains("بترول") || normQuery.contains("وقود") ->
                 """nwr["amenity"="fuel"]"""
+            normQuery.contains("شارع") || normQuery.contains("طريق") || normQuery.contains("خط") ->
+                """way["highway"]["name"]"""
+            normQuery.contains("بيت") || normQuery.contains("منزل") || normQuery.contains("عماره") || normQuery.contains("حاره") ->
+                """nwr["addr:housenumber"]"""
             else -> null
         }
     }
@@ -240,12 +280,17 @@ internal object ValhallaPlaceSearchHelper {
         val q = query.trim()
         if (q.length < 2) return@withContext emptyList()
         val normQ = ArabicNormalizer.normalize(q)
+        val looseTokens = ArabicNormalizer.normalizeLoose(q).split(' ').filter { it.length >= 2 }
+        fun matchesTokens(text: String): Boolean {
+            val looseTarget = ArabicNormalizer.normalizeLoose(text)
+            return looseTarget.contains(normQ) || (looseTokens.isNotEmpty() && looseTokens.all { looseTarget.contains(it) })
+        }
 
         val localResults = mutableListOf<RealValhallaNavigator.SearchAddressResult>()
 
         providers.filter {
             it.latitude != 0.0 && it.longitude != 0.0 &&
-                ArabicNormalizer.normalize("${it.name} ${it.area} ${it.localNeighborhood} ${it.profession} ${it.specialization}").contains(normQ)
+                matchesTokens("${it.name} ${it.area} ${it.localNeighborhood} ${it.profession} ${it.specialization}")
         }.take(6).forEach {
             localResults.add(
                 RealValhallaNavigator.SearchAddressResult(
@@ -260,7 +305,7 @@ internal object ValhallaPlaceSearchHelper {
         }
         stores.filter {
             it.latitude != 0.0 && it.longitude != 0.0 &&
-                ArabicNormalizer.normalize("${it.name} ${it.localNeighborhood} ${it.description} ${it.categoryId}").contains(normQ)
+                matchesTokens("${it.name} ${it.localNeighborhood} ${it.description} ${it.categoryId}")
         }.take(6).forEach {
             localResults.add(
                 RealValhallaNavigator.SearchAddressResult(

@@ -9,13 +9,13 @@
     <link rel="stylesheet" href="MarkerCluster.Default.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { width: 100%; height: 100%; background-color: #0F172A; overflow: hidden; font-family: sans-serif; }
-        #map { width: 100%; height: 100vh; background-color: #0F172A; }
+        body { width: 100%; height: 100%; background-color: #14202E; overflow: hidden; font-family: sans-serif; }
+        #map { width: 100%; height: 100vh; background-color: #14202E; }
         #map.no-tiles {
-            background-color: #0B1220;
+            background-color: #101A28;
             background-image:
-                linear-gradient(rgba(148,163,184,.08) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(148,163,184,.08) 1px, transparent 1px);
+                linear-gradient(rgba(91,134,255,.09) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(91,134,255,.09) 1px, transparent 1px);
             background-size: 64px 64px;
         }
         #offline-tiles-banner {
@@ -53,9 +53,9 @@
         .mode-3d-tilted { transform: rotateX(25deg) scale(1.05); transform-origin: 50% 80%; transition: transform 0.5s ease; }
         
         .custom-pin-container { display: flex; flex-direction: column; align-items: center; cursor: pointer; transform: translate(-50%, -100%); }
-        .custom-pin-head { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #ffffff; border: 2px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.7); z-index: 10; }
+        .custom-pin-head { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #ffffff; border: 2px solid #ffffff; box-shadow: 0 5px 14px rgba(0,0,0,0.68), inset 0 1px 2px rgba(255,255,255,0.45); z-index: 10; }
         .custom-pin-arrow { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #ffffff; margin-top: -1px; }
-        .custom-pin-label { background: rgba(15, 23, 42, 0.95); color: #ffffff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; margin-top: 3px; white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; border: 1px solid rgba(255,255,255,0.35); box-shadow: 0 3px 8px rgba(0,0,0,0.5); direction: rtl; text-align: right; }
+        .custom-pin-label { background: rgba(11, 18, 32, 0.94); color: #F8FAFC; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; margin-top: 3px; white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; border: 1px solid rgba(91,134,255,0.55); box-shadow: 0 4px 10px rgba(0,0,0,0.55); direction: rtl; text-align: right; }
 
         .user-pulse-marker { position: relative; width: 28px; height: 28px; }
         .user-dot { width: 18px; height: 18px; background: #00E5FF; border: 3px solid #ffffff; border-radius: 50%; position: absolute; top: 5px; left: 5px; box-shadow: 0 0 16px #00E5FF; z-index: 5; }
@@ -100,25 +100,25 @@
             font-family: system-ui, -apple-system, Roboto, sans-serif;
         }
         .sat-dropdown-btn {
-            background: rgba(15, 23, 42, 0.94);
+            background: linear-gradient(180deg, rgba(40, 81, 216, 0.92), rgba(15, 23, 42, 0.96));
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(0, 229, 255, 0.4);
+            border: 1px solid rgba(91, 134, 255, 0.65);
             border-radius: 20px;
             padding: 8px 14px;
-            color: #00E5FF;
+            color: #E0F2FE;
             font-size: 11px;
             font-weight: 700;
             display: flex;
             align-items: center;
             gap: 6px;
             cursor: pointer;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255,255,255,0.22);
             transition: all 0.25s ease;
         }
         .sat-dropdown-btn:hover {
-            border-color: rgba(0, 229, 255, 0.7);
-            background: rgba(15, 23, 42, 0.98);
+            border-color: rgba(0, 229, 255, 0.8);
+            background: linear-gradient(180deg, rgba(58, 107, 255, 0.95), rgba(15, 23, 42, 0.98));
         }
         .sat-dropdown-btn:active {
             transform: scale(0.96);
@@ -374,8 +374,8 @@
             <div class="sat-menu-item" data-key="sentinel2" onclick="selectSatLayer('sentinel2', 'Sentinel-2 OGC حية')">
                 <span class="sat-item-icon">🛰️</span>
                 <div class="sat-item-info">
-                    <div class="sat-item-title">Sentinel-2 (Sentinel Hub + EOX)</div>
-                    <div class="sat-item-desc">أحدث صور Sentinel-2 المباشرة بدون مفاتيح</div>
+                    <div class="sat-item-title">Sentinel-2 (EOX cloudless عالية الدقة)</div>
+                    <div class="sat-item-desc">أحدث صور Sentinel-2 بدقة عالية بدون أي مفاتيح أو اشتراكات</div>
                 </div>
             </div>
             <div class="sat-menu-item" data-key="eumet" onclick="selectSatLayer('eumet', 'قمر Meteosat مباشر (EUMETSAT)')">
@@ -479,8 +479,24 @@
             }
         }
 
+        // [نظام خرائط وملاحة عالمي - ملكنا]
+        var TILE_OPTS = {
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            keepBuffer: 4,
+            detectRetina: false,
+            crossOrigin: false,
+            errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+        };
+        var isDataSaverActive = false;
+        var currentAdminMaxZoom = 22;
+
+        function mergedTileOpts(opts) {
+            return Object.assign({}, TILE_OPTS, opts || {});
+        }
+
         function createResilientTileLayer(url, options, fallbackUrl) {
-            var layer = L.tileLayer(url, options);
+            var layer = L.tileLayer(url, mergedTileOpts(options));
             if (fallbackUrl) {
                 layer.on('tileerror', function(error, tile) {
                     if (tile && !tile._hasFallback) {
@@ -500,20 +516,20 @@
             ),
             'osm_ar': createResilientTileLayer(
                 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                { maxZoom: 22, attribution: 'OSM' },
-                'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+                { maxZoom: 22, maxNativeZoom: 19, attribution: 'OSM' },
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
             ),
             'navigation': createResilientTileLayer(
-                'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-                { maxZoom: 22, attribution: 'Carto Voyager Navigation' },
-                'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                { maxZoom: 22, maxNativeZoom: 19, attribution: 'OSM Navigation' },
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
             ),
-            'nasa_gibs': L.tileLayer(getNasaGibsTileUrl(), {
+            'nasa_gibs': L.tileLayer(getNasaGibsTileUrl(), mergedTileOpts({
                 maxZoom: 18,
                 maxNativeZoom: 9,
                 opacity: 0.90,
                 attribution: 'NASA GIBS'
-            }),
+            })),
             'eox_cloudless': createResilientTileLayer(
                 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg',
                 { maxZoom: 22, maxNativeZoom: 13, attribution: 'Sentinel-2 cloudless 2023 by EOX IT Services GmbH' },
@@ -620,6 +636,7 @@
         }
         window.setEumet = setEumet;
 
+        // [نظام خرائط وملاحة عالمي - ملكنا]
         function initMap() {
             try {
                 map = L.map('map', {
@@ -628,7 +645,12 @@
                     zoomControl: false,
                     attributionControl: false,
                     maxZoom: 22,
-                    minZoom: 4
+                    minZoom: 4,
+                    zoomSnap: 1,
+                    zoomDelta: 1,
+                    preferCanvas: true,
+                    fadeAnimation: false,
+                    markerZoomAnimation: false
                 });
 
                 // Default to Esri World Imagery (free high-res satellite)
@@ -641,17 +663,88 @@
                 groupMembersLayerGroup = L.layerGroup().addTo(map);
                 waypointLayerGroup = L.layerGroup().addTo(map);
 
-                map.on('click', function(e) {
-                    if (isMeasureMode && e && e.latlng) {
-                        addMeasurePoint(e.latlng);
-                    } else if (isPickMode && e && e.latlng && window.AndroidBridge && window.AndroidBridge.onMapPicked) {
-                        window.AndroidBridge.onMapPicked(e.latlng.lat, e.latlng.lng);
-                    } else if (window.AndroidBridge) {
-                        window.AndroidBridge.onMapClicked();
+                var longPressTimer = null;
+                var tapTimer = null;
+                var pointerStartX = 0;
+                var pointerStartY = 0;
+                var longPressFiredAt = 0;
+                var lastMultiOrZoomAt = 0;
+                var mapContainer = map.getContainer();
+
+                function cancelGestures() {
+                    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                    if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+                }
+
+                mapContainer.addEventListener('pointerdown', function(ev) {
+                    if (ev.isPrimary === false) {
+                        lastMultiOrZoomAt = Date.now();
+                        cancelGestures();
+                        return;
                     }
+                    pointerStartX = ev.clientX;
+                    pointerStartY = ev.clientY;
+                    if (longPressTimer) clearTimeout(longPressTimer);
+                    if (isMeasureMode || isPickMode) return;
+                    longPressTimer = setTimeout(function() {
+                        longPressTimer = null;
+                        if (Date.now() - lastMultiOrZoomAt < 350) return;
+                        try {
+                            var rect = mapContainer.getBoundingClientRect();
+                            var pt = L.point(pointerStartX - rect.left, pointerStartY - rect.top);
+                            var ll = map.containerPointToLatLng(pt);
+                            longPressFiredAt = Date.now();
+                            if (window.AndroidBridge && window.AndroidBridge.onMapLongPress) {
+                                window.AndroidBridge.onMapLongPress(ll.lat, ll.lng);
+                            }
+                        } catch (err) {}
+                    }, 550);
+                }, { passive: true });
+
+                mapContainer.addEventListener('pointermove', function(ev) {
+                    if (longPressTimer) {
+                        var dx = ev.clientX - pointerStartX;
+                        var dy = ev.clientY - pointerStartY;
+                        if ((dx * dx + dy * dy) > 144) {
+                            cancelGestures();
+                        }
+                    }
+                }, { passive: true });
+
+                mapContainer.addEventListener('pointerup', function() {
+                    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                }, { passive: true });
+
+                mapContainer.addEventListener('pointercancel', cancelGestures, { passive: true });
+
+                map.on('dblclick zoomstart movestart', function() {
+                    lastMultiOrZoomAt = Date.now();
+                    cancelGestures();
                 });
 
-                if (window.AndroidBridge) window.AndroidBridge.onMapReady();
+                map.on('click', function(e) {
+                    var now = Date.now();
+                    if (now - lastMultiOrZoomAt < 350 || now - longPressFiredAt < 450) return;
+                    if (isMeasureMode && e && e.latlng) {
+                        addMeasurePoint(e.latlng);
+                        return;
+                    }
+                    if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+                    var clickLatLng = e && e.latlng ? e.latlng : null;
+                    tapTimer = setTimeout(function() {
+                        tapTimer = null;
+                        if (Date.now() - lastMultiOrZoomAt < 350) return;
+                        if (isPickMode && clickLatLng && window.AndroidBridge && window.AndroidBridge.onMapPicked) {
+                            window.AndroidBridge.onMapPicked(clickLatLng.lat, clickLatLng.lng);
+                        } else if (window.AndroidBridge && window.AndroidBridge.onMapTap) {
+                            window.AndroidBridge.onMapTap();
+                        } else if (window.AndroidBridge && window.AndroidBridge.onMapClicked) {
+                            window.AndroidBridge.onMapClicked();
+                        }
+                    }, 300);
+                });
+
+                if (window.AndroidBridge && window.AndroidBridge.onMapReady) window.AndroidBridge.onMapReady();
             } catch(e) {
                 document.body.innerHTML = '<div style="color:white; padding:20px; text-align:center;">خطأ في تحميل الخريطة</div>';
             }
@@ -662,6 +755,9 @@
             var banner = document.getElementById('offline-tiles-banner');
             if (banner) {
                 banner.style.display = failing ? 'block' : 'none';
+            }
+            if (!failing && window.AndroidBridge && window.AndroidBridge.onTilesLoaded) {
+                try { window.AndroidBridge.onTilesLoaded(); } catch (e) {}
             }
             if (failing && window.AndroidBridge && window.AndroidBridge.onTilesFailedOffline) {
                 try { window.AndroidBridge.onTilesFailedOffline(currentLayerKey || ''); } catch (e) {}
@@ -854,14 +950,19 @@
             }
         }
 
+        // [نظام خرائط وملاحة عالمي - ملكنا]
         function ensureArabicLabelsLayerObject() {
             if (!arabicLabelsOverlayLayer) {
-                arabicLabelsOverlayLayer = L.tileLayer('https://a.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png', {
-                    maxZoom: 22,
-                    opacity: 0.95,
-                    zIndex: 450,
-                    attribution: 'Carto Labels Overlay'
-                });
+                arabicLabelsOverlayLayer = L.tileLayer(
+                    'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+                    mergedTileOpts({
+                        maxZoom: 22,
+                        maxNativeZoom: 19,
+                        opacity: 0.95,
+                        zIndex: 451,
+                        attribution: 'Esri World Boundaries and Places'
+                    })
+                );
             }
             return arabicLabelsOverlayLayer;
         }
@@ -871,7 +972,7 @@
             var satelliteKeys = ['esri_world_imagery', 'eox_cloudless', 'esri_wayback', 'imagery', 'eox', 'esri', 'default'];
             var isSatellite = satelliteKeys.indexOf(baseKey || currentLayerKey) !== -1;
             var layer = ensureArabicLabelsLayerObject();
-            if (isLabelsOverlayActive && isSatellite) {
+            if (isLabelsOverlayActive && isSatellite && !isDataSaverActive) {
                 if (!map.hasLayer(layer)) layer.addTo(map);
             } else {
                 if (map.hasLayer(layer)) map.removeLayer(layer);
@@ -879,12 +980,12 @@
             var titleEl = document.getElementById('labelsToggleTitle');
             var itemEl = document.getElementById('labelsToggleItem');
             if (titleEl) {
-                titleEl.textContent = isLabelsOverlayActive
+                titleEl.textContent = (isLabelsOverlayActive && !isDataSaverActive)
                     ? 'تسميات الشوارع والمدن: مفعّل ✓'
                     : 'تسميات الشوارع والمدن: إيقاف';
             }
             if (itemEl) {
-                itemEl.classList.toggle('active', isLabelsOverlayActive);
+                itemEl.classList.toggle('active', isLabelsOverlayActive && !isDataSaverActive);
             }
         }
 
@@ -893,6 +994,24 @@
             syncLabelsOverlayForCurrentBase(currentLayerKey);
         }
         window.setLabelsOverlay = setLabelsOverlay;
+
+        function setDataSaver(enable) {
+            isDataSaverActive = !!enable;
+            if (map) {
+                var targetMax = isDataSaverActive ? Math.min(currentAdminMaxZoom, 16) : currentAdminMaxZoom;
+                map.setMaxZoom(targetMax);
+                if (map.getZoom() > targetMax) {
+                    map.setZoom(targetMax);
+                }
+            }
+            if (isDataSaverActive) {
+                toggleNasaGibsLayer(false);
+                toggleRainViewerLayer(false);
+                setEumet(false, '');
+            }
+            syncLabelsOverlayForCurrentBase(currentLayerKey);
+        }
+        window.setDataSaver = setDataSaver;
 
         // 🏷️ طبقة تسميات المدن والشوارع بالعربية فوق أي طبقة فضائية
         function toggleArabicLabelsOverlay(event) {
@@ -994,9 +1113,9 @@
             if (enable) {
                 if (!sentinel2HubLayer) {
                     sentinel2HubLayer = createResilientTileLayer(
-                        'https://services.sentinel-hub.com/ogc/wmts/426742d7-5264-4424-9b2d-f952c4819d45?LAYER=TRUE-COLOR&REQUEST=GetTile&TILEMATRIXSET=PopularWebMercator&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
-                        { maxZoom: 20, maxNativeZoom: 14, attribution: 'Sentinel-2 Hub OGC API' },
-                        'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg'
+                        'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg',
+                        { maxZoom: 20, maxNativeZoom: 15, attribution: 'Sentinel-2 (EOX cloudless / Esri World Imagery)' },
+                        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
                     );
                 }
                 if (!map.hasLayer(sentinel2HubLayer)) {
@@ -1242,6 +1361,7 @@
         }
 
         function updateUserLocation(lat, lng, acc, pan) {
+            if (!isFinite(lat) || !isFinite(lng) || (lat === 0 && lng === 0)) return;
             userLat = lat; userLng = lng;
             var icon = L.divIcon({
                 className: '',
@@ -1279,17 +1399,36 @@
         }
 
         var activeRouteLine = null;
+        var activeRouteGlowLine = null;
         var destinationMarker = null;
 
         function drawRoute(lat1, lng1, lat2, lng2, color, destName) {
             drawRealRoute(lat1, lng1, lat2, lng2, color, destName);
         }
 
+        function addStyledRoutePolyline(latLngs, routeColor, dashed) {
+            activeRouteGlowLine = L.polyline(latLngs, {
+                color: '#1D4ED8',
+                weight: 10,
+                opacity: 0.35,
+                lineJoin: 'round',
+                lineCap: 'round'
+            }).addTo(map);
+            activeRouteLine = L.polyline(latLngs, {
+                color: routeColor || '#00E5FF',
+                weight: dashed ? 5 : 6,
+                opacity: 0.96,
+                dashArray: dashed ? '10, 8' : null,
+                lineJoin: 'round',
+                lineCap: 'round'
+            }).addTo(map);
+        }
+
         function drawRealRoute(lat1, lng1, lat2, lng2, color, destName) {
             clearRoute();
-            var routeColor = safeColor(color, '#0D5C3A');
+            var routeColor = safeColor(color, '#00E5FF');
 
-            var destHtml = '<div style="background:#0D5C3A; color:#E0F2FE; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; border:2px solid #D4A017; box-shadow:0 0 12px #0D5C3A; font-size:18px;">🏁</div>';
+            var destHtml = '<div style="background:#2851D8; color:#FFFFFF; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; border:2px solid #00E5FF; box-shadow:0 0 14px rgba(0,229,255,0.75); font-size:18px;">🏁</div>';
             destinationMarker = L.marker([lat2, lng2], {
                 icon: L.divIcon({ className: '', html: destHtml, iconSize: [36, 36], iconAnchor: [18, 18] })
             }).addTo(map);
@@ -1307,13 +1446,7 @@
                     if (data && data.routes && data.routes.length > 0) {
                         var coordinates = data.routes[0].geometry.coordinates;
                         var latLngs = coordinates.map(function(pt) { return [pt[1], pt[0]]; });
-                        activeRouteLine = L.polyline(latLngs, {
-                            color: routeColor,
-                            weight: 6,
-                            opacity: 0.95,
-                            lineJoin: 'round',
-                            lineCap: 'round'
-                        }).addTo(map);
+                        addStyledRoutePolyline(latLngs, routeColor, false);
                         map.fitBounds(activeRouteLine.getBounds(), { padding: [60, 60], maxZoom: 18 });
                     } else {
                         drawFallbackStraightRoute(lat1, lng1, lat2, lng2, routeColor);
@@ -1328,7 +1461,7 @@
             clearRoute();
             var pts = (typeof waypointsJson === 'string') ? JSON.parse(waypointsJson) : waypointsJson;
             if (!pts || !Array.isArray(pts) || pts.length < 2) return;
-            var routeColor = safeColor(color, '#10B981');
+            var routeColor = safeColor(color, '#00E5FF');
             setWaypointMarkers(pts);
             var coordParam = pts.map(function(p) { return p.lng + ',' + p.lat; }).join(';');
             var osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' + coordParam + '?overview=full&geometries=geojson';
@@ -1337,21 +1470,15 @@
                 .then(function(data) {
                     if (data && data.routes && data.routes.length > 0) {
                         var latLngs = data.routes[0].geometry.coordinates.map(function(pt) { return [pt[1], pt[0]]; });
-                        activeRouteLine = L.polyline(latLngs, {
-                            color: routeColor, weight: 6, opacity: 0.95, lineJoin: 'round', lineCap: 'round'
-                        }).addTo(map);
+                        addStyledRoutePolyline(latLngs, routeColor, false);
                         map.fitBounds(activeRouteLine.getBounds(), { padding: [60, 60], maxZoom: 16 });
                     } else {
-                        activeRouteLine = L.polyline(pts.map(function(p) { return [p.lat, p.lng]; }), {
-                            color: routeColor, weight: 5, opacity: 0.9, dashArray: '10, 8'
-                        }).addTo(map);
+                        addStyledRoutePolyline(pts.map(function(p) { return [p.lat, p.lng]; }), routeColor, true);
                         map.fitBounds(activeRouteLine.getBounds(), { padding: [60, 60], maxZoom: 16 });
                     }
                 })
                 .catch(function() {
-                    activeRouteLine = L.polyline(pts.map(function(p) { return [p.lat, p.lng]; }), {
-                        color: routeColor, weight: 5, opacity: 0.9, dashArray: '10, 8'
-                    }).addTo(map);
+                    addStyledRoutePolyline(pts.map(function(p) { return [p.lat, p.lng]; }), routeColor, true);
                     map.fitBounds(activeRouteLine.getBounds(), { padding: [60, 60], maxZoom: 16 });
                 });
         }
@@ -1365,16 +1492,15 @@
                 [midLat, midLng],
                 [lat2, lng2]
             ];
-            activeRouteLine = L.polyline(waypoints, {
-                color: color || '#0D5C3A',
-                weight: 5,
-                opacity: 0.9,
-                dashArray: '10, 8'
-            }).addTo(map);
+            addStyledRoutePolyline(waypoints, color || '#00E5FF', true);
             map.fitBounds(activeRouteLine.getBounds(), { padding: [60, 60], maxZoom: 18 });
         }
 
         function clearRoute() {
+            if (activeRouteGlowLine) {
+                map.removeLayer(activeRouteGlowLine);
+                activeRouteGlowLine = null;
+            }
             if (activeRouteLine) {
                 map.removeLayer(activeRouteLine);
                 activeRouteLine = null;
@@ -1388,7 +1514,11 @@
         function setCity(n, lat, lng, z) { map.setView([lat, lng], z || 15, { animate: true }); }
         function zoomIn() { if (map) map.zoomIn(); }
         function zoomOut() { if (map) map.zoomOut(); }
-        function recenterUser() { if (map) map.setView([userLat, userLng], 17, { animate: true }); }
+        function recenterUser() {
+            if (map && isFinite(userLat) && isFinite(userLng) && (userLat !== 0 || userLng !== 0)) {
+                map.setView([userLat, userLng], 17, { animate: true });
+            }
+        }
         
         // Fly smoothly to a specific result
         function flyToLocation(lat, lng, z) {
@@ -1521,9 +1651,11 @@
                     satDropdown.style.display = (!cfg.showSatMenu && !cfg.showMeasureTool) ? 'none' : 'block';
                 }
                 if (map && typeof cfg.maxZoom === 'number' && cfg.maxZoom >= 10 && cfg.maxZoom <= 22) {
-                    map.setMaxZoom(cfg.maxZoom);
-                    if (map.getZoom() > cfg.maxZoom) {
-                        map.setZoom(cfg.maxZoom);
+                    currentAdminMaxZoom = cfg.maxZoom;
+                    var effectiveMax = isDataSaverActive ? Math.min(cfg.maxZoom, 16) : cfg.maxZoom;
+                    map.setMaxZoom(effectiveMax);
+                    if (map.getZoom() > effectiveMax) {
+                        map.setZoom(effectiveMax);
                     }
                 }
             } catch (e) {}

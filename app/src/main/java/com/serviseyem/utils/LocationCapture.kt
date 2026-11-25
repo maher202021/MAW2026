@@ -28,11 +28,12 @@ object LocationCapture {
         return fine || coarse
     }
 
+    // [نظام خرائط وملاحة عالمي - ملكنا]
     @SuppressLint("MissingPermission")
     suspend fun fresh(
         context: Context,
-        timeoutMs: Long = 15_000L,
-        maxAccuracyM: Float = 150f
+        timeoutMs: Long = 8_000L,
+        maxAccuracyM: Float = 500f
     ): Location? {
         val appCtx = context.applicationContext
         if (!hasLocationPermission(appCtx)) return null

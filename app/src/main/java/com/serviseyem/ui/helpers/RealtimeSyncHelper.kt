@@ -29,6 +29,18 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
     }
 
     val firestoreListeners = java.util.concurrent.CopyOnWriteArrayList<ListenerRegistration>()
+    val staffListeners = java.util.concurrent.CopyOnWriteArrayList<ListenerRegistration>()
+
+    private fun Query.addStaffSnapshotListenerReg(listener: EventListener<QuerySnapshot>): ListenerRegistration? {
+        return try {
+            val reg = this.addSnapshotListener(listener)
+            staffListeners.add(reg)
+            reg
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 
     private fun Query.addSnapshotListenerReg(listener: EventListener<QuerySnapshot>): ListenerRegistration? {
         return try {
@@ -54,7 +66,24 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
         }
     }
 
+    fun clearStaffListeners() {
+        try {
+            val iterator = staffListeners.iterator()
+            while (iterator.hasNext()) {
+                try {
+                    iterator.next().remove()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            staffListeners.clear()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     fun clearListeners() {
+        clearStaffListeners()
         try {
             val iterator = firestoreListeners.iterator()
             while (iterator.hasNext()) {
@@ -79,10 +108,6 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
             }
             if (snapshot != null && snapshot.exists()) {
                 try {
-                    // Security migration: Cleanup legacy adminPassword from Firestore if present
-                    if (snapshot.contains("adminPassword")) {
-                        snapshot.reference.update("adminPassword", com.google.firebase.firestore.FieldValue.delete())
-                    }
                     snapshot.toObject(AdminSettingsEntity::class.java)?.let {
                         appState._settings.value = it.copy(ownerPassword = "")
                         appState._maxKmRadius.value = it.maxSearchRadiusKm
@@ -377,103 +402,6 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
             }
         }
 
-        // 9. Pending Providers & Join Requests (Realtime Listener 9)
-        db.collection("pending_providers").limit(REALTIME_QUERY_LIMIT).addSnapshotListenerReg { snapshot, error ->
-            if (error == null && snapshot != null) {
-                val fetched = snapshot.documents.mapNotNull { doc ->
-                    try {
-                        val parsed = doc.toObject(PendingProviderEntity::class.java)
-                        parsed?.copy(id = doc.id)
-                    } catch (e: Exception) {
-                        try {
-                            PendingProviderEntity(
-                                id = doc.id,
-                                name = doc.getString("name") ?: doc.getString("ownerName") ?: "",
-                                phone = doc.getString("phone") ?: "",
-                                categoryId = doc.getString("categoryId") ?: "",
-                                area = doc.getString("area") ?: "",
-                                localNeighborhood = doc.getString("localNeighborhood") ?: "",
-                                status = doc.getString("status") ?: "PENDING",
-                                profession = doc.getString("profession") ?: "",
-                                specialization = doc.getString("specialization") ?: "",
-                                customCategoryName = doc.getString("customCategoryName") ?: "",
-                                passwordHash = doc.getString("passwordHash") ?: doc.getString("password") ?: "",
-                                ownerName = doc.getString("ownerName") ?: "",
-                                description = doc.getString("description") ?: "",
-                                workingHours = doc.getString("workingHours") ?: "",
-                                hasDelivery = doc.getBoolean("hasDelivery") == true,
-                                hasEmergency = doc.getBoolean("hasEmergency") == true,
-                                experienceYears = doc.getString("experienceYears") ?: "",
-                                submittedAt = doc.getLong("submittedAt") ?: doc.getLong("createdAt") ?: 0L,
-                                ownerId = doc.getString("ownerId") ?: "",
-                                uid = doc.getString("uid") ?: ""
-                            )
-                        } catch (ex: Exception) {
-                            null
-                        }
-                    }
-                }
-                appState._pendingProviders.value = fetched
-            }
-        }
-
-        // 10. Registered Users (Realtime Listener 10)
-        db.collection("registered_users").limit(REALTIME_QUERY_LIMIT).addSnapshotListenerReg { snapshot, error ->
-            if (error == null && snapshot != null) {
-                val fetched = snapshot.documents.mapNotNull { doc ->
-                    val data = doc.data?.toMutableMap() ?: mutableMapOf()
-                    data["id"] = doc.id
-                    data
-                }
-                appState._registeredUsersList.value = fetched
-                appState._registeredUsersCount.value = fetched.size
-            }
-        }
-
-        // 11. Fallback Sync from join_requests collection for any pending request
-        db.collection("join_requests").whereEqualTo("status", "PENDING").limit(REALTIME_QUERY_LIMIT).addSnapshotListenerReg { snapshot, error ->
-            if (error == null && snapshot != null) {
-                val currentPending = appState._pendingProviders.value.associateBy { it.id }.toMutableMap()
-                var updated = false
-                snapshot.documents.forEach { doc ->
-                    val docId = doc.id
-                    if (!currentPending.containsKey(docId)) {
-                        val type = doc.getString("type") ?: "CLIENT"
-                        val phone = doc.getString("phone") ?: ""
-                        val name = doc.getString("businessName")?.takeIf { it.isNotBlank() }
-                            ?: doc.getString("fullName")
-                            ?: doc.getString("name")
-                            ?: "طلب انضمام جديد"
-                        val city = doc.getString("city") ?: doc.getString("area") ?: ""
-                        val entity = PendingProviderEntity(
-                            id = docId,
-                            name = name,
-                            phone = phone,
-                            categoryId = type,
-                            area = city,
-                            localNeighborhood = doc.getString("neighborhood") ?: "",
-                            status = "PENDING",
-                            profession = type,
-                            providerType = type,
-                            ownerName = doc.getString("ownerName") ?: doc.getString("fullName") ?: "",
-                            description = doc.getString("description") ?: "",
-                            workingHours = doc.getString("workingHours") ?: "",
-                            hasDelivery = doc.getBoolean("hasDelivery") == true,
-                            hasEmergency = doc.getBoolean("hasEmergency") == true,
-                            experienceYears = doc.getString("experienceYears") ?: "",
-                            submittedAt = doc.getLong("submittedAt") ?: doc.getLong("createdAt") ?: 0L,
-                            uid = doc.getString("uid") ?: ""
-                        )
-                        currentPending[docId] = entity
-                        updated = true
-                    }
-                }
-                if (updated) {
-                    appState._pendingProviders.value = currentPending.values.toList()
-                }
-            }
-        }
-
         // 12. Products & Services Realtime Snapshot Listener
         db.collection("products").limit(REALTIME_QUERY_LIMIT).addSnapshotListenerReg { snapshot, error ->
             if (error != null) {
@@ -673,6 +601,107 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    fun setupStaffRealtimeListeners(appState: com.serviseyem.ui.helpers.AppState) {
+        clearStaffListeners()
+
+        // 1. Pending Providers (Staff Listener)
+        db.collection("pending_providers").limit(REALTIME_QUERY_LIMIT).addStaffSnapshotListenerReg { snapshot, error ->
+            if (error == null && snapshot != null) {
+                val fetched = snapshot.documents.mapNotNull { doc ->
+                    try {
+                        val parsed = doc.toObject(PendingProviderEntity::class.java)
+                        parsed?.copy(id = doc.id)
+                    } catch (e: Exception) {
+                        try {
+                            PendingProviderEntity(
+                                id = doc.id,
+                                name = doc.getString("name") ?: doc.getString("ownerName") ?: "",
+                                phone = doc.getString("phone") ?: "",
+                                categoryId = doc.getString("categoryId") ?: "",
+                                area = doc.getString("area") ?: "",
+                                localNeighborhood = doc.getString("localNeighborhood") ?: "",
+                                status = doc.getString("status") ?: "PENDING",
+                                profession = doc.getString("profession") ?: "",
+                                specialization = doc.getString("specialization") ?: "",
+                                customCategoryName = doc.getString("customCategoryName") ?: "",
+                                passwordHash = doc.getString("passwordHash") ?: doc.getString("password") ?: "",
+                                ownerName = doc.getString("ownerName") ?: "",
+                                description = doc.getString("description") ?: "",
+                                workingHours = doc.getString("workingHours") ?: "",
+                                hasDelivery = doc.getBoolean("hasDelivery") == true,
+                                hasEmergency = doc.getBoolean("hasEmergency") == true,
+                                experienceYears = doc.getString("experienceYears") ?: "",
+                                submittedAt = doc.getLong("submittedAt") ?: doc.getLong("createdAt") ?: 0L,
+                                ownerId = doc.getString("ownerId") ?: "",
+                                uid = doc.getString("uid") ?: ""
+                            )
+                        } catch (ex: Exception) {
+                            null
+                        }
+                    }
+                }
+                appState._pendingProviders.value = fetched
+            }
+        }
+
+        // 2. Registered Users (Staff Listener)
+        db.collection("registered_users").limit(REALTIME_QUERY_LIMIT).addStaffSnapshotListenerReg { snapshot, error ->
+            if (error == null && snapshot != null) {
+                val fetched = snapshot.documents.mapNotNull { doc ->
+                    val data = doc.data?.toMutableMap() ?: mutableMapOf()
+                    data["id"] = doc.id
+                    data
+                }
+                appState._registeredUsersList.value = fetched
+                appState._registeredUsersCount.value = fetched.size
+            }
+        }
+
+        // 3. Fallback Sync from join_requests collection for any pending request (Staff Listener)
+        db.collection("join_requests").whereEqualTo("status", "PENDING").limit(REALTIME_QUERY_LIMIT).addStaffSnapshotListenerReg { snapshot, error ->
+            if (error == null && snapshot != null) {
+                val currentPending = appState._pendingProviders.value.associateBy { it.id }.toMutableMap()
+                var updated = false
+                snapshot.documents.forEach { doc ->
+                    val docId = doc.id
+                    if (!currentPending.containsKey(docId)) {
+                        val type = doc.getString("type") ?: "CLIENT"
+                        val phone = doc.getString("phone") ?: ""
+                        val name = doc.getString("businessName")?.takeIf { it.isNotBlank() }
+                            ?: doc.getString("fullName")
+                            ?: doc.getString("name")
+                            ?: "طلب انضمام جديد"
+                        val city = doc.getString("city") ?: doc.getString("area") ?: ""
+                        val entity = PendingProviderEntity(
+                            id = docId,
+                            name = name,
+                            phone = phone,
+                            categoryId = type,
+                            area = city,
+                            localNeighborhood = doc.getString("neighborhood") ?: "",
+                            status = "PENDING",
+                            profession = type,
+                            providerType = type,
+                            ownerName = doc.getString("ownerName") ?: doc.getString("fullName") ?: "",
+                            description = doc.getString("description") ?: "",
+                            workingHours = doc.getString("workingHours") ?: "",
+                            hasDelivery = doc.getBoolean("hasDelivery") == true,
+                            hasEmergency = doc.getBoolean("hasEmergency") == true,
+                            experienceYears = doc.getString("experienceYears") ?: "",
+                            submittedAt = doc.getLong("submittedAt") ?: doc.getLong("createdAt") ?: 0L,
+                            uid = doc.getString("uid") ?: ""
+                        )
+                        currentPending[docId] = entity
+                        updated = true
+                    }
+                }
+                if (updated) {
+                    appState._pendingProviders.value = currentPending.values.toList()
                 }
             }
         }

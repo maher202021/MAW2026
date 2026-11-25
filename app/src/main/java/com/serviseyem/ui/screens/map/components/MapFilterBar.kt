@@ -188,11 +188,12 @@ fun MapFilterBar(
                 .widthIn(max = 600.dp)
                 .align(Alignment.CenterHorizontally)
         ) {
+            // [نظام خرائط وملاحة عالمي - ملكنا]
             Surface(
                 shape = RoundedCornerShape(28.dp),
-                color = Color(0xFF1E293B).copy(alpha = 0.95f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
-                shadowElevation = 8.dp,
+                color = Color(0xFF0B1220).copy(alpha = 0.94f),
+                border = BorderStroke(1.dp, Color(0xFF5B86FF).copy(alpha = 0.35f)),
+                shadowElevation = 10.dp,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
@@ -222,13 +223,13 @@ fun MapFilterBar(
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
                             strokeWidth = 2.dp,
-                            color = Color(0xFF10B981)
+                            color = Color(0xFF00E5FF)
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "بحث",
-                            tint = Color(0xFF10B981),
+                            tint = Color(0xFF5B86FF),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -258,7 +259,7 @@ fun MapFilterBar(
                             unfocusedContainerColor = Color.Transparent,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            cursorColor = Color(0xFF10B981)
+                            cursorColor = Color(0xFF00E5FF)
                         ),
                         keyboardOptions = KeyboardOptions(
                             imeAction = ImeAction.Search
@@ -303,7 +304,7 @@ fun MapFilterBar(
                         Icon(
                             imageVector = Icons.Default.Mic,
                             contentDescription = "بحث صوتي",
-                            tint = Color(0xFF10B981),
+                            tint = Color(0xFF00E5FF),
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -331,132 +332,7 @@ fun MapFilterBar(
             }
         }
 
-        // Google-Maps-style 1-Tap Quick City & Category Chips Row
-        val quickCategories = remember {
-            listOf(
-                Triple("ALL", "الكل", "🌐"),
-                Triple("PROVIDERS", "فنيون", "🔧"),
-                Triple("STORES", "متاجر", "🛒"),
-                Triple("RESTAURANTS", "مطاعم", "🍳"),
-                Triple("MEDICAL", "طبي", "💊"),
-                Triple("PROPERTIES", "عقارات", "🏠")
-            )
-        }
-        var showCityDropdown by remember { mutableStateOf(false) }
 
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = 600.dp)
-                .align(Alignment.CenterHorizontally),
-            contentPadding = PaddingValues(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            item(key = "city_selector_chip") {
-                Box {
-                    Surface(
-                        onClick = {
-                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                            showCityDropdown = true
-                        },
-                        shape = RoundedCornerShape(20.dp),
-                        color = Color(0xFF0F172A).copy(alpha = 0.90f),
-                        border = BorderStroke(
-                            1.dp,
-                            if (selectedCity != "الكل" && selectedCity.isNotBlank()) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.18f)
-                        ),
-                        shadowElevation = 4.dp,
-                        modifier = Modifier
-                            .defaultMinSize(minHeight = 38.dp)
-                            .testTag("map_city_quick_chip")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.LocationOn,
-                                contentDescription = "المدينة",
-                                tint = Color(0xFF00E5FF),
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Text(
-                                text = if (selectedCity == "الكل" || selectedCity.isBlank()) "كل اليمن" else selectedCity,
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Icon(
-                                imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.7f),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-
-                    DropdownMenu(
-                        expanded = showCityDropdown,
-                        onDismissRequest = { showCityDropdown = false },
-                        modifier = Modifier.background(Color(0xFF0F172A))
-                    ) {
-                        governorates.forEach { gov ->
-                            val isSelected = (gov == "الكل" && (selectedCity == "الكل" || selectedCity.isBlank())) || selectedCity == gov
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = if (gov == "الكل") "كل اليمن 🇾🇪" else gov,
-                                        color = if (isSelected) Color(0xFF10B981) else Color.White,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        fontSize = 13.sp
-                                    )
-                                },
-                                onClick = {
-                                    onCitySelected(gov)
-                                    showCityDropdown = false
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            items(quickCategories, key = { it.first }) { (catKey, catLabel, emoji) ->
-                val isSelected = selectedCategory == catKey
-                Surface(
-                    onClick = {
-                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                        onCategorySelected(catKey)
-                    },
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) Color(0xFF10B981) else Color(0xFF0F172A).copy(alpha = 0.88f),
-                    border = BorderStroke(
-                        1.dp,
-                        if (isSelected) Color(0xFF10B981) else Color.White.copy(alpha = 0.16f)
-                    ),
-                    shadowElevation = if (isSelected) 6.dp else 3.dp,
-                    modifier = Modifier
-                        .defaultMinSize(minHeight = 38.dp)
-                        .testTag("map_cat_chip_$catKey")
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Text(text = emoji, fontSize = 13.sp)
-                        Text(
-                            text = catLabel,
-                            color = if (isSelected) Color.Black else Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold
-                        )
-                    }
-                }
-            }
-        }
 
         // 🧠 Smart Autocomplete Results (Floating Layer)
         AnimatedVisibility(
@@ -596,7 +472,7 @@ fun MapFilterBar(
     if (showFiltersSheet) {
         ModalBottomSheet(
             onDismissRequest = { showFiltersSheet = false },
-            containerColor = Color(0xFF0F172A),
+            containerColor = Color(0xFF0B1220),
             dragHandle = { BottomSheetDefaults.DragHandle(color = Color.White.copy(alpha = 0.3f)) },
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
         ) {
@@ -632,15 +508,15 @@ fun MapFilterBar(
                             label = { Text(catLabel) },
                             colors = FilterChipDefaults.filterChipColors(
                                 containerColor = Color.White.copy(alpha = 0.05f),
-                                selectedContainerColor = Color(0xFF10B981).copy(alpha = 0.2f),
+                                selectedContainerColor = Color(0xFF3A6BFF).copy(alpha = 0.28f),
                                 labelColor = Color.White.copy(alpha = 0.8f),
-                                selectedLabelColor = Color(0xFF10B981)
+                                selectedLabelColor = Color(0xFF93C5FD)
                             )
                         )
                     }
                 }
 
-                Divider(color = Color.White.copy(alpha = 0.1f))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
 
                 Text("الموقع الجغرافي (المحافظة)", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
                 FlowRow(
@@ -662,9 +538,9 @@ fun MapFilterBar(
                             label = { Text(label) },
                             colors = FilterChipDefaults.filterChipColors(
                                 containerColor = Color.White.copy(alpha = 0.05f),
-                                selectedContainerColor = Color(0xFF10B981).copy(alpha = 0.2f),
+                                selectedContainerColor = Color(0xFF3A6BFF).copy(alpha = 0.28f),
                                 labelColor = Color.White.copy(alpha = 0.8f),
-                                selectedLabelColor = Color(0xFF10B981)
+                                selectedLabelColor = Color(0xFF93C5FD)
                             )
                         )
                     }
@@ -672,11 +548,11 @@ fun MapFilterBar(
 
                 Button(
                     onClick = { showFiltersSheet = false },
-                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp).padding(top = 16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A6BFF)),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
-                    Text("عرض النتائج المحسنة", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text("عرض النتائج المحسنة", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }

@@ -115,49 +115,44 @@ class RegistrationHelper(
                 ).filter { it.isNotBlank() }.distinct()
 
                 val existingConflict = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    var foundMsg: String? = null
-                    for (ph in phoneVariants) {
-                        val jrSnap = runCatching {
-                            com.google.android.gms.tasks.Tasks.await(
-                                db.collection("join_requests").whereEqualTo("phone", ph).get()
-                            )
-                        }.getOrNull()
-                        val hasActiveJoin = jrSnap?.documents?.any { doc ->
-                            val st = (doc.getString("status") ?: doc.getString("approvalStatus") ?: "").uppercase()
-                            st in listOf("PENDING", "APPROVED", "ACCEPTED")
-                        } == true
-                        if (hasActiveJoin) {
-                            foundMsg = "يوجد طلب انضمام أو حساب نشط مسجل بالفعل لرقم الهاتف هذا"
-                            break
-                        }
-
-                        val pendSnap = runCatching {
-                            com.google.android.gms.tasks.Tasks.await(
-                                db.collection("pending_providers").whereEqualTo("phone", ph).get()
-                            )
-                        }.getOrNull()
-                        val hasActivePending = pendSnap?.documents?.any { doc ->
-                            val st = (doc.getString("status") ?: "PENDING").uppercase()
-                            st == "PENDING"
-                        } == true
-                        if (hasActivePending) {
-                            foundMsg = "يوجد طلب انضمام قيد المراجعة بالفعل لرقم الهاتف هذا"
-                            break
-                        }
-
-                        val userExists = runCatching {
-                            !com.google.android.gms.tasks.Tasks.await(
-                                db.collection("registered_users").whereEqualTo("phone", ph).limit(1).get()
-                            ).isEmpty || com.google.android.gms.tasks.Tasks.await(
-                                db.collection("registered_users").document(ph).get()
-                            ).exists()
-                        }.getOrDefault(false)
-                        if (userExists) {
-                            foundMsg = "يوجد حساب مستخدم مسجل بالفعل لرقم الهاتف هذا"
-                            break
-                        }
+                    val queryVariants = phoneVariants.take(10)
+                    val jrSnap = runCatching {
+                        com.google.android.gms.tasks.Tasks.await(
+                            db.collection("join_requests").whereIn("phone", queryVariants).get()
+                        )
+                    }.getOrNull()
+                    val hasActiveJoin = jrSnap?.documents?.any { doc ->
+                        val st = (doc.getString("status") ?: doc.getString("approvalStatus") ?: "").uppercase()
+                        st in listOf("PENDING", "APPROVED", "ACCEPTED")
+                    } == true
+                    if (hasActiveJoin) {
+                        return@withContext "يوجد طلب انضمام أو حساب نشط مسجل بالفعل لرقم الهاتف هذا"
                     }
-                    foundMsg
+
+                    val pendSnap = runCatching {
+                        com.google.android.gms.tasks.Tasks.await(
+                            db.collection("pending_providers").whereIn("phone", queryVariants).get()
+                        )
+                    }.getOrNull()
+                    val hasActivePending = pendSnap?.documents?.any { doc ->
+                        val st = (doc.getString("status") ?: "PENDING").uppercase()
+                        st == "PENDING"
+                    } == true
+                    if (hasActivePending) {
+                        return@withContext "يوجد طلب انضمام قيد المراجعة بالفعل لرقم الهاتف هذا"
+                    }
+
+                    val userExists = runCatching {
+                        !com.google.android.gms.tasks.Tasks.await(
+                            db.collection("registered_users").whereIn("phone", queryVariants).limit(1).get()
+                        ).isEmpty || com.google.android.gms.tasks.Tasks.await(
+                            db.collection("registered_users").document(cleanPhone).get()
+                        ).exists()
+                    }.getOrDefault(false)
+                    if (userExists) {
+                        return@withContext "يوجد حساب مستخدم مسجل بالفعل لرقم الهاتف هذا"
+                    }
+                    null
                 }
 
                 if (existingConflict != null) {
@@ -192,8 +187,8 @@ class RegistrationHelper(
                     Triple(selfie, idCard, work)
                 }
 
-                val encSelfie = if (finalSelfie.isNotEmpty()) SecurityCryptoUtils.encrypt(finalSelfie) else ""
-                val encIdCard = if (finalIdCard.isNotEmpty()) SecurityCryptoUtils.encrypt(finalIdCard) else ""
+                val encSelfie = finalSelfie
+                val encIdCard = if (finalIdCard.isNotEmpty()) SecurityCryptoUtils.encryptCrossDevice(finalIdCard) else ""
                 val requestType = when (catId.uppercase()) {
                     "STORE" -> "STORE"
                     "RESTAURANT" -> "RESTAURANT"
@@ -423,7 +418,7 @@ class RegistrationHelper(
             "name" to name,
             "phone" to cleanPhone,
             "residence" to residence,
-            "password" to hashedPassword,
+            "password" to "",
             "passwordHash" to hashedPassword,
             "isApproved" to false,
             "createdAt" to System.currentTimeMillis()

@@ -226,6 +226,12 @@ fun BackdoorLoginDialog(
                                     )
                                     when (result) {
                                         "OWNER" -> {
+                                            com.serviseyem.utils.SecureAdminStorage.storeCredentials(
+                                                context = context,
+                                                ownerEmail = trimmedUser,
+                                                ownerPassword = trimmedPass
+                                            )
+                                            viewModel.adminViewModel.syncRolePermissionsNow("OWNER", trimmedUser)
                                             failedAttempts = 0
                                             securityManager.resetAttempts()
                                             onDismiss()
@@ -233,6 +239,12 @@ fun BackdoorLoginDialog(
                                             viewModel.triggerNotification("🔓 مرحباً بك بصلاحية المالك - تم تسجيل الدخول بنجاح!")
                                         }
                                         "ADMIN" -> {
+                                            com.serviseyem.utils.SecureAdminStorage.storeCredentials(
+                                                context = context,
+                                                adminEmail = trimmedUser,
+                                                adminPassword = trimmedPass
+                                            )
+                                            viewModel.adminViewModel.syncRolePermissionsNow("ADMIN", trimmedUser)
                                             failedAttempts = 0
                                             securityManager.resetAttempts()
                                             onDismiss()
@@ -240,18 +252,24 @@ fun BackdoorLoginDialog(
                                             viewModel.triggerNotification("🔓 مرحباً بك بصلاحية مدير النظام - تم تسجيل الدخول بنجاح!")
                                         }
                                         "SUPERVISOR" -> {
-                                            val matchingSup = supervisors.find {
+                                            val matchedSup = supervisors.find {
                                                 it.id.equals(trimmedUser, ignoreCase = true) ||
                                                     it.name.trim().equals(trimmedUser, ignoreCase = true)
-                                            } ?: com.serviseyem.data.SupervisorEntity(
+                                            }
+                                            val resolvedPerms = com.serviseyem.security.AdminPermissionResolver.resolve(
+                                                role = "SUPERVISOR",
+                                                explicit = matchedSup?.permissions,
+                                                matrix = viewModel.rolePermissionsMap.value
+                                            ).toList()
+                                            val matchingSup = (matchedSup ?: com.serviseyem.data.SupervisorEntity(
                                                 id = trimmedUser,
                                                 name = trimmedUser,
-                                                role = "SUPERVISOR",
-                                                permissions = listOf("MANAGE_PROVIDERS", "MANAGE_BOOKINGS", "MANAGE_REQUESTS")
-                                            )
+                                                role = "SUPERVISOR"
+                                            )).copy(permissions = resolvedPerms)
                                             failedAttempts = 0
                                             securityManager.resetAttempts()
                                             viewModel.setSupervisorSession(matchingSup)
+                                            viewModel.adminViewModel.syncRolePermissionsNow("SUPERVISOR", trimmedUser, resolvedPerms)
                                             onDismiss()
                                             viewModel.authenticateAdmin(context, "SUPERVISOR", rememberMe)
                                             viewModel.triggerNotification("🔓 مرحباً بك المشرف: ${matchingSup.name} - تم تسجيل الدخول بنجاح!")

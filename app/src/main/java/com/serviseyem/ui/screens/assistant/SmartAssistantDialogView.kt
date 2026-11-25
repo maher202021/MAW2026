@@ -90,6 +90,12 @@ fun SmartAssistantDialogView(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.clearAssistantHistoryTrigger.collect {
+            assistantViewModel.clearChat()
+        }
+    }
+
     LaunchedEffect(chatHistory.size) {
         if (chatHistory.isNotEmpty()) {
             listState.animateScrollToItem(chatHistory.size - 1)

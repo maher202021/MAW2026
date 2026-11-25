@@ -228,21 +228,27 @@ object CrossFuzzySearchEngine {
 
         // 3. البحث في المعالم اليمنية (مساجد، مدارس، صرافات، مستشفيات، جولات، شوارع)
         val allLandmarks = getOrLoadLandmarks(context)
-        val queryTokens = cleanQuery.split(' ', '-', '•', '/').map { it.trim() }.filter { it.length >= 2 }
+        val looseQuery = ArabicNormalizer.normalizeLoose(rawQuery)
+        val queryTokens = looseQuery.split(' ', '-', '•', '/').map { it.trim() }.filter { it.length >= 2 }
         allLandmarks.forEach { landmark ->
-            val combinedTarget = normalizeText("${landmark.name} ${landmark.area} ${landmark.city} ${landmark.type}")
+            val rawTarget = "${landmark.name} ${landmark.area} ${landmark.city} ${landmark.type}"
+            val combinedTarget = normalizeText(rawTarget)
+            val looseTarget = ArabicNormalizer.normalizeLoose(rawTarget)
             val isDialectMatch = dialectVariants.any { variant -> variant.length >= 2 && combinedTarget.contains(variant) }
-            val scoreName = calculateMatchScore(cleanQuery, normalizeText(landmark.name))
+            val scoreName = maxOf(
+                calculateMatchScore(cleanQuery, normalizeText(landmark.name)),
+                calculateMatchScore(looseQuery, ArabicNormalizer.normalizeLoose(landmark.name))
+            )
             val scoreCombined = if (scoreName >= 70) scoreName else calculateMatchScore(cleanQuery, combinedTarget)
 
-            val tokenMatches = if (queryTokens.isNotEmpty()) queryTokens.count { token -> combinedTarget.contains(token) } else 0
+            val tokenMatches = if (queryTokens.isNotEmpty()) queryTokens.count { token -> looseTarget.contains(token) } else 0
             val allTokensMatch = queryTokens.isNotEmpty() && tokenMatches == queryTokens.size
 
             val effectiveScore = maxOf(
                 scoreName,
                 scoreCombined,
                 when {
-                    allTokensMatch -> 85
+                    allTokensMatch -> 86
                     tokenMatches > 0 -> 58 + tokenMatches * 10
                     else -> 0
                 },
@@ -254,11 +260,15 @@ object CrossFuzzySearchEngine {
                 val distText = dist?.let { " • يبعد ${formatDistance(it)}" } ?: ""
                 val typeIcon = when {
                     landmark.type.contains("صراف") || landmark.type.contains("بنك") || landmark.name.contains("كريمي", true) || landmark.name.contains("صراف") -> "💱"
-                    landmark.type.contains("مسجد") || landmark.type.contains("جامع") || landmark.name.contains("جامع") || landmark.name.contains("مسجد") -> "🕌"
+                    landmark.type.contains("جامعة") || landmark.name.contains("جامعة") || landmark.name.contains("كلية") -> "🎓"
+                    landmark.type.contains("مسجد") || (landmark.type.contains("جامع") && !landmark.type.contains("جامعة")) || (landmark.name.contains("جامع") && !landmark.name.contains("جامعة")) || landmark.name.contains("مسجد") -> "🕌"
                     landmark.type.contains("مستشفى") || landmark.name.contains("مستشفى") || landmark.name.contains("طبي") -> "🏥"
-                    landmark.type.contains("مدرسة") || landmark.type.contains("جامعة") || landmark.name.contains("مدرسة") || landmark.name.contains("جامعة") -> "🎓"
+                    landmark.type.contains("مدرسة") || landmark.name.contains("مدرسة") -> "🎓"
                     landmark.type.contains("جولة") || landmark.type.contains("دوار") || landmark.name.contains("جولة") -> "🔄"
                     landmark.type.contains("شارع") || landmark.name.contains("شارع") || landmark.name.contains("خط") -> "🛣️"
+                    landmark.type.contains("مطعم") || landmark.name.contains("مطعم") || landmark.name.contains("كافيه") -> "🍽️"
+                    landmark.type.contains("سوق") || landmark.type.contains("متجر") || landmark.name.contains("متجر") -> "🛍️"
+                    landmark.type.contains("صالة") || landmark.name.contains("صالة") || landmark.name.contains("قاعة") || landmark.name.contains("افراح") -> "🎊"
                     landmark.type.contains("وقود") -> "⛽"
                     else -> "🏛️"
                 }
@@ -365,7 +375,9 @@ object CrossFuzzySearchEngine {
             }
         }
 
-        val distinct = results.distinctBy { it.title + it.type.name + it.latitude.toString() }
+        val distinct = results.distinctBy {
+            "${normalizeText(it.title)}_${it.type.name}_${String.format(Locale.US, "%.3f_%.3f", it.latitude, it.longitude)}"
+        }
 
         return if (hasGps) {
             distinct.sortedWith(
@@ -399,7 +411,7 @@ object CrossFuzzySearchEngine {
         for (raw in text.trim().lowercase(Locale.getDefault())) {
             if (raw in '\u064B'..'\u065F' || raw == '\u0640') continue
             val ch = when (raw) {
-                'أ', 'إ', 'آ' -> 'ا'
+                'أ', 'إ', 'آ', 'ٱ' -> 'ا'
                 'ة' -> 'ه'
                 'ى' -> 'ي'
                 'ؤ' -> 'و'

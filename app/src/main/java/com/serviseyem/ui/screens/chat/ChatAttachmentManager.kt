@@ -114,7 +114,7 @@ class ChatAttachmentManager(private val context: Context) {
                     }
                 }
             }
-            if (finalData.isNotEmpty()) {
+            if (finalData.isNotEmpty() && !isVideo && finalData.size <= 350 * 1024) {
                 val fallbackUrl = "data:$mimeType;base64," + android.util.Base64.encodeToString(finalData, android.util.Base64.NO_WRAP)
                 return@withContext Result.success(fallbackUrl)
             }

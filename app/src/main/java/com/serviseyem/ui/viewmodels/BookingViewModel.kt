@@ -420,7 +420,7 @@ open class BookingViewModel @Inject constructor(
                     if (sendAdminNotif) {
                         onAddNotification?.invoke(
                             "📢 حجز جديد مسجل في النظام",
-                            "العميل $cleanName حجز لدى $providerName في مدينة $area. رقم الحجز: $finalBookingNumber والرمز السري: $generatedPass.",
+                            "العميل $cleanName حجز لدى $providerName في مدينة $area. رقم الحجز: $finalBookingNumber.",
                             "ADMIN_ONLY",
                             ""
                         )
@@ -552,13 +552,15 @@ open class BookingViewModel @Inject constructor(
             .whereEqualTo("customerPhone", customerPhone)
             .get()
             .addOnSuccessListener { querySnapshot ->
-                val batch = db.batch()
-                for (doc in querySnapshot.documents) {
-                    batch.delete(doc.reference)
+                val docs = querySnapshot.documents
+                docs.chunked(400).forEach { chunk ->
+                    val batch = db.batch()
+                    for (doc in chunk) {
+                        batch.delete(doc.reference)
+                    }
+                    batch.commit()
                 }
-                batch.commit().addOnSuccessListener {
-                    triggerNotificationCallback?.invoke("🗑️ تم تصفية وحذف سجل جميع الحجوزات بنجاح.")
-                }
+                triggerNotificationCallback?.invoke("🗑️ تم تصفية وحذف سجل جميع الحجوزات بنجاح.")
             }
     }
 

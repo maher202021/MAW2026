@@ -146,14 +146,14 @@ fun ChatScreen(
     val activeChannel = currentChannel
 
     // Mark as read only when opening or closing the chat, not on every single message
-    DisposableEffect(activeChannel) {
+    DisposableEffect(activeChannel, effectiveUserId) {
         val chId = activeChannel?.id ?: channelId
         if (!chId.isNullOrBlank()) {
-            chatViewModel.markAsRead(chId, currentUserId)
+            chatViewModel.markAsRead(chId, effectiveUserId)
         }
         onDispose {
             if (!chId.isNullOrBlank()) {
-                chatViewModel.markAsRead(chId, currentUserId)
+                chatViewModel.markAsRead(chId, effectiveUserId)
             }
         }
     }
@@ -184,10 +184,10 @@ fun ChatScreen(
         }
     }
 
-    val otherUserId = remember(activeChannel, currentUserId, targetUserId) {
-        activeChannel?.participants?.firstOrNull { it != currentUserId } ?: targetUserId ?: ""
+    val otherUserId = remember(activeChannel, effectiveUserId, targetUserId) {
+        activeChannel?.participants?.firstOrNull { it != effectiveUserId } ?: targetUserId ?: ""
     }
-    val otherUserName = remember(activeChannel, otherUserId, targetUserName, showClientIdentityToProviders) {
+    val otherUserName = remember(activeChannel, otherUserId, targetUserName, showClientIdentityToProviders, effectiveUserId) {
         val rawName = activeChannel?.participantNames?.get(otherUserId) 
             ?: targetUserName 
             ?: activeChannel?.title?.takeIf { it.isNotBlank() } 
@@ -195,7 +195,7 @@ fun ChatScreen(
         
         // If client identity is hidden from providers and current user is the provider/owner
         if (!showClientIdentityToProviders && (activeChannel?.relatedEntityType == "PROVIDER" || relatedEntityType == "PROVIDER" || activeChannel?.type == com.serviseyem.data.models.ChannelType.PROVIDER)) {
-            val isCurrentViewerProvider = currentUserId == (activeChannel?.relatedEntityId ?: relatedEntityId) || currentUserId.startsWith("provider_")
+            val isCurrentViewerProvider = effectiveUserId == (activeChannel?.relatedEntityId ?: relatedEntityId) || effectiveUserId.startsWith("provider_")
             if (isCurrentViewerProvider) {
                 "العميل"
             } else {
@@ -439,7 +439,7 @@ fun ChatScreen(
                                 DateSeparatorChip(dateMillis = msg.timestamp)
                             }
 
-                            val isMe = msg.senderId == currentUserId
+                            val isMe = msg.senderId == effectiveUserId
                             val isPreviousSame = index > 0 &&
                                     filteredMessages[index - 1].senderId == msg.senderId &&
                                     !showDateSeparator
@@ -509,7 +509,7 @@ fun ChatScreen(
 
                 // 🧠 Smart Quick Reply Suggestions (اقتراحات الردود الذكية فوق شريط الإدخال)
                 val lastMsg = messages.lastOrNull()
-                val isLastMsgMine = lastMsg?.senderId == currentUserId
+                val isLastMsgMine = lastMsg?.senderId == effectiveUserId
                 val smartSuggestions = remember(lastMsg?.id, lastMsg?.message, isLastMsgMine) {
                     ChatSmartSuggestionsEngine.generateSuggestions(
                         lastMessage = lastMsg,
@@ -533,8 +533,8 @@ fun ChatScreen(
                                 shadowElevation = 1.dp,
                                 modifier = Modifier.clickable {
                                     chatViewModel.sendMessage(
-                                        senderId = currentUserId,
-                                        senderName = currentUserName,
+                                        senderId = effectiveUserId,
+                                        senderName = effectiveUserName,
                                         text = suggestion,
                                         mediaType = MediaType.TEXT
                                     )
@@ -577,6 +577,18 @@ fun ChatScreen(
                             audioWaveform = waveform
                         )
                     },
+                    onSendMediaAttachment = { text, mediaType, uri, waveform, tempFile ->
+                        chatViewModel.sendMediaAttachment(
+                            context = context,
+                            senderId = effectiveUserId,
+                            senderName = effectiveUserName,
+                            text = text,
+                            mediaType = mediaType,
+                            uri = uri,
+                            audioWaveform = waveform,
+                            tempFileToDelete = tempFile
+                        )
+                    },
                     onEditMessage = { messageId, newText ->
                         chatViewModel.editMessage(messageId, newText)
                         editingMessage = null
@@ -598,7 +610,7 @@ fun ChatScreen(
     // Message options dialog
     val targetMsg = selectedMessageForAction
     if (targetMsg != null) {
-        val isMe = targetMsg.senderId == currentUserId
+        val isMe = targetMsg.senderId == effectiveUserId
 
         AlertDialog(
             onDismissRequest = { selectedMessageForAction = null },
@@ -653,14 +665,14 @@ fun ChatScreen(
                     }
                     if (isMe) {
                         TextButton(onClick = {
-                            chatViewModel.deleteMessage(targetMsg.id, true, currentUserId)
+                            chatViewModel.deleteMessage(targetMsg.id, true, effectiveUserId)
                             selectedMessageForAction = null
                         }) {
                             Text("🗑️ حذف لدى الجميع", color = Color(0xFFE53935), fontSize = 13.sp)
                         }
                     }
                     TextButton(onClick = {
-                        chatViewModel.deleteMessage(targetMsg.id, false, currentUserId)
+                        chatViewModel.deleteMessage(targetMsg.id, false, effectiveUserId)
                         selectedMessageForAction = null
                     }) {
                         Text("🗑️ حذف لدي فقط", color = themeColors.textSecondary, fontSize = 13.sp)

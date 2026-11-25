@@ -1,5 +1,7 @@
 package com.serviseyem.ui.screens.chat
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.serviseyem.data.models.*
@@ -10,9 +12,11 @@ import com.serviseyem.ui.screens.chat.managers.ChatPresenceManager
 import com.serviseyem.ui.screens.chat.managers.ChatTypingManager
 import com.serviseyem.utils.AppResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 sealed class ChatError(open val messageArabic: String) {
@@ -235,6 +239,83 @@ class ChatViewModel @Inject constructor(
                 }
             },
             onError = { errMsg ->
+                viewModelScope.launch {
+                    _eventFlow.emit(ChatEvent.ShowError(errMsg))
+                }
+            }
+        )
+    }
+
+    fun sendMediaAttachment(
+        context: Context,
+        senderId: String = activeUserId,
+        senderName: String = "أنا",
+        text: String,
+        mediaType: MediaType,
+        uri: Uri,
+        audioWaveform: List<Int> = emptyList(),
+        tempFileToDelete: File? = null
+    ) {
+        var channel = _currentChannel.value
+        if (channel == null) {
+            val fallbackChId = "direct_${activeUserId.ifBlank { senderId }}"
+            channel = ChatChannel(
+                id = fallbackChId,
+                participants = listOf(senderId.ifBlank { activeUserId }),
+                title = "محادثة"
+            )
+            _currentChannel.value = channel
+        }
+
+        val replyTo = editManager.replyingToMessage.value
+        editManager.setReplyingTo(null)
+        val appContext = context.applicationContext
+        val uploadType = when (mediaType) {
+            MediaType.IMAGE -> "image"
+            MediaType.VIDEO -> "video"
+            else -> "audio"
+        }
+
+        messagesManager.sendMessage(
+            channelId = channel.id,
+            senderId = senderId.ifBlank { activeUserId },
+            senderName = senderName,
+            text = text.trim(),
+            mediaType = mediaType,
+            mediaUrl = uri.toString(),
+            replyTo = replyTo,
+            attachment = null,
+            audioWaveform = audioWaveform,
+            onSuccess = { sentMsg ->
+                viewModelScope.launch {
+                    _eventFlow.emit(ChatEvent.MessageSent(sentMsg.id))
+                }
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        val attachmentManager = ChatAttachmentManager(appContext)
+                        val uploadResult = attachmentManager.uploadAttachment(
+                            channelId = channel.id,
+                            uri = uri,
+                            type = uploadType
+                        )
+                        uploadResult.onSuccess { downloadUrl ->
+                            messagesManager.updateLocalMessageMediaUrl(sentMsg.id, downloadUrl)
+                            repository.updateMessageMediaUrl(channel.id, sentMsg.id, downloadUrl)
+                        }.onFailure { err ->
+                            messagesManager.updateMessageStatus(sentMsg.id, MessageStatus.FAILED)
+                            _eventFlow.emit(ChatEvent.ShowError(err.message ?: "فشل رفع الملف المرفق"))
+                        }
+                    } finally {
+                        try {
+                            tempFileToDelete?.delete()
+                        } catch (_: Exception) {}
+                    }
+                }
+            },
+            onError = { errMsg ->
+                try {
+                    tempFileToDelete?.delete()
+                } catch (_: Exception) {}
                 viewModelScope.launch {
                     _eventFlow.emit(ChatEvent.ShowError(errMsg))
                 }

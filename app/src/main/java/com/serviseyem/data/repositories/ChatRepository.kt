@@ -112,6 +112,12 @@ class ChatRepository(
         currentUserId: String
     ): AppResult<Unit> = messageDelegate.editMessage(channelId, messageId, newText, currentUserId)
 
+    override suspend fun updateMessageMediaUrl(
+        channelId: String,
+        messageId: String,
+        mediaUrl: String
+    ): AppResult<Unit> = messageDelegate.updateMessageMediaUrl(channelId, messageId, mediaUrl)
+
     override suspend fun deleteMessage(
         channelId: String,
         messageId: String,

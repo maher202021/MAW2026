@@ -68,6 +68,7 @@ fun ChatInputBar(
     onCancelEdit: () -> Unit = {},
     onSendMessage: (text: String, mediaType: MediaType, mediaUrl: String) -> Unit,
     onSendAudioMessage: ((text: String, mediaUrl: String, waveform: List<Int>) -> Unit)? = null,
+    onSendMediaAttachment: ((text: String, mediaType: MediaType, uri: Uri, waveform: List<Int>, tempFile: File?) -> Unit)? = null,
     onEditMessage: ((messageId: String, newText: String) -> Unit)? = null,
     onTyping: (String) -> Unit = {},
     themeColors: VisualThemePalette? = null
@@ -366,32 +367,38 @@ fun ChatInputBar(
             val recordedDurationText = "تسجيل صوتي (${recordingDuration}ث)"
             val localAudioUri = uri.toString()
             val waveformToSend = capturedWaveform.toList()
+            audioFile = null
 
-            // إرسال الصوت فوراً ليظهر في شاشة المحادثة بحالة قيد الإرسال كما في تطبيقات التواصل
-            if (onSendAudioMessage != null) {
-                onSendAudioMessage(
-                    recordedDurationText,
-                    localAudioUri,
-                    waveformToSend
-                )
-            } else {
-                onSendMessage(
+            if (onSendMediaAttachment != null) {
+                onSendMediaAttachment(
                     recordedDurationText,
                     MediaType.AUDIO,
-                    localAudioUri
+                    uri,
+                    waveformToSend,
+                    file
                 )
-            }
-
-            scope.launch {
-                val uploadResult = attachmentManager.uploadAttachment(
-                    channelId = channelId,
-                    uri = uri,
-                    type = "audio"
-                )
-                uploadResult.onSuccess { downloadUrl ->
-                    // تم الرفع بنجاح في الخلفية
+            } else {
+                if (onSendAudioMessage != null) {
+                    onSendAudioMessage(
+                        recordedDurationText,
+                        localAudioUri,
+                        waveformToSend
+                    )
+                } else {
+                    onSendMessage(
+                        recordedDurationText,
+                        MediaType.AUDIO,
+                        localAudioUri
+                    )
                 }
-                file.delete()
+                scope.launch {
+                    attachmentManager.uploadAttachment(
+                        channelId = channelId,
+                        uri = uri,
+                        type = "audio"
+                    )
+                    file.delete()
+                }
             }
         } else {
             file?.delete()
@@ -926,25 +933,26 @@ fun ChatInputBar(
                     onClick = {
                         val captionToSend = imageCaption.trim()
                         val uriToSend = activePreviewUri
+                        val fileToDelete = pendingCameraFile
+                        pendingCameraFile = null
+                        pendingCameraUri = null
                         previewImageUri = null
                         imageCaption = ""
                         imageUploadError = null
                         isUploadingPreview = false
 
-                        // إضافة الصورة فوراً لشاشة المحادثة لتظهر بحالة "قيد الإرسال" كما في واتساب وتليجرام
-                        onSendMessage(captionToSend, MediaType.IMAGE, uriToSend.toString())
-
-                        scope.launch {
-                            val uploadResult = attachmentManager.uploadAttachment(
-                                channelId = channelId,
-                                uri = uriToSend,
-                                type = "image"
-                            )
-                            uploadResult.onSuccess { downloadUrl ->
-                                // تم الرفع بنجاح
+                        if (onSendMediaAttachment != null) {
+                            onSendMediaAttachment(captionToSend, MediaType.IMAGE, uriToSend, emptyList(), fileToDelete)
+                        } else {
+                            onSendMessage(captionToSend, MediaType.IMAGE, uriToSend.toString())
+                            scope.launch {
+                                attachmentManager.uploadAttachment(
+                                    channelId = channelId,
+                                    uri = uriToSend,
+                                    type = "image"
+                                )
+                                fileToDelete?.delete()
                             }
-                            pendingCameraFile?.delete()
-                            pendingCameraFile = null
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = primaryColor)
@@ -1047,17 +1055,16 @@ fun ChatInputBar(
                         videoUploadError = null
                         isUploadingVideo = false
 
-                        // إضافة الفيديو فوراً لشاشة المحادثة
-                        onSendMessage(captionToSend, MediaType.VIDEO, uriToSend.toString())
-
-                        scope.launch {
-                            val uploadResult = attachmentManager.uploadAttachment(
-                                channelId = channelId,
-                                uri = uriToSend,
-                                type = "video"
-                            )
-                            uploadResult.onSuccess { downloadUrl ->
-                                // تم الرفع بنجاح
+                        if (onSendMediaAttachment != null) {
+                            onSendMediaAttachment(captionToSend, MediaType.VIDEO, uriToSend, emptyList(), null)
+                        } else {
+                            onSendMessage(captionToSend, MediaType.VIDEO, uriToSend.toString())
+                            scope.launch {
+                                attachmentManager.uploadAttachment(
+                                    channelId = channelId,
+                                    uri = uriToSend,
+                                    type = "video"
+                                )
                             }
                         }
                     },

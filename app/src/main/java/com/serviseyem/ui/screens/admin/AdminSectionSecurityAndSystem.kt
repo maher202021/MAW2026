@@ -145,7 +145,7 @@ internal fun LazyListScope.adminSecurityAndSystemSections(
             }
         }
         "BACKDOOR" -> {
-            if (adminRole == "OWNER") {
+            if (com.serviseyem.utils.AdminSecurityManager.hasOwnerPermission(adminRole)) {
                 item {
                     OwnerBackdoorPanelLayout(viewModel = viewModel, themeColors = themeColors)
                 }

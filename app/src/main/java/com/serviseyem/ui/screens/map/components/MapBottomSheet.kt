@@ -136,10 +136,11 @@ fun MapBottomSheet(
     val distanceText = MapDistanceCalculator.formatDistance(distanceMeters)
     val etaText = MapDistanceCalculator.computeEta(distanceMeters)
 
+    // [نظام خرائط وملاحة عالمي - ملكنا]
     Surface(
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        color = Color(0xFF0F172A),
-        border = BorderStroke(1.dp, Color(0xFF1E293B)),
+        color = Color(0xFF0B1220),
+        border = BorderStroke(1.dp, Color(0xFF3A6BFF).copy(alpha = 0.45f)),
         shadowElevation = 16.dp,
         modifier = modifier
             .fillMaxWidth()
@@ -261,7 +262,7 @@ fun MapBottomSheet(
                         },
                         modifier = Modifier.size(48.dp).testTag("internal_nav_btn")
                     ) {
-                        Icon(Icons.Default.Navigation, contentDescription = "بدء الملاحة في تطبيقنا", tint = Color(0xFF10B981), modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Navigation, contentDescription = "بدء الملاحة في تطبيقنا", tint = Color(0xFF5B86FF), modifier = Modifier.size(20.dp))
                     }
 
                     // Close Button

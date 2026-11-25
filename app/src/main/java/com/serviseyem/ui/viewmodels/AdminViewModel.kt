@@ -46,67 +46,67 @@ data class SystemStats(
 @Keep
 data class SystemHealth(
     val status: String = "HEALTHY", // "HEALTHY", "WARNING", "CRITICAL"
-    val uptime: Long = System.currentTimeMillis() - 1000L * 60 * 60 * 24 * 7,
-    val memoryUsage: Double = 34.5,
-    val cpuUsage: Double = 12.8,
-    val activeConnections: Int = 142,
+    val uptime: Long = System.currentTimeMillis() - 1000L * 60 * 60 * 24,
+    val memoryUsage: Double = 0.0,
+    val cpuUsage: Double = 0.0,
+    val activeConnections: Int = 0,
     val lastError: String? = null
 )
 
 @Keep
 data class StorageUsage(
-    val totalBytes: Long = 10L * 1024 * 1024 * 1024,
-    val usedBytes: Long = 2L * 1024 * 1024 * 1024 + 450 * 1024 * 1024,
-    val freeBytes: Long = 7L * 1024 * 1024 * 1024 + 574 * 1024 * 1024,
-    val imageCount: Int = 854,
-    val documentCount: Int = 128
+    val totalBytes: Long = 0L,
+    val usedBytes: Long = 0L,
+    val freeBytes: Long = 0L,
+    val imageCount: Int = 0,
+    val documentCount: Int = 0
 )
 
 @Keep
 data class BookingStats(
-    val total: Int = 5120,
-    val pending: Int = 42,
-    val inProgress: Int = 88,
-    val completed: Int = 4850,
-    val cancelled: Int = 140,
-    val today: Int = 34,
-    val thisWeek: Int = 245,
-    val thisMonth: Int = 1120
+    val total: Int = 0,
+    val pending: Int = 0,
+    val inProgress: Int = 0,
+    val completed: Int = 0,
+    val cancelled: Int = 0,
+    val today: Int = 0,
+    val thisWeek: Int = 0,
+    val thisMonth: Int = 0
 )
 
 @Keep
 data class RevenueStats(
-    val totalRevenue: Double = 5420000.0,
-    val platformCommission: Double = 542000.0,
-    val providerPayouts: Double = 4878000.0,
+    val totalRevenue: Double = 0.0,
+    val platformCommission: Double = 0.0,
+    val providerPayouts: Double = 0.0,
     val currency: String = "YER",
-    val todayRevenue: Double = 125000.0,
-    val monthRevenue: Double = 1840000.0
+    val todayRevenue: Double = 0.0,
+    val monthRevenue: Double = 0.0
 )
 
 @Keep
 data class ProviderStats(
-    val totalVerified: Int = 340,
-    val pendingApproval: Int = 12,
-    val topRated: Int = 95,
-    val suspended: Int = 3
+    val totalVerified: Int = 0,
+    val pendingApproval: Int = 0,
+    val topRated: Int = 0,
+    val suspended: Int = 0
 )
 
 @Keep
 data class CategoryStats(
-    val maintenanceCount: Int = 145,
-    val storeCount: Int = 88,
-    val restaurantCount: Int = 64,
-    val medicalCount: Int = 43
+    val maintenanceCount: Int = 0,
+    val storeCount: Int = 0,
+    val restaurantCount: Int = 0,
+    val medicalCount: Int = 0
 )
 
 @Keep
 data class CityStats(
-    val sanaaCount: Int = 420,
-    val adenCount: Int = 240,
-    val taizCount: Int = 160,
-    val ibbCount: Int = 100,
-    val mukallaCount: Int = 80
+    val sanaaCount: Int = 0,
+    val adenCount: Int = 0,
+    val taizCount: Int = 0,
+    val ibbCount: Int = 0,
+    val mukallaCount: Int = 0
 )
 
 @Keep
@@ -190,6 +190,37 @@ class AdminViewModel @Inject constructor(
         ).toList()
     }
 
+    private var pendingTechniciansListenerReg: ListenerRegistration? = null
+
+    fun syncRolePermissionsNow(
+        role: String,
+        @Suppress("UNUSED_PARAMETER") username: String = "",
+        explicitPerms: List<String>? = null
+    ) {
+        viewModelScope.launch {
+            val perms = resolveEffectivePermissions(role, explicitPerms)
+            _adminRole.value = role
+            _supervisorPermissions.value = perms
+            if (role in listOf("OWNER", "SUPER_ADMIN", "MAIN_ADMIN", "ADMIN", "SUPERVISOR")) {
+                startStaffListeners()
+            } else {
+                stopStaffListeners()
+            }
+        }
+    }
+
+    fun startStaffListeners() {
+        listenToPasswordRecoveryRequests()
+        loadPendingTechnicians()
+        loadPendingRequests()
+    }
+
+    fun stopStaffListeners() {
+        passwordRecoveryListenerRegistration?.remove()
+        passwordRecoveryListenerRegistration = null
+        pendingTechniciansListenerReg?.remove()
+        pendingTechniciansListenerReg = null
+    }
     /**
      * 🔐 تسجيل دخول الأدمن الآمن
      * - يتحقق عبر Cloud Function
@@ -1139,7 +1170,9 @@ fun rejectTechnician(providerId: String, reason: String = "لم يستوفِ ا�
 
 fun loadPendingTechnicians() {
         try {
-            db.collection("pending_providers")
+            pendingTechniciansListenerReg?.remove()
+            pendingTechniciansListenerReg = db.collection("pending_providers")
+                .limit(com.serviseyem.ui.helpers.RealtimeSyncHelper.REALTIME_QUERY_LIMIT)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) return@addSnapshotListener
                     if (snapshot != null) {
@@ -3522,13 +3555,130 @@ fun exportJobApplicantsCsv(context: android.content.Context) {
         }
     }
 
-    fun getSystemHealth(): SystemHealth = SystemHealth()
-    fun getStorageUsage(): StorageUsage = StorageUsage()
-    fun getBookingStats(): BookingStats = BookingStats()
-    fun getRevenueStats(): RevenueStats = RevenueStats()
-    fun getProviderStats(): ProviderStats = ProviderStats()
-    fun getCategoryStats(): CategoryStats = CategoryStats()
-    fun getCityStats(): CityStats = CityStats()
+    fun getSystemHealth(): SystemHealth {
+        val runtime = Runtime.getRuntime()
+        val totalMem = runtime.totalMemory()
+        val freeMem = runtime.freeMemory()
+        val usedMem = (totalMem - freeMem).toDouble() / (1024 * 1024)
+        return SystemHealth(
+            status = "HEALTHY",
+            uptime = System.currentTimeMillis() - 1000L * 60 * 60 * 24,
+            memoryUsage = String.format(java.util.Locale.US, "%.1f", usedMem).toDoubleOrNull() ?: 0.0,
+            cpuUsage = 5.0,
+            activeConnections = (appState._providers.value.size + appState._stores.value.size).coerceAtLeast(1),
+            lastError = null
+        )
+    }
+
+    fun getStorageUsage(): StorageUsage {
+        val provCount = appState._providers.value.size
+        val storeCount = appState._stores.value.size
+        val propCount = appState._properties.value.size
+        val bookingCount = appState._bookings.value.size
+        val totalEntities = provCount + storeCount + propCount + bookingCount
+        return StorageUsage(
+            totalBytes = 100L * 1024 * 1024,
+            usedBytes = (totalEntities * 1024L),
+            freeBytes = (100L * 1024 * 1024 - (totalEntities * 1024L)).coerceAtLeast(0L),
+            imageCount = provCount + storeCount,
+            documentCount = bookingCount + appState._orders.value.size
+        )
+    }
+
+    fun getBookingStats(): BookingStats {
+        val bookings = appState._bookings.value
+        val now = System.currentTimeMillis()
+        val startOfToday = now - (now % (24 * 60 * 60 * 1000L))
+        val startOfWeek = now - (7L * 24 * 60 * 60 * 1000L)
+        val startOfMonth = now - (30L * 24 * 60 * 60 * 1000L)
+
+        val total = bookings.size
+        val pending = bookings.count { it.status.uppercase() in listOf("PENDING", "NEW", "WAITING") }
+        val inProgress = bookings.count { it.status.uppercase() in listOf("ACCEPTED", "IN_PROGRESS", "ACTIVE") }
+        val completed = bookings.count { it.status.uppercase() in listOf("COMPLETED", "FINISHED") }
+        val cancelled = bookings.count { it.status.uppercase() in listOf("CANCELLED", "REJECTED") }
+        val today = bookings.count { it.createdAt >= startOfToday }
+        val thisWeek = bookings.count { it.createdAt >= startOfWeek }
+        val thisMonth = bookings.count { it.createdAt >= startOfMonth }
+
+        return BookingStats(
+            total = total,
+            pending = pending,
+            inProgress = inProgress,
+            completed = completed,
+            cancelled = cancelled,
+            today = today,
+            thisWeek = thisWeek,
+            thisMonth = thisMonth
+        )
+    }
+
+    fun getRevenueStats(): RevenueStats {
+        val payments = appState._payments.value
+        val totalRev = payments.sumOf { it.amount }
+        val now = System.currentTimeMillis()
+        val startOfToday = now - (now % (24 * 60 * 60 * 1000L))
+        val startOfMonth = now - (30L * 24 * 60 * 60 * 1000L)
+        val todayRev = payments.filter { it.createdAt >= startOfToday }.sumOf { it.amount }
+        val monthRev = payments.filter { it.createdAt >= startOfMonth }.sumOf { it.amount }
+        val comm = totalRev * 0.10
+        val payouts = totalRev - comm
+
+        return RevenueStats(
+            totalRevenue = totalRev,
+            platformCommission = comm,
+            providerPayouts = payouts,
+            currency = "YER",
+            todayRevenue = todayRev,
+            monthRevenue = monthRev
+        )
+    }
+
+    fun getProviderStats(): ProviderStats {
+        val provs = appState._providers.value
+        val verified = provs.count { it.isVerified }
+        val pending = appState._pendingProviders.value.size
+        val topRated = provs.count { it.rating >= 4.5f }
+        val suspended = provs.count { it.isBlocked }
+        return ProviderStats(
+            totalVerified = verified,
+            pendingApproval = pending,
+            topRated = topRated,
+            suspended = suspended
+        )
+    }
+
+    fun getCategoryStats(): CategoryStats {
+        val provs = appState._providers.value
+        val stores = appState._stores.value
+        val maintCount = provs.count { it.providerType.uppercase() == "PROVIDER" || it.categoryId.contains("صيانة", ignoreCase = true) || it.profession.isNotBlank() }
+        val storeCount = stores.count { it.sectionId.equals("stores", ignoreCase = true) }
+        val restCount = stores.count { it.sectionId.contains("rest", ignoreCase = true) }
+        val medCount = stores.count { it.sectionId.contains("med", ignoreCase = true) }
+        return CategoryStats(
+            maintenanceCount = maintCount,
+            storeCount = storeCount,
+            restaurantCount = restCount,
+            medicalCount = medCount
+        )
+    }
+
+    fun getCityStats(): CityStats {
+        val allLocations = (appState._providers.value.map { it.area + " " + it.cityId } +
+            appState._stores.value.map { it.cityId + " " + it.localNeighborhood }).map { it.lowercase() }
+        val sanaa = allLocations.count { it.contains("صنعاء") || it.contains("sana") || it.contains("ye_san") }
+        val aden = allLocations.count { it.contains("عدن") || it.contains("aden") || it.contains("ye_ade") }
+        val taiz = allLocations.count { it.contains("تعز") || it.contains("taiz") || it.contains("ye_tai") }
+        val ibb = allLocations.count { it.contains("إب") || it.contains("اب") || it.contains("ibb") }
+        val mukalla = allLocations.count { it.contains("حضرموت") || it.contains("المكلا") || it.contains("سيئون") || it.contains("mukalla") }
+        return CityStats(
+            sanaaCount = sanaa,
+            adenCount = aden,
+            taizCount = taiz,
+            ibbCount = ibb,
+            mukallaCount = mukalla
+        )
+    }
 
     fun sendAdminNotification(title: String, message: String, target: String) {
         val notif = AdminNotification(
@@ -3570,7 +3720,6 @@ fun exportJobApplicantsCsv(context: android.content.Context) {
 
     init {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            listenToPasswordRecoveryRequests()
             try {
                 val session = secureStorage.getAdminSession()
                 if (session != null) {
@@ -3578,6 +3727,7 @@ fun exportJobApplicantsCsv(context: android.content.Context) {
                     if (!isExpired && session.role in listOf("OWNER", "ADMIN", "SUPERVISOR")) {
                         _adminRole.value = session.role
                         _supervisorPermissions.value = session.permissions
+                        startStaffListeners()
                     }
                 } else {
                     val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
@@ -3586,6 +3736,7 @@ fun exportJobApplicantsCsv(context: android.content.Context) {
                             val role = token?.claims?.get("role") as? String
                             if (role != null && role.uppercase() in listOf("OWNER", "ADMIN", "SUPERVISOR")) {
                                 _adminRole.value = role.uppercase()
+                                startStaffListeners()
                             }
                         }
                     }
@@ -3597,6 +3748,7 @@ fun exportJobApplicantsCsv(context: android.content.Context) {
     private fun listenToPasswordRecoveryRequests() {
         passwordRecoveryListenerRegistration?.remove()
         passwordRecoveryListenerRegistration = db.collection("password_recovery_requests")
+            .limit(com.serviseyem.ui.helpers.RealtimeSyncHelper.REALTIME_QUERY_LIMIT)
             .addSnapshotListener { snap, err ->
                 if (err == null && snap != null) {
                     try {
@@ -3624,7 +3776,7 @@ fun exportJobApplicantsCsv(context: android.content.Context) {
 
     override fun onCleared() {
         super.onCleared()
-        passwordRecoveryListenerRegistration?.remove()
+        stopStaffListeners()
     }
 
     /**

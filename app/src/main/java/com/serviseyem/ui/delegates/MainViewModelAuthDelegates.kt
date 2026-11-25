@@ -223,20 +223,34 @@ fun MainViewModel.setLanguage(context: Context, lang: String) {
 }
 
 fun MainViewModel.loadUserPoints() {
-    _currentUserPoints.value = (100..500).random()
+    val sp = appContext?.getSharedPreferences("yemen_service_prefs", Context.MODE_PRIVATE)
+    val savedPoints = sp?.getInt("user_loyalty_points", 0) ?: _currentUserPoints.value
+    _currentUserPoints.value = savedPoints.coerceAtLeast(0)
 }
 
 fun MainViewModel.redeemLoyaltyPoints() {
-    triggerNotification("🎉 تم استبدال نقاطك بنجاح! تم الخصم بنجاح.")
+    val current = _currentUserPoints.value
+    if (current < 100) {
+        triggerNotification("⚠️ رصيدك الحالي ($current نقطة) غير كافٍ للاستبدال (الحد الأدنى 100 نقطة).")
+        return
+    }
+    val updated = current - 100
+    _currentUserPoints.value = updated
+    appContext?.getSharedPreferences("yemen_service_prefs", Context.MODE_PRIVATE)
+        ?.edit()?.putInt("user_loyalty_points", updated)?.apply()
+    triggerNotification("🎉 تم استبدال 100 نقطة بنجاح! الرصيد المتبقي: $updated نقطة.")
 }
 
 fun MainViewModel.rewardSharePoints() {
-    _currentUserPoints.value = _currentUserPoints.value + 20
+    val updated = _currentUserPoints.value + 20
+    _currentUserPoints.value = updated
+    appContext?.getSharedPreferences("yemen_service_prefs", Context.MODE_PRIVATE)
+        ?.edit()?.putInt("user_loyalty_points", updated)?.apply()
     triggerNotification("🎁 حصلت على 20 نقطة مشاركة!")
 }
 
 fun MainViewModel.clearSmartAssistantChatHistory() {
-    _currentUserPoints.value = 0
+    _clearAssistantHistoryTrigger.value = System.currentTimeMillis()
     triggerNotification("🧹 تم تصفية وحذف سجل المحادثة الذكية بنجاح!")
 }
 

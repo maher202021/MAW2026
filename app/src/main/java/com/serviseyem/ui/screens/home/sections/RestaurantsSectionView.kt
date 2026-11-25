@@ -59,10 +59,10 @@ fun RestaurantsSectionView(
     )
 
     val filteredRestaurants = remember(restaurantsList, selectedSubCat) {
-        if (selectedSubCat.isNullOrBlank() || selectedSubCat == "الكل") {
+        val query = selectedSubCat.orEmpty()
+        if (query.isBlank() || query == "الكل") {
             restaurantsList
         } else {
-            val query = selectedSubCat!!
             restaurantsList.filter {
                 it.categoryId.contains(query, ignoreCase = true) ||
                 it.name.contains(query, ignoreCase = true) ||

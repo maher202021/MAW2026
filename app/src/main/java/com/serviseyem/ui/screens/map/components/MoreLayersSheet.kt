@@ -103,7 +103,7 @@ fun MoreLayersSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color(0xFF0F172A),
+        containerColor = Color(0xFF0B1220),
         contentColor = Color.White,
         tonalElevation = 8.dp,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
@@ -200,6 +200,21 @@ fun MoreLayersSheet(
             ) { enabled ->
                 labelsOverlayEnabled = enabled
                 onToggleLabelsOverlay(enabled)
+            }
+
+            // [نظام خرائط وملاحة عالمي - ملكنا]
+            Row3(
+                title = "توفير البيانات (Data Saver)",
+                subtitle = "تقليل دقة البلاطات وإيقاف الطبقات الفضائية الثقيلة لتوفير باقة الإنترنت",
+                checked = state.isDataSaverActive
+            ) { enabled ->
+                state.isDataSaverActive = enabled
+                if (enabled) {
+                    state.eumetEnabled = false
+                    state.isNasaGibsActive = false
+                    state.isEoxCloudlessActive = false
+                    state.isEsriImageryActive = false
+                }
             }
 
             // Quick View Modes
@@ -444,12 +459,19 @@ fun MoreLayersSheet(
                     }
                 }
 
+                // [نظام خرائط وملاحة عالمي - ملكنا]
                 Row3(
                     title = "قمر Meteosat مباشر (EUMETSAT)",
                     subtitle = "يتجدد كل ~15 دقيقة • سحب وغبار فوق اليمن • دقة ≈ 3 كم",
                     checked = state.eumetEnabled
-                ) {
-                    state.eumetEnabled = it
+                ) { active ->
+                    state.eumetEnabled = active
+                    if (active) {
+                        state.isDataSaverActive = false
+                        state.isNasaGibsActive = false
+                        state.isEoxCloudlessActive = false
+                        state.isEsriImageryActive = false
+                    }
                 }
 
                 if (state.eumetEnabled) {
@@ -543,6 +565,8 @@ fun MoreLayersSheet(
                 ) { active ->
                     state.isNasaGibsActive = active
                     if (active) {
+                        state.isDataSaverActive = false
+                        state.eumetEnabled = false
                         state.isEoxCloudlessActive = false
                         state.isEsriImageryActive = false
                     }
@@ -558,6 +582,8 @@ fun MoreLayersSheet(
                 ) { active ->
                     state.isEoxCloudlessActive = active
                     if (active) {
+                        state.isDataSaverActive = false
+                        state.eumetEnabled = false
                         state.isNasaGibsActive = false
                         state.isEsriImageryActive = false
                     }
@@ -573,6 +599,8 @@ fun MoreLayersSheet(
                 ) { active ->
                     state.isEsriImageryActive = active
                     if (active) {
+                        state.isDataSaverActive = false
+                        state.eumetEnabled = false
                         state.isNasaGibsActive = false
                         state.isEoxCloudlessActive = false
                     }
@@ -588,7 +616,7 @@ fun MoreLayersSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "حقوق البيانات والإسناد: © OpenStreetMap • Carto Labels • EUMETSAT • NASA GIBS • Sentinel-2 by EOX • Esri World Imagery",
+                    text = "حقوق البيانات والإسناد: © OpenStreetMap • EUMETSAT • NASA GIBS • Sentinel-2 by EOX • Esri World Imagery",
                     fontSize = 10.5.sp,
                     color = Color(0xFF64748B),
                     modifier = Modifier.padding(12.dp),
@@ -611,10 +639,10 @@ private fun BaseStyleTile(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(14.dp),
-        color = if (selected) Color(0xFF10B981).copy(alpha = 0.18f) else Color(0xFF1E293B),
+        color = if (selected) Color(0xFF3A6BFF).copy(alpha = 0.22f) else Color(0xFF14202E),
         border = BorderStroke(
             1.5.dp,
-            if (selected) Color(0xFF10B981) else Color.White.copy(alpha = 0.12f)
+            if (selected) Color(0xFF5B86FF) else Color.White.copy(alpha = 0.12f)
         ),
         modifier = modifier.defaultMinSize(minHeight = 68.dp)
     ) {
@@ -626,7 +654,7 @@ private fun BaseStyleTile(
             Text(text = emoji, fontSize = 18.sp)
             Text(
                 text = title,
-                color = if (selected) Color(0xFF10B981) else Color.White,
+                color = if (selected) Color(0xFF93C5FD) else Color.White,
                 fontSize = 11.5.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,

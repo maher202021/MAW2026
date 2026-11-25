@@ -26,13 +26,11 @@ open class AuthViewModel @Inject constructor() : BaseViewModel() {
                 }
                 val cleanPhone = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(currentUserPhone).filter { it.isDigit() }
                 if (cleanPhone.length >= 7) {
-                    val phoneVariants = listOf(cleanPhone, "0$cleanPhone", "+967$cleanPhone", "967$cleanPhone", "00967$cleanPhone").distinct()
+                    val phoneVariants = listOf(cleanPhone, "0$cleanPhone", "+967$cleanPhone", "967$cleanPhone", "00967$cleanPhone").distinct().take(10)
                     for (col in listOf("providers", "stores", "properties", "users", "registered_users")) {
-                        for (ph in phoneVariants) {
-                            db.collection(col).whereEqualTo("phone", ph).get().addOnSuccessListener { snaps ->
-                                for (doc in snaps.documents) {
-                                    doc.reference.update("fcmToken", token)
-                                }
+                        db.collection(col).whereIn("phone", phoneVariants).limit(5).get().addOnSuccessListener { snaps ->
+                            for (doc in snaps.documents) {
+                                doc.reference.update("fcmToken", token)
                             }
                         }
                     }
@@ -491,27 +489,27 @@ open class AuthViewModel @Inject constructor() : BaseViewModel() {
 
         viewModelScope.launch {
             try {
+                val queryVariants = phoneVariants.take(10)
                 var matchedDoc: com.google.firebase.firestore.DocumentSnapshot? = null
                 for (col in listOf("registered_users", "users")) {
-                    for (ph in phoneVariants) {
-                        val snap = runCatching {
-                            db.collection(col).whereEqualTo("phone", ph).limit(1).get().await()
-                        }.getOrNull()
-                        val docs = snap?.documents.orEmpty().toMutableList()
+                    val snap = runCatching {
+                        db.collection(col).whereIn("phone", queryVariants).limit(5).get().await()
+                    }.getOrNull()
+                    val docs = snap?.documents.orEmpty().toMutableList()
+                    if (docs.isEmpty()) {
                         runCatching {
-                            val direct = db.collection(col).document(ph).get().await()
-                            if (direct.exists() && docs.none { it.id == direct.id }) {
+                            val direct = db.collection(col).document(finalPhone).get().await()
+                            if (direct.exists()) {
                                 docs.add(direct)
                             }
                         }
-                        for (doc in docs) {
-                            val hasCredential = !doc.getString("passwordHash").isNullOrBlank() || !doc.getString("password").isNullOrBlank()
-                            if (hasCredential) {
-                                matchedDoc = doc
-                                break
-                            }
+                    }
+                    for (doc in docs) {
+                        val hasCredential = !doc.getString("passwordHash").isNullOrBlank() || !doc.getString("password").isNullOrBlank()
+                        if (hasCredential) {
+                            matchedDoc = doc
+                            break
                         }
-                        if (matchedDoc != null) break
                     }
                     if (matchedDoc != null) break
                 }

@@ -223,10 +223,13 @@ internal fun MapControlsDock(
             }
         },
         isNasaGibsActive = state.isNasaGibsActive,
+        // [نظام خرائط وملاحة عالمي - ملكنا]
         onToggleNasaGibs = {
             state.isNasaGibsActive = !state.isNasaGibsActive
             val active = state.isNasaGibsActive
             if (active) {
+                state.isDataSaverActive = false
+                state.eumetEnabled = false
                 state.isEoxCloudlessActive = false
                 state.isEsriImageryActive = false
             }
@@ -242,6 +245,8 @@ internal fun MapControlsDock(
             val order = listOf("viirs_noaa20", "viirs_snpp", "truecolor", "landtemp")
             val idx = order.indexOf(state.gibsProduct)
             state.gibsProduct = order[(idx + 1) % order.size]
+            state.isDataSaverActive = false
+            state.eumetEnabled = false
             state.isEoxCloudlessActive = false
             state.isEsriImageryActive = false
             if (!state.isNasaGibsActive) {
@@ -263,6 +268,8 @@ internal fun MapControlsDock(
             state.isEoxCloudlessActive = !state.isEoxCloudlessActive
             val active = state.isEoxCloudlessActive
             if (active) {
+                state.isDataSaverActive = false
+                state.eumetEnabled = false
                 state.isNasaGibsActive = false
                 state.isEsriImageryActive = false
             }
@@ -280,6 +287,8 @@ internal fun MapControlsDock(
             state.isEsriImageryActive = !state.isEsriImageryActive
             val active = state.isEsriImageryActive
             if (active) {
+                state.isDataSaverActive = false
+                state.eumetEnabled = false
                 state.isNasaGibsActive = false
                 state.isEoxCloudlessActive = false
             }
@@ -297,6 +306,10 @@ internal fun MapControlsDock(
             val next = !state.eumetEnabled
             state.eumetEnabled = next
             if (next) {
+                state.isDataSaverActive = false
+                state.isNasaGibsActive = false
+                state.isEoxCloudlessActive = false
+                state.isEsriImageryActive = false
                 coroutineScope.launch {
                     if (state.eumetLayerName.isBlank()) {
                         val layers = com.serviseyem.utils.EumetViewCatalog.iodcLayers()

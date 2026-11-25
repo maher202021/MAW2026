@@ -45,10 +45,13 @@ object PlaceSearch {
 
         val localTask = async(Dispatchers.Default) {
             val out = mutableListOf<RealValhallaNavigator.SearchAddressResult>()
-            val exp = DialectSynonyms.expand(q)
+            val exp = DialectSynonyms.expand(q).map { ArabicNormalizer.normalizeLoose(it) }.filter { it.isNotEmpty() }
+            val queryTokens = ArabicNormalizer.normalizeLoose(q).split(' ').filter { it.length >= 2 }
+            // [نظام خرائط وملاحة عالمي - ملكنا]
             fun hit(text: String): Boolean {
-                val t = ArabicNormalizer.normalize(text)
-                return exp.any { it.isNotEmpty() && t.contains(it) }
+                val t = ArabicNormalizer.normalizeLoose(text)
+                return exp.any { t.contains(it) } ||
+                    (queryTokens.isNotEmpty() && queryTokens.all { t.contains(it) })
             }
             providers.filter {
                 it.latitude != 0.0 && it.longitude != 0.0 &&

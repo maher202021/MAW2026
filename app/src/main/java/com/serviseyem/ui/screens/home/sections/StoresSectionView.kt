@@ -61,10 +61,10 @@ fun StoresSectionView(
     )
 
     val filteredStores = remember(commercialStores, selectedSubCat) {
-        if (selectedSubCat.isNullOrBlank() || selectedSubCat == "الكل") {
+        val query = selectedSubCat.orEmpty()
+        if (query.isBlank() || query == "الكل") {
             commercialStores
         } else {
-            val query = selectedSubCat!!
             commercialStores.filter {
                 it.categoryId.contains(query, ignoreCase = true) ||
                 it.name.contains(query, ignoreCase = true) ||
@@ -194,12 +194,6 @@ fun StoresSectionView(
                     color = Color.Gray,
                     fontSize = 14.sp
                 )
-            }
-        }
-
-        if (commercialStores.isEmpty()) {
-            Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
-                Text("لا توجد متاجر متاحة حالياً", color = Color.Gray, fontSize = 14.sp)
             }
         }
     }

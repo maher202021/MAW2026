@@ -102,20 +102,21 @@ fun MapControls(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
-                .padding(top = 114.dp, end = 12.dp),
+                .padding(top = 120.dp, end = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // [نظام خرائط وملاحة عالمي - ملكنا]
             Surface(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onOpenMoreLayers()
                 },
                 shape = CircleShape,
-                color = Color(0xFF0F172A).copy(alpha = 0.92f),
+                color = Color(0xFF0B1220).copy(alpha = 0.92f),
                 border = BorderStroke(
                     1.dp,
-                    if (anyExtraLayerActive) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.18f)
+                    if (anyExtraLayerActive) Color(0xFF5B86FF) else Color.White.copy(alpha = 0.16f)
                 ),
                 shadowElevation = 8.dp,
                 modifier = Modifier
@@ -139,10 +140,10 @@ fun MapControls(
                         onToggleRadarMode()
                     },
                     shape = CircleShape,
-                    color = if (isRadarMode) Color(0xFF10B981) else Color(0xFF0F172A).copy(alpha = 0.92f),
+                    color = if (isRadarMode) Color(0xFF3A6BFF) else Color(0xFF0B1220).copy(alpha = 0.92f),
                     border = BorderStroke(
                         1.dp,
-                        if (isRadarMode) Color(0xFF10B981) else Color.White.copy(alpha = 0.18f)
+                        if (isRadarMode) Color(0xFF93C5FD) else Color.White.copy(alpha = 0.16f)
                     ),
                     shadowElevation = 8.dp,
                     modifier = Modifier
@@ -153,7 +154,7 @@ fun MapControls(
                         Icon(
                             imageVector = if (isRadarMode) Icons.Default.Map else Icons.Default.Explore,
                             contentDescription = if (isRadarMode) "عرض الخريطة" else "وضع الرادار",
-                            tint = if (isRadarMode) Color.Black else Color.White,
+                            tint = Color.White,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -173,8 +174,8 @@ fun MapControls(
             if (!isRadarMode) {
                 Surface(
                     shape = RoundedCornerShape(24.dp),
-                    color = Color(0xFF0F172A).copy(alpha = 0.92f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
+                    color = Color(0xFF0B1220).copy(alpha = 0.92f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
                     shadowElevation = 8.dp,
                     modifier = Modifier.width(48.dp)
                 ) {
@@ -222,10 +223,10 @@ fun MapControls(
             // My Location FAB (tap = recenter GPS, long press = GNSS diagnostics)
             Surface(
                 shape = CircleShape,
-                color = Color(0xFF0F172A).copy(alpha = 0.94f),
+                color = Color(0xFF0B1220).copy(alpha = 0.94f),
                 border = BorderStroke(
                     1.5.dp,
-                    if (isGpsActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.22f)
+                    if (isGpsActive) Color(0xFF5B86FF) else Color.White.copy(alpha = 0.22f)
                 ),
                 shadowElevation = 10.dp,
                 modifier = Modifier
@@ -247,7 +248,7 @@ fun MapControls(
                     Icon(
                         imageVector = Icons.Default.MyLocation,
                         contentDescription = "موقعي الحالي",
-                        tint = if (isGpsActive) Color(0xFF10B981) else Color.White,
+                        tint = if (isGpsActive) Color(0xFF00E5FF) else Color.White,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -265,17 +266,31 @@ fun MapControls(
                         }
                     },
                     shape = RoundedCornerShape(16.dp),
-                    color = if (isNavActive) Color(0xFF00E5FF) else Color(0xFF10B981),
+                    color = Color.Transparent,
+                    border = BorderStroke(
+                        1.dp,
+                        if (isNavActive) Color(0xFF00E5FF) else Color(0xFF93C5FD).copy(alpha = 0.45f)
+                    ),
                     shadowElevation = 12.dp,
                     modifier = Modifier
                         .size(52.dp)
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                if (isNavActive) {
+                                    listOf(Color(0xFF22D3EE), Color(0xFF0284C7), Color(0xFF1E3A8A))
+                                } else {
+                                    listOf(Color(0xFF5B86FF), Color(0xFF3A6BFF), Color(0xFF2851D8))
+                                }
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        )
                         .testTag("map_directions_fab")
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = if (isNavActive) Icons.Default.Close else Icons.Default.Directions,
                             contentDescription = if (isNavActive) "إغلاق الملاحة" else "الاتجاهات والملاحة",
-                            tint = Color.Black,
+                            tint = Color.White,
                             modifier = Modifier.size(26.dp)
                         )
                     }

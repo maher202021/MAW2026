@@ -6,7 +6,9 @@
 package com.serviseyem.ui.screens.map
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,6 +38,8 @@ import com.serviseyem.ui.screens.map.utils.StreetOrLandmark
 import com.serviseyem.utils.GnssDiagnosticsManager
 import com.serviseyem.utils.GpsSensorFusionFilter
 import com.serviseyem.utils.LandmarkAddressStore
+import com.serviseyem.utils.LocationHealth
+import com.serviseyem.utils.LocationStatus
 import com.serviseyem.utils.RecentDestinations
 import com.serviseyem.utils.VisualThemePalette
 import com.serviseyem.utils.VoiceSearchHelper
@@ -83,6 +87,8 @@ fun MapScreenContent(
     var showDestChooser by remember { mutableStateOf(false) }
     var pickingDestination by remember { mutableStateOf(false) }
     var pickedPoint by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    // [نظام خرائط وملاحة عالمي - ملكنا]
+    var longPressDraftPoint by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var offlinePackVersion by remember { mutableIntStateOf(0) }
     val addressStore = remember { LandmarkAddressStore(context) }
     var savedAddresses by remember { mutableStateOf(addressStore.all()) }
@@ -119,6 +125,9 @@ fun MapScreenContent(
             pickingDestination -> {
                 pickingDestination = false
                 pickedPoint = null
+            }
+            longPressDraftPoint != null -> {
+                longPressDraftPoint = null
             }
             state.selectedEntity != null -> state.resetSelection()
             else -> onBackClick()
@@ -203,7 +212,19 @@ fun MapScreenContent(
 
     val userLatState by viewModel.userLatitude.collectAsState()
     val userLngState by viewModel.userLongitude.collectAsState()
+    val userAccuracyMeters by viewModel.userAccuracyMeters.collectAsState()
+    val lastLocationTimestampMs by viewModel.lastLocationTimestampMs.collectAsState()
     val hasRealLocation = userLatState != 0.0 && !userLatState.isNaN() && userLngState != 0.0 && !userLngState.isNaN()
+    // [نظام خرائط وملاحة عالمي - ملكنا]
+    val locationStatus = remember(userLatState, userLngState, userAccuracyMeters, lastLocationTimestampMs) {
+        LocationHealth.evaluate(
+            context = context,
+            lat = userLatState,
+            lng = userLngState,
+            accuracyM = userAccuracyMeters,
+            timestampMs = lastLocationTimestampMs
+        )
+    }
 
     val fallbackCityCoords = remember(state.selectedCity) {
         OfflineMapManager.getCityCoordinates(state.selectedCity)
@@ -214,6 +235,15 @@ fun MapScreenContent(
     LaunchedEffect(pickingDestination) {
         if (pickingDestination) {
             snackbarHostState.showSnackbar("اضغط على الخريطة لتحديد الوجهة")
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val prefs = context.getSharedPreferences("map_ux_hints", android.content.Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("shown_long_press_hint", false)) {
+            prefs.edit().putBoolean("shown_long_press_hint", true).apply()
+            kotlinx.coroutines.delay(1400L)
+            snackbarHostState.showSnackbar("اضغط مطولاً على الخريطة لتحديد نقطة")
         }
     }
 
@@ -403,7 +433,16 @@ fun MapScreenContent(
                 filteredProperties = filteredProperties,
                 pickingDestination = pickingDestination,
                 pickedPoint = pickedPoint,
+                longPressDraftPoint = longPressDraftPoint,
                 onPickedPointChange = { pickedPoint = it },
+                onMapLongPress = { la, lo ->
+                    state.selectedEntity = null
+                    longPressDraftPoint = la to lo
+                },
+                onMapTap = {
+                    state.selectedEntity = null
+                    longPressDraftPoint = null
+                },
                 onShowMapErrorChange = { showMapErrorOverlay = it },
                 onWebViewCreated = { webViewRef = it },
                 webViewRef = webViewRef,
@@ -512,6 +551,34 @@ fun MapScreenContent(
                     },
                     themeColors = themeColors
                 )
+
+                // [نظام خرائط وملاحة عالمي - ملكنا]
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    LocationStatusPill(
+                        status = locationStatus,
+                        onActionClick = {
+                            when (locationStatus) {
+                                is LocationStatus.NoPermission -> {
+                                    locationPermissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                        )
+                                    )
+                                }
+                                is LocationStatus.ProviderOff -> {
+                                    runCatching {
+                                        context.startActivity(
+                                            Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        )
+                                    }
+                                }
+                                else -> viewModel.startLocationUpdates()
+                            }
+                        }
+                    )
+                }
             }
 
             MapControlsDock(
@@ -549,6 +616,21 @@ fun MapScreenContent(
                     onConfirmDestination = { label, la, lo ->
                         pickingDestination = false
                         pickedPoint = null
+                        startDestinationNavigation(label, la, lo)
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(16.dp)
+                        .fillMaxWidth()
+                )
+            } else if (longPressDraftPoint != null) {
+                MapPickDestinationBar(
+                    context = context,
+                    pickedPoint = longPressDraftPoint,
+                    onCancel = { longPressDraftPoint = null },
+                    onConfirmDestination = { label, la, lo ->
+                        longPressDraftPoint = null
                         startDestinationNavigation(label, la, lo)
                     },
                     modifier = Modifier

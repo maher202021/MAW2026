@@ -1066,8 +1066,9 @@ internal fun AdminPanelDialogs(
     }
 
     // 1b. Internal Wallet Transaction Dialog
-    if (state.showWalletTxDialog && state.selectedWalletForTx != null) {
-        val wallet = state.selectedWalletForTx!!
+    val activeWalletForTx = state.selectedWalletForTx
+    if (state.showWalletTxDialog && activeWalletForTx != null) {
+        val wallet = activeWalletForTx
         AlertDialog(
             onDismissRequest = { state.showWalletTxDialog = false },
             title = {

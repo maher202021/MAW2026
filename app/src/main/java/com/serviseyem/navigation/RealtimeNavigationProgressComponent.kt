@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,10 +53,11 @@ fun RealtimeNavigationProgressComponent(
         label = "nav_progress"
     )
 
+    // [نظام خرائط وملاحة عالمي - ملكنا]
     Surface(
         shape = RoundedCornerShape(24.dp),
-        color = Color(0xFF0D1424).copy(alpha = 0.96f),
-        border = BorderStroke(1.dp, BespokePremiumSystem.GlassBorder),
+        color = Color(0xFF0B1220).copy(alpha = 0.96f),
+        border = BorderStroke(1.2.dp, Color(0xFF3A6BFF).copy(alpha = 0.45f)),
         shadowElevation = 16.dp,
         modifier = modifier.fillMaxWidth()
     ) {
@@ -73,8 +75,8 @@ fun RealtimeNavigationProgressComponent(
             ) {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
-                    color = if (isOfflineMode) Color(0xFF064E3B).copy(alpha = 0.7f) else Color(0xFF0C4A6E).copy(alpha = 0.7f),
-                    border = BorderStroke(1.dp, if (isOfflineMode) Color(0xFF10B981) else Color(0xFF0284C7))
+                    color = if (isOfflineMode) Color(0xFF064E3B).copy(alpha = 0.7f) else Color(0xFF1E3A8A).copy(alpha = 0.7f),
+                    border = BorderStroke(1.dp, if (isOfflineMode) Color(0xFF10B981) else Color(0xFF5B86FF))
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -85,7 +87,7 @@ fun RealtimeNavigationProgressComponent(
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(CircleShape)
-                                .background(if (isOfflineMode) Color(0xFF10B981) else Color(0xFF38BDF8))
+                                .background(if (isOfflineMode) Color(0xFF10B981) else Color(0xFF00E5FF))
                         )
                         Text(
                             text = if (isOfflineMode) "🗺️ وضع غير متصل (Offline Valhalla)" else "🛰️ وضع متصل (Online OSM)",
@@ -122,11 +124,12 @@ fun RealtimeNavigationProgressComponent(
                     modifier = Modifier
                         .size(48.dp)
                         .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    if (isOfflineMode) Color(0xFF059669) else Color(0xFF2563EB),
-                                    if (isOfflineMode) Color(0xFF10B981) else Color(0xFF00E5FF)
-                                )
+                            Brush.verticalGradient(
+                                if (isOfflineMode) {
+                                    listOf(Color(0xFF10B981), Color(0xFF059669))
+                                } else {
+                                    listOf(Color(0xFF5B86FF), Color(0xFF3A6BFF), Color(0xFF2851D8))
+                                }
                             ),
                             RoundedCornerShape(14.dp)
                         ),
@@ -216,7 +219,7 @@ fun RealtimeNavigationProgressComponent(
                 }
             }
 
-            Divider(color = Color.White.copy(alpha = 0.08f))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
             // 5. Actions: Recenter & End Navigation
             Row(
@@ -225,24 +228,33 @@ fun RealtimeNavigationProgressComponent(
             ) {
                 OutlinedButton(
                     onClick = onRecenterClick,
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
-                    modifier = Modifier.weight(1f).height(44.dp)
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Color(0xFF5B86FF).copy(alpha = 0.45f)),
+                    modifier = Modifier.weight(1f).defaultMinSize(minHeight = 48.dp)
                 ) {
-                    Icon(Icons.Default.MyLocation, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.MyLocation, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("موقعي", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
-                Button(
-                    onClick = onEndNavigationClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1.2f).height(44.dp)
+                Box(
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .defaultMinSize(minHeight = 48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            brush = Brush.verticalGradient(
+                                listOf(Color(0xFFF87171), Color(0xFFEF4444), Color(0xFFB91C1C))
+                            )
+                        )
+                        .clickable(onClick = onEndNavigationClick),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("إنهاء الرحلة", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("إنهاء", color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

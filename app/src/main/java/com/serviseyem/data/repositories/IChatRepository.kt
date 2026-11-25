@@ -82,6 +82,11 @@ interface IChatRepository {
     suspend fun editMessage(channelId: String, messageId: String, newText: String, currentUserId: String = ""): AppResult<Unit>
 
     /**
+     * تحديث رابط الوسائط للرسالة بعد اكتمال رفعها على السحابة
+     */
+    suspend fun updateMessageMediaUrl(channelId: String, messageId: String, mediaUrl: String): AppResult<Unit>
+
+    /**
      * حذف رسالة (للجميع أو للمستخدم فقط)
      */
     suspend fun deleteMessage(channelId: String, messageId: String, forEveryone: Boolean, currentUserId: String): AppResult<Unit>

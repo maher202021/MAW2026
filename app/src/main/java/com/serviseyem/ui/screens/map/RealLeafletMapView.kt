@@ -74,8 +74,11 @@ fun RealLeafletMapView(
     eumetEnabled: Boolean = false,
     eumetLayer: String = "",
     onOverlayStatus: ((String, Boolean) -> Unit)? = null,
+    isDataSaverActive: Boolean = false,
     pickMode: Boolean = false,
     onMapPicked: ((Double, Double) -> Unit)? = null,
+    onMapLongPress: ((Double, Double) -> Unit)? = null,
+    onMapTap: (() -> Unit)? = null,
     waypointMarkers: List<Triple<String, Double, Double>> = emptyList(),
     themeColors: VisualThemePalette = resolveThemePalette(AdminSettingsEntity()),
     modifier: Modifier = Modifier
@@ -83,6 +86,7 @@ fun RealLeafletMapView(
     val context = LocalContext.current
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     var isMapReady by remember { mutableStateOf(false) }
+    var hasTilesLoaded by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val latestProviders by rememberUpdatedState(nearbyProviders)
     val latestStores by rememberUpdatedState(nearbyStores)
@@ -95,6 +99,8 @@ fun RealLeafletMapView(
     val latestOnEarthquakeDataLoaded by rememberUpdatedState(onEarthquakeDataLoaded)
     val latestOnEarthquakeDataError by rememberUpdatedState(onEarthquakeDataError)
     val latestOnMapPicked by rememberUpdatedState(onMapPicked)
+    val latestOnMapLongPress by rememberUpdatedState(onMapLongPress)
+    val latestOnMapTap by rememberUpdatedState(onMapTap)
     val latestOnGibsInfo by rememberUpdatedState(onGibsInfo)
     val latestOnOverlayStatus by rememberUpdatedState(onOverlayStatus)
     val latestOnMapLoadFailed by rememberUpdatedState(onMapLoadFailed)
@@ -109,6 +115,17 @@ fun RealLeafletMapView(
         }
     }
     var hasLoadError by remember { mutableStateOf(!isAssetAvailable) }
+
+    // [نظام خرائط وملاحة عالمي - ملكنا] حارس مهلة 7 ثوانٍ للتحول التلقائي للخريطة المحلية عند تعذر تحميل WebView
+    LaunchedEffect(isAssetAvailable, hasLoadError, isMapReady) {
+        if (isAssetAvailable && !hasLoadError && !isMapReady) {
+            kotlinx.coroutines.delay(7_000L)
+            if (!isMapReady) {
+                hasLoadError = true
+                latestOnMapLoadFailed?.invoke()
+            }
+        }
+    }
 
     // تنظيف الموارد لمنع تسريب الذاكرة أو تجمد العرض
     DisposableEffect(Unit) {
@@ -249,6 +266,13 @@ fun RealLeafletMapView(
         webViewRef?.evaluateJavascript("if (window.setEumet) { window.setEumet(${eumetEnabled && safe.isNotEmpty()}, $quotedSafe); }", null)
     }
 
+    // [نظام خرائط وملاحة عالمي - ملكنا] مزامنة وضع توفير البيانات
+    LaunchedEffect(isMapReady, isDataSaverActive) {
+        if (isMapReady && webViewRef != null) {
+            webViewRef?.evaluateJavascript("if (window.setDataSaver) { window.setDataSaver($isDataSaverActive); }", null)
+        }
+    }
+
     // [تعديل] التحكم في التكبير والتصغير التفاعلي وربطه مباشرة مع خريطة OpenStreetMap
     var lastZoomScale by remember { mutableFloatStateOf(zoomScale) }
     LaunchedEffect(zoomScale) {
@@ -303,7 +327,10 @@ fun RealLeafletMapView(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
                         )
-                        setBackgroundColor(android.graphics.Color.parseColor("#F8FAFC"))
+                        setBackgroundColor(android.graphics.Color.parseColor("#14202E"))
+                        if (com.serviseyem.utils.OfflineTileInterceptor.migrateCacheIfNeeded(ctx)) {
+                            clearCache(true)
+                        }
 
                         settings.apply {
                             javaScriptEnabled = true
@@ -334,6 +361,31 @@ fun RealLeafletMapView(
                                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                                     latestOnDeselect()
                                 }
+                            }
+
+                            @JavascriptInterface
+                            fun onMapTap() {
+                                post {
+                                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                                    if (latestOnMapTap != null) {
+                                        latestOnMapTap?.invoke()
+                                    } else {
+                                        latestOnDeselect()
+                                    }
+                                }
+                            }
+
+                            @JavascriptInterface
+                            fun onMapLongPress(lat: Double, lng: Double) {
+                                post {
+                                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                    latestOnMapLongPress?.invoke(lat, lng)
+                                }
+                            }
+
+                            @JavascriptInterface
+                            fun onTilesLoaded() {
+                                post { hasTilesLoaded = true }
                             }
 
                             @JavascriptInterface

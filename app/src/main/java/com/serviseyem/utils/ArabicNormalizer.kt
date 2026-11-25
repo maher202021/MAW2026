@@ -8,6 +8,7 @@ object ArabicNormalizer {
     private val ALEF = Regex("[إأآٱ]")
     private val WHITESPACE = Regex("\\s+")
 
+    // [نظام خرائط وملاحة عالمي - ملكنا]
     fun normalize(input: String): String {
         if (input.isBlank()) return ""
         var s = input.trim().lowercase()
@@ -18,5 +19,15 @@ object ArabicNormalizer {
             .replace('ؤ', 'و')
             .replace('ة', 'ه')
         return WHITESPACE.replace(s, " ").trim()
+    }
+
+    fun normalizeLoose(input: String): String {
+        val base = normalize(input)
+        if (base.isEmpty()) return ""
+        return base.split(' ')
+            .filter { it.isNotBlank() }
+            .joinToString(" ") { token ->
+                if (token.length > 3 && token.startsWith("ال")) token.removePrefix("ال") else token
+            }
     }
 }

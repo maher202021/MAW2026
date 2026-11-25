@@ -75,6 +75,8 @@ class MainViewModel @Inject constructor(
     val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
     internal val _currentUserPoints = MutableStateFlow(0)
     val currentUserPoints: StateFlow<Int> = _currentUserPoints.asStateFlow()
+    internal val _clearAssistantHistoryTrigger = MutableStateFlow(0L)
+    val clearAssistantHistoryTrigger: StateFlow<Long> = _clearAssistantHistoryTrigger.asStateFlow()
     internal val _targetRegistrationType = MutableStateFlow<String?>(null)
     val targetRegistrationType: StateFlow<String?> = _targetRegistrationType.asStateFlow()
 
@@ -256,10 +258,15 @@ class MainViewModel @Inject constructor(
         _pendingMapFocus.value = null
     }
 
-    internal val _userLatitude = MutableStateFlow(15.3694)
+    // [نظام خرائط وملاحة عالمي - ملكنا]
+    internal val _userLatitude = MutableStateFlow(0.0)
     val userLatitude: StateFlow<Double> = _userLatitude.asStateFlow()
-    internal val _userLongitude = MutableStateFlow(44.1910)
+    internal val _userLongitude = MutableStateFlow(0.0)
     val userLongitude: StateFlow<Double> = _userLongitude.asStateFlow()
+    internal val _userAccuracyMeters = MutableStateFlow(Float.MAX_VALUE)
+    val userAccuracyMeters: StateFlow<Float> = _userAccuracyMeters.asStateFlow()
+    internal val _lastLocationTimestampMs = MutableStateFlow(0L)
+    val lastLocationTimestampMs: StateFlow<Long> = _lastLocationTimestampMs.asStateFlow()
     internal val _isGpsTrackingActive = MutableStateFlow(false)
     val isGpsTrackingActive: StateFlow<Boolean> = _isGpsTrackingActive.asStateFlow()
     internal val _isProvidersLoading get() = appState._isProvidersLoading
@@ -331,6 +338,13 @@ class MainViewModel @Inject constructor(
                 if (adminViewModel._adminRole.value != role) {
                     adminViewModel._adminRole.value = role
                 }
+                if (role in listOf("OWNER", "SUPER_ADMIN", "MAIN_ADMIN", "ADMIN", "SUPERVISOR")) {
+                    realtimeSyncHelper?.setupStaffRealtimeListeners(appState)
+                    adminViewModel.startStaffListeners()
+                } else {
+                    realtimeSyncHelper?.clearStaffListeners()
+                    adminViewModel.stopStaffListeners()
+                }
             }
         }
         viewModelScope.launch {
@@ -354,29 +368,79 @@ class MainViewModel @Inject constructor(
                 }
             }
         }
+        viewModelScope.launch {
+            appState._rolePermissionsMap.collect { map ->
+                val currentRole = adminViewModel.adminRole.value
+                if (currentRole in listOf("OWNER", "SUPER_ADMIN", "MAIN_ADMIN")) {
+                    adminViewModel._supervisorPermissions.value = listOf("ALL")
+                    authViewModel._currentSupervisorPermissions.value = listOf("ALL")
+                } else if (currentRole == "ADMIN") {
+                    val adminPerms = map["ADMIN"] ?: com.serviseyem.security.AdminPermissionResolver.getAllAdminPermissions().toList()
+                    adminViewModel._supervisorPermissions.value = adminPerms
+                    authViewModel._currentSupervisorPermissions.value = adminPerms
+                } else if (currentRole == "SUPERVISOR") {
+                    val matchedSup = appState._supervisors.value.find { it.id == authViewModel.currentUserId.value }
+                    val supPerms = com.serviseyem.security.AdminPermissionResolver.resolve("SUPERVISOR", matchedSup?.permissions, map).toList()
+                    adminViewModel._supervisorPermissions.value = supPerms
+                    authViewModel._currentSupervisorPermissions.value = supPerms
+                }
+            }
+        }
     }
     private fun checkAndTriggerFavoriteOffersNotifications() {
     }
-    fun updateUserLocation(lat: Double, lng: Double) {
+    // [نظام خرائط وملاحة عالمي - ملكنا]
+    fun updateUserLocation(
+        lat: Double,
+        lng: Double,
+        accuracyMeters: Float = 25f,
+        timestampMs: Long = System.currentTimeMillis()
+    ) {
+        if (lat == 0.0 && lng == 0.0) return
+        if (lat.isNaN() || lng.isNaN()) return
         _userLatitude.value = lat
         _userLongitude.value = lng
+        _userAccuracyMeters.value = if (accuracyMeters.isFinite() && accuracyMeters > 0f) accuracyMeters else 50f
+        _lastLocationTimestampMs.value = if (timestampMs > 0L) timestampMs else System.currentTimeMillis()
     }
     fun startLocationUpdates() {
         _isGpsTrackingActive.value = true
         appContext?.let { ctx ->
             try {
-                if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
-                    androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                if (com.serviseyem.utils.LocationCapture.hasLocationPermission(ctx)) {
                     val fusedClient = com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(ctx)
                     fusedClient.lastLocation.addOnSuccessListener { loc ->
-                        loc?.let { updateUserLocation(it.latitude, it.longitude) }
+                        loc?.let {
+                            updateUserLocation(
+                                it.latitude,
+                                it.longitude,
+                                if (it.hasAccuracy()) it.accuracy else 35f,
+                                it.time.takeIf { t -> t > 0L } ?: System.currentTimeMillis()
+                            )
+                        }
+                    }
+                    viewModelScope.launch {
+                        val fresh = com.serviseyem.utils.LocationCapture.fresh(ctx, 8_000L, 500f)
+                        fresh?.let {
+                            updateUserLocation(
+                                it.latitude,
+                                it.longitude,
+                                if (it.hasAccuracy()) it.accuracy else 30f,
+                                it.time.takeIf { t -> t > 0L } ?: System.currentTimeMillis()
+                            )
+                        }
                     }
                 }
                 val lm = ctx.getSystemService(android.content.Context.LOCATION_SERVICE) as? android.location.LocationManager
                 val loc = lm?.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
                     ?: lm?.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
                 loc?.let {
-                    updateUserLocation(it.latitude, it.longitude)
+                    updateUserLocation(
+                        it.latitude,
+                        it.longitude,
+                        if (it.hasAccuracy()) it.accuracy else 45f,
+                        it.time.takeIf { t -> t > 0L } ?: System.currentTimeMillis()
+                    )
                 }
             } catch (e: Exception) {
                 android.util.Log.e("MainViewModel", "Error: ", e)
@@ -524,7 +588,9 @@ class MainViewModel @Inject constructor(
             android.util.Log.e("MainViewModel", "❌ Error in SettingsViewModel loadCardSettings", e)
         }
         try {
-            adminViewModel.loadPendingTechnicians()
+            if (adminViewModel.adminRole.value in listOf("OWNER", "SUPER_ADMIN", "MAIN_ADMIN", "ADMIN", "SUPERVISOR")) {
+                adminViewModel.loadPendingTechnicians()
+            }
         } catch (e: Exception) {
             android.util.Log.e("MainViewModel", "❌ Error in AdminViewModel loadPendingTechnicians", e)
         }
@@ -582,11 +648,6 @@ class MainViewModel @Inject constructor(
     fun setupRealtimeFirestoreListeners() {
         realtimeSyncHelper?.clearListeners()
         realtimeSyncHelper?.setupRealtimeFirestoreListeners(appState)
-        
-        // Use new robust repository-based sync
-        providerRepository.startSyncingProviders()
-        storeRepository.startSyncingStores()
-        propertyRepository.startSyncingProperties()
 
         viewModelScope.launch {
             realtimeSyncHelper?.loadOnDemandInitialData(appState)

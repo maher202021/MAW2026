@@ -31,6 +31,23 @@ object AdminPermissionResolver {
         "NOTIFICATIONS"
     )
 
+    fun getAllAdminPermissions(): Set<String> {
+        val registryKeys = try {
+            com.serviseyem.data.models.AdminPermissionsRegistry.allPermissions
+                .filter { it.category != com.serviseyem.data.models.PermissionCategory.OWNER_CONTROL }
+                .map { it.key }
+                .toSet()
+        } catch (_: Exception) {
+            emptySet()
+        }
+        return DEFAULT_ADMIN + registryKeys + setOf(
+            "PASSWORDS_RESET", "PAYMENTS", "WALLETS", "SETTINGS", "USERS",
+            "BANNERS", "CATEGORIES", "CITIES", "OFFERS", "COUPONS", "REPORTS",
+            "AUDIT_LOGS", "ROLES_PERMISSIONS", "ANALYTICS", "MAP", "QUICK_SERVICE",
+            "REVIEWS", "CALLS"
+        )
+    }
+
     fun resolve(
         role: String,
         explicit: Collection<String>? = null,
@@ -47,7 +64,7 @@ object AdminPermissionResolver {
         if (byRole.isNotEmpty()) return byRole
 
         return when (r) {
-            "ADMIN" -> DEFAULT_ADMIN
+            "ADMIN" -> getAllAdminPermissions()
             "SUPERVISOR", "SUPPORT", "AUDITOR", "OPERATIONS" -> DEFAULT_SUPERVISOR
             else -> emptySet()
         }

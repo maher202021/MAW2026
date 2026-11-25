@@ -24,6 +24,8 @@ object AudioPlayerManager {
     private var mediaPlayer: MediaPlayer? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var progressJob: Job? = null
+    private var playJob: Job? = null
+    private var playSessionId: Long = 0L
 
     private val _currentPlayingId = MutableStateFlow<String?>(null)
     val currentPlayingId: StateFlow<String?> = _currentPlayingId.asStateFlow()
@@ -52,69 +54,102 @@ object AudioPlayerManager {
             return
         }
 
-        try {
-            val player = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .build()
-                )
-            }
+        val currentSession = ++playSessionId
+        _currentPlayingId.value = messageId
+        _playbackProgress.value = 0f
 
-            if (audioSource.startsWith("data:audio") || isLikelyBase64(audioSource)) {
-                val base64Data = if (audioSource.contains(",")) {
-                    audioSource.substringAfter(",")
-                } else {
-                    audioSource
+        playJob = scope.launch {
+            try {
+                // 1. Prepare data source off the main thread (I/O)
+                val dataSourceResult = withContext(Dispatchers.IO) {
+                    try {
+                        if (audioSource.startsWith("data:audio") || isLikelyBase64(audioSource)) {
+                            val base64Data = if (audioSource.contains(",")) {
+                                audioSource.substringAfter(",")
+                            } else {
+                                audioSource
+                            }
+                            val decodedBytes = Base64.decode(base64Data, Base64.DEFAULT)
+                            val tempFile = File.createTempFile("temp_voice_", ".m4a", context.cacheDir)
+                            FileOutputStream(tempFile).use { it.write(decodedBytes) }
+                            Pair("file", tempFile.absolutePath)
+                        } else if (audioSource.startsWith("http://") || audioSource.startsWith("https://")) {
+                            Pair("url", audioSource)
+                        } else if (audioSource.startsWith("content://") || audioSource.startsWith("file://")) {
+                            Pair("uri", audioSource)
+                        } else {
+                            val localFile = File(audioSource)
+                            if (localFile.exists()) {
+                                Pair("file", localFile.absolutePath)
+                            } else {
+                                val decodedBytes = Base64.decode(audioSource, Base64.DEFAULT)
+                                val tempFile = File.createTempFile("temp_voice_", ".m4a", context.cacheDir)
+                                FileOutputStream(tempFile).use { it.write(decodedBytes) }
+                                Pair("file", tempFile.absolutePath)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to resolve audio source: ${e.message}", e)
+                        null
+                    }
                 }
-                val decodedBytes = Base64.decode(base64Data, Base64.DEFAULT)
-                val tempFile = File(context.cacheDir, "temp_voice_play.m4a")
-                FileOutputStream(tempFile).use { it.write(decodedBytes) }
-                player.setDataSource(tempFile.absolutePath)
-            } else if (audioSource.startsWith("http://") || audioSource.startsWith("https://")) {
-                player.setDataSource(audioSource)
-            } else if (audioSource.startsWith("content://") || audioSource.startsWith("file://")) {
-                player.setDataSource(context, Uri.parse(audioSource))
-            } else {
-                val localFile = File(audioSource)
-                if (localFile.exists()) {
-                    player.setDataSource(localFile.absolutePath)
-                } else {
-                    val decodedBytes = Base64.decode(audioSource, Base64.DEFAULT)
-                    val tempFile = File(context.cacheDir, "temp_voice_play.m4a")
-                    FileOutputStream(tempFile).use { it.write(decodedBytes) }
-                    player.setDataSource(tempFile.absolutePath)
+
+                if (currentSession != playSessionId || dataSourceResult == null) {
+                    if (currentSession == playSessionId) stop()
+                    return@launch
                 }
-            }
 
-            player.prepare()
-            player.start()
+                // 2. Configure MediaPlayer on Main
+                val player = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .build()
+                    )
+                }
 
-            mediaPlayer = player
-            _currentPlayingId.value = messageId
-            _isPlaying.value = true
-            _playbackProgress.value = 0f
+                when (dataSourceResult.first) {
+                    "file" -> player.setDataSource(dataSourceResult.second)
+                    "url" -> player.setDataSource(dataSourceResult.second)
+                    "uri" -> player.setDataSource(context, Uri.parse(dataSourceResult.second))
+                }
 
-            player.setOnCompletionListener {
-                val finishedId = _currentPlayingId.value
+                player.setOnPreparedListener { mp ->
+                    if (currentSession == playSessionId) {
+                        mp.start()
+                        mediaPlayer = mp
+                        _isPlaying.value = true
+                        startProgressTicker()
+                    } else {
+                        try {
+                            mp.stop()
+                            mp.release()
+                        } catch (_: Exception) {}
+                    }
+                }
+
+                player.setOnCompletionListener {
+                    val finishedId = _currentPlayingId.value
+                    stop()
+                    if (finishedId != null) {
+                        onAudioFinished?.invoke(finishedId)
+                    }
+                }
+
+                player.setOnErrorListener { _, what, extra ->
+                    Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
+                    stop()
+                    true
+                }
+
+                mediaPlayer = player
+                player.prepareAsync()
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start audio playback: ${e.message}", e)
                 stop()
-                if (finishedId != null) {
-                    onAudioFinished?.invoke(finishedId)
-                }
             }
-
-            player.setOnErrorListener { _, what, extra ->
-                Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
-                stop()
-                true
-            }
-
-            startProgressTicker()
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start audio playback: ${e.message}", e)
-            stop()
         }
     }
 
@@ -147,6 +182,9 @@ object AudioPlayerManager {
     }
 
     fun stop() {
+        playSessionId++
+        playJob?.cancel()
+        playJob = null
         progressJob?.cancel()
         progressJob = null
         try {
@@ -160,7 +198,7 @@ object AudioPlayerManager {
             _isPlaying.value = false
             _playbackProgress.value = 0f
 
-            // 🧹 حذف الملفات المؤقتة
+            // 🧹 حذف الملفات المؤقتة القديمة بأمان
             try {
                 val cacheDir = lastContext?.cacheDir
                 cacheDir?.listFiles()?.forEach { file ->
@@ -168,9 +206,7 @@ object AudioPlayerManager {
                         file.delete()
                     }
                 }
-            } catch (e: Exception) {
-                // تجاهل
-            }
+            } catch (_: Exception) {}
         }
     }
 

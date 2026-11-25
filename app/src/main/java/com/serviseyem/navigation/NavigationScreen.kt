@@ -1,11 +1,16 @@
 package com.serviseyem.navigation
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Intent
+import android.provider.Settings
 import android.view.WindowManager
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
@@ -16,7 +21,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.serviseyem.ui.MainViewModel
+import com.serviseyem.ui.screens.map.components.OfflineInteractiveMap
 import com.serviseyem.utils.LandmarkAddressStore
+import com.serviseyem.utils.LocationHealth
+import com.serviseyem.utils.LocationStatus
 import com.serviseyem.utils.PlaceSearch
 import com.serviseyem.utils.PlaceSearchOutcome
 import com.serviseyem.utils.RecentDestinations
@@ -119,8 +127,63 @@ fun NavigationScreen(
     var isSearching by remember { mutableStateOf(false) }
     var searchJob by remember { mutableStateOf<Job?>(null) }
 
-    // Map WebView reference
+    // [نظام خرائط وملاحة عالمي - ملكنا]
+    fun isValidGps(lat: Double, lng: Double): Boolean =
+        lat != 0.0 && lng != 0.0 && !lat.isNaN() && !lng.isNaN() && lat in -90.0..90.0 && lng in -180.0..180.0
+
+    val hasValidStartGps = isValidGps(locationFix.latitude, locationFix.longitude)
+    val locationStatus = remember(
+        locationFix.latitude,
+        locationFix.longitude,
+        locationFix.accuracyMeters,
+        locationFix.timestamp
+    ) {
+        LocationHealth.evaluate(
+            context = context,
+            lat = locationFix.latitude,
+            lng = locationFix.longitude,
+            accuracyM = locationFix.accuracyMeters,
+            timestampMs = locationFix.timestamp
+        )
+    }
+
+    val navPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        if (perms[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            perms[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        ) {
+            locationEngine.startNavigationTracking()
+        }
+    }
+
+    // Map WebView reference & resilience
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    var hasTilesLoaded by remember { mutableStateOf(false) }
+    var hasWebError by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            runCatching {
+                webViewRef?.apply {
+                    stopLoading()
+                    loadUrl("about:blank")
+                    removeAllViews()
+                    destroy()
+                }
+            }
+            webViewRef = null
+        }
+    }
+
+    LaunchedEffect(hasTilesLoaded, hasWebError) {
+        if (!hasTilesLoaded && !hasWebError) {
+            delay(7_000L)
+            if (!hasTilesLoaded && statusBannerText == null) {
+                statusBannerText = "تحميل البلاطات بطيء — الخريطة تعتمد المسار المحلي أو المخابئ المتوفرة"
+            }
+        }
+    }
 
     LaunchedEffect(isArabicVoiceSupported) {
         if (!isArabicVoiceSupported && statusBannerText == null) {
@@ -130,6 +193,20 @@ fun NavigationScreen(
 
     fun recalculateRoute(announce: Boolean = false) {
         hasAnnouncedArrival = false
+        if (!isValidGps(locationFix.latitude, locationFix.longitude)) {
+            remainingDistanceText = "في انتظار GPS"
+            estimatedTimeText = "--"
+            currentInstruction = "جاري تحديد موقعك عبر GPS للانطلاق نحو $targetName"
+            nextTurnManeuver = ManeuverType.START
+            webViewRef?.post {
+                webViewRef?.evaluateJavascript(
+                    "if (window.centerOnDestination) { window.centerOnDestination($targetLat, $targetLng); }",
+                    null
+                )
+            }
+            isRerouting = false
+            return
+        }
         coroutineScope.launch {
             val result = realNavigator.calculateRoute(
                 locationFix.latitude,
@@ -193,11 +270,12 @@ fun NavigationScreen(
         }
     }
 
-    LaunchedEffect(targetLat, targetLng, hasValhallaFiles) {
-        recalculateRoute(announce = true)
+    LaunchedEffect(targetLat, targetLng, hasValhallaFiles, hasValidStartGps) {
+        recalculateRoute(announce = hasValidStartGps)
     }
 
     LaunchedEffect(locationFix.latitude, locationFix.longitude) {
+        if (!isValidGps(locationFix.latitude, locationFix.longitude)) return@LaunchedEffect
         val res = routeResult
         var distToNextTurn = 999.0
         if (res is NavigationRouteResult.Success) {
@@ -315,13 +393,15 @@ fun NavigationScreen(
             searchMessage = null
             canDownloadPlacesFromSearch = false
             val query = searchQuery.trim()
+            val anchorLat = if (isValidGps(locationFix.latitude, locationFix.longitude)) locationFix.latitude else targetLat
+            val anchorLng = if (isValidGps(locationFix.latitude, locationFix.longitude)) locationFix.longitude else targetLng
             when (val outcome = PlaceSearch.search(
                 context = context,
                 query = query,
                 providers = providersList,
                 stores = storesList,
-                userLat = locationFix.latitude,
-                userLng = locationFix.longitude
+                userLat = anchorLat,
+                userLng = anchorLng
             )) {
                 is PlaceSearchOutcome.Results -> {
                     searchResults = outcome.items.map { res ->
@@ -347,63 +427,120 @@ fun NavigationScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF070B14))
+            .background(Color(0xFF14202E))
     ) {
         LaunchedEffect(pickingOnNavMap) {
             webViewRef?.evaluateJavascript("if (window.setPickMode) { window.setPickMode($pickingOnNavMap); }", null)
         }
 
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = { ctx ->
-                WebView(ctx).apply {
-                    webViewRef = this
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.cacheMode = WebSettings.LOAD_DEFAULT
-                    settings.allowFileAccess = true
-                    settings.allowContentAccess = false
-                    addJavascriptInterface(
-                        object {
-                            @android.webkit.JavascriptInterface
-                            fun onNavMapPicked(lat: Double, lng: Double) {
-                                post {
-                                    if (pickingOnNavMap) {
-                                        pickedNavPoint = lat to lng
+        if (hasWebError) {
+            OfflineInteractiveMap(
+                userCoords = Pair(
+                    if (hasValidStartGps) locationFix.latitude else targetLat,
+                    if (hasValidStartGps) locationFix.longitude else targetLng
+                ),
+                nearbyProviders = providersList,
+                nearbyStores = storesList,
+                nearbyProperties = emptyList(),
+                dynamicOffsets = emptyMap(),
+                selectedCity = "صنعاء",
+                zoomScale = 1.0f,
+                onZoomScaleChange = {},
+                panOffset = androidx.compose.ui.geometry.Offset.Zero,
+                onPanOffsetChange = {},
+                selectedEntity = null,
+                onProviderSelected = {},
+                onStoreSelected = {},
+                onPropertySelected = {},
+                onDeselect = {},
+                pickMode = pickingOnNavMap,
+                onMapPicked = { la, lo ->
+                    if (pickingOnNavMap) pickedNavPoint = la to lo
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { ctx ->
+                    WebView(ctx).apply {
+                        webViewRef = this
+                        setBackgroundColor(android.graphics.Color.parseColor("#14202E"))
+                        if (com.serviseyem.utils.OfflineTileInterceptor.migrateCacheIfNeeded(ctx)) {
+                            clearCache(true)
+                        }
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.cacheMode = WebSettings.LOAD_DEFAULT
+                        settings.allowFileAccess = true
+                        settings.allowContentAccess = false
+                        addJavascriptInterface(
+                            object {
+                                @android.webkit.JavascriptInterface
+                                fun onNavMapPicked(lat: Double, lng: Double) {
+                                    post {
+                                        if (pickingOnNavMap) {
+                                            pickedNavPoint = lat to lng
+                                        }
                                     }
                                 }
-                            }
-                        },
-                        "NavBridge"
-                    )
-                    webViewClient = object : WebViewClient() {
-                        override fun shouldInterceptRequest(
-                            view: WebView?,
-                            request: android.webkit.WebResourceRequest?
-                        ): android.webkit.WebResourceResponse? {
-                            return com.serviseyem.utils.OfflineTileInterceptor.intercept(ctx, request)
-                                ?: super.shouldInterceptRequest(view, request)
-                        }
 
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                            super.onPageFinished(view, url)
-                            view?.evaluateJavascript("if (window.setPickMode) { window.setPickMode($pickingOnNavMap); }", null)
-                            recalculateRoute()
+                                @android.webkit.JavascriptInterface
+                                fun onTilesLoaded() {
+                                    post { hasTilesLoaded = true }
+                                }
+
+                                @android.webkit.JavascriptInterface
+                                fun onTilesFailed() {
+                                    post {
+                                        if (!hasTilesLoaded && !com.serviseyem.utils.OfflineTileInterceptor.hasAnyInstalledRegions(ctx)) {
+                                            statusBannerText = "تعذر تحميل بلاطات الإنترنت — جاري استخدام مسار التوجيه المحلي"
+                                        }
+                                    }
+                                }
+                            },
+                            "NavBridge"
+                        )
+                        webViewClient = object : WebViewClient() {
+                            override fun shouldInterceptRequest(
+                                view: WebView?,
+                                request: android.webkit.WebResourceRequest?
+                            ): android.webkit.WebResourceResponse? {
+                                return com.serviseyem.utils.OfflineTileInterceptor.intercept(ctx, request)
+                                    ?: super.shouldInterceptRequest(view, request)
+                            }
+
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                super.onPageFinished(view, url)
+                                view?.evaluateJavascript("if (window.setPickMode) { window.setPickMode($pickingOnNavMap); }", null)
+                                recalculateRoute()
+                            }
+
+                            override fun onReceivedError(
+                                view: WebView?,
+                                request: android.webkit.WebResourceRequest?,
+                                error: android.webkit.WebResourceError?
+                            ) {
+                                super.onReceivedError(view, request, error)
+                                if (request?.isForMainFrame == true) {
+                                    hasWebError = true
+                                }
+                            }
                         }
+                        val htmlContent = buildNavigationLeafletHtml(
+                            locationFix.latitude,
+                            locationFix.longitude,
+                            targetLat,
+                            targetLng,
+                            targetName,
+                            preferOsmOffline = com.serviseyem.utils.OfflineTileInterceptor.hasAnyInstalledRegions(ctx)
+                        )
+                        loadDataWithBaseURL("https://openstreetmap.org", htmlContent, "text/html", "UTF-8", null)
                     }
-                    val htmlContent = buildNavigationLeafletHtml(
-                        locationFix.latitude,
-                        locationFix.longitude,
-                        targetLat,
-                        targetLng,
-                        targetName,
-                        preferOsmOffline = com.serviseyem.utils.OfflineTileInterceptor.hasAnyInstalledRegions(ctx)
-                    )
-                    loadDataWithBaseURL("https://openstreetmap.org", htmlContent, "text/html", "UTF-8", null)
-                }
-            },
-            update = { view -> webViewRef = view }
-        )
+                },
+                update = { view -> webViewRef = view }
+            )
+        }
 
         NavigationTopHudColumn(
             hasValhallaFiles = hasValhallaFiles,
@@ -435,14 +572,36 @@ fun NavigationScreen(
                 searchMessage = null
                 recalculateRoute(announce = true)
             },
-            onOpenPlacesDownload = { showPlacesDownload = true }
+            onOpenPlacesDownload = { showPlacesDownload = true },
+            locationStatus = locationStatus,
+            onLocationStatusAction = {
+                when (locationStatus) {
+                    is LocationStatus.NoPermission -> navPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                    is LocationStatus.ProviderOff -> runCatching {
+                        context.startActivity(
+                            Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                    else -> locationEngine.startNavigationTracking()
+                }
+            }
         )
 
         NavigationFloatingWidgets(
             speedKmh = locationFix.speedKmh.toInt(),
             onRecenterClick = {
-                val script = "if (window.centerOnUser) { window.centerOnUser(${locationFix.latitude}, ${locationFix.longitude}); }"
-                webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                if (hasValidStartGps) {
+                    val script = "if (window.centerOnUser) { window.centerOnUser(${locationFix.latitude}, ${locationFix.longitude}); }"
+                    webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+                } else {
+                    locationEngine.startNavigationTracking()
+                }
             },
             modifier = Modifier
                 .align(Alignment.CenterEnd)
@@ -506,8 +665,8 @@ fun NavigationScreen(
         showDestChooser = showDestChooser,
         showValhallaDialog = showValhallaDialog,
         showPlacesDownload = showPlacesDownload,
-        userLat = locationFix.latitude,
-        userLng = locationFix.longitude,
+        userLat = if (hasValidStartGps) locationFix.latitude else targetLat,
+        userLng = if (hasValidStartGps) locationFix.longitude else targetLng,
         providersList = providersList,
         storesList = storesList,
         savedAddresses = savedAddresses,

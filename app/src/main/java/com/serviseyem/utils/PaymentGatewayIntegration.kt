@@ -175,10 +175,17 @@ class PaymentGatewayIntegration(private val context: Context? = null) {
      * Decrypts configurations securely on-the-fly when performing live financial operations
      */
     fun getDecryptedConfig(config: GatewayConfig): GatewayConfig {
+        fun decryptValue(raw: String): String {
+            return if (raw.startsWith("gcm:") || raw.startsWith("gcmx:") || raw.startsWith("enc::")) {
+                SecurityCryptoUtils.decryptCrossDevice(raw)
+            } else {
+                raw
+            }
+        }
         return config.copy(
-            apiKey = if (config.apiKey.startsWith("gcm:")) SecurityCryptoUtils.decryptCrossDevice(config.apiKey) else config.apiKey,
-            secret = if (config.secret.startsWith("gcm:")) SecurityCryptoUtils.decryptCrossDevice(config.secret) else config.secret,
-            merchantId = if (config.merchantId.startsWith("gcm:")) SecurityCryptoUtils.decryptCrossDevice(config.merchantId) else config.merchantId
+            apiKey = decryptValue(config.apiKey),
+            secret = decryptValue(config.secret),
+            merchantId = decryptValue(config.merchantId)
         )
     }
 

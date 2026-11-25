@@ -123,11 +123,12 @@ fun SmartNavigationPanel(
 
     if (isCollapsed) {
         // ==================== COMPACT HUD BAR (Waze/Google Maps style - Leaves 90% map visible) ====================
+        // [نظام خرائط وملاحة عالمي - ملكنا]
         Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xF90B132B)),
-            border = BorderStroke(1.5.dp, Color(0xFF00E5FF)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xF80B1220)),
+            border = BorderStroke(1.5.dp, Color(0xFF3A6BFF)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
             modifier = modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
@@ -146,7 +147,7 @@ fun SmartNavigationPanel(
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = Color(0xFF00E5FF).copy(alpha = 0.2f),
+                        color = Color(0xFF3A6BFF).copy(alpha = 0.24f),
                         modifier = Modifier.size(38.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -164,7 +165,7 @@ fun SmartNavigationPanel(
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(text = "📏 ${activeRoute.distanceKm} كم", fontSize = 11.sp, color = Color(0xFF00E5FF))
-                            Text(text = "⏱️ ${activeRoute.durationText}", fontSize = 11.sp, color = Color(0xFF10B981))
+                            Text(text = "⏱️ ${activeRoute.durationText}", fontSize = 11.sp, color = Color(0xFF93C5FD))
                         }
                     }
                 }
@@ -176,26 +177,26 @@ fun SmartNavigationPanel(
                     if (onOpenDestinationChooser != null) {
                         OutlinedButton(
                             onClick = onOpenDestinationChooser,
-                            border = BorderStroke(1.dp, Color(0xFF38BDF8)),
-                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, Color(0xFF5B86FF)),
+                            shape = RoundedCornerShape(12.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                             modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                         ) {
-                            Text("الوجهة", color = Color(0xFF38BDF8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("الوجهة", color = Color(0xFF93C5FD), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
                     // Expand Button
                     Button(
                         onClick = { isCollapsed = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A6BFF)),
+                        shape = RoundedCornerShape(12.dp),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                         modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                     ) {
-                        Icon(Icons.Default.ExpandLess, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.ExpandLess, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(2.dp))
-                        Text("توسيع", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("توسيع", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
 
                     // Close Navigation
@@ -207,9 +208,9 @@ fun SmartNavigationPanel(
                         },
                         modifier = Modifier
                             .size(48.dp)
-                            .background(Color(0xFF1E293B), CircleShape)
+                            .background(Color(0xFF7F1D1D).copy(alpha = 0.65f), CircleShape)
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color(0xFFFCA5A5), modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -718,15 +719,15 @@ fun SmartNavigationPanel(
                                     activeRoute.destinationName
                                 )
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A6BFF)),
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .weight(1f)
                                 .defaultMinSize(minHeight = 48.dp)
                         ) {
-                            Icon(Icons.Default.Navigation, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Navigation, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("ملاحة تفصيلية", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("ملاحة تفصيلية", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     } else {
                         Button(

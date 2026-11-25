@@ -8,7 +8,6 @@
         <domain includeSubdomains="true">tile.opentopomap.org</domain>
         <domain includeSubdomains="true">arcgisonline.com</domain>
         <domain includeSubdomains="true">arcgis.com</domain>
-        <domain includeSubdomains="true">cartocdn.com</domain>
         <domain includeSubdomains="true">maps.eox.at</domain>
         <domain includeSubdomains="true">gibs.earthdata.nasa.gov</domain>
         <domain includeSubdomains="true">view.eumetsat.int</domain>

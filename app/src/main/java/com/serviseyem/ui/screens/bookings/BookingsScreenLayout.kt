@@ -35,7 +35,7 @@ fun BookingsScreenLayout(
 
     var isCreatingNewBooking by remember { mutableStateOf(false) }
 
-    val isAdmin = adminRole != "GUEST" && adminRole != "SUPERVISOR"
+    val isAdmin = adminRole.uppercase() in setOf("OWNER", "SUPER_ADMIN", "MAIN_ADMIN", "ADMIN")
 
     // Filter relevant bookings for the user or admin
     val relevantBookings = remember(bookings, currentUserPhone, currentUserId, isAdmin, joinRequestPhone) {
