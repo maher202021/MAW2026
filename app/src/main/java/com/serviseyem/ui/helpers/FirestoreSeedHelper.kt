@@ -89,7 +89,7 @@ class FirestoreSeedHelper(private val db: FirebaseFirestore) {
             CategoryEntity("sub_1_1", "سباكة وأنابيب", "🚰", 2, parentId = "1", isMainCategory = false),
             CategoryEntity("sub_1_2", "كهرباء ومولدات", "⚡", 3, parentId = "1", isMainCategory = false),
             CategoryEntity("sub_1_3", "تكييف وتبريد", "❄️", 4, parentId = "1", isMainCategory = false),
-            CategoryEntity("sub_1_4", "نجارة وأثاث", "و", 5, parentId = "1", isMainCategory = false),
+            CategoryEntity("sub_1_4", "نجارة وأثاث", "🪚", 5, parentId = "1", isMainCategory = false),
             CategoryEntity("sub_1_5", "صيانة أجهزة منزلية", "🧺", 6, parentId = "1", isMainCategory = false),
             CategoryEntity("2", "طب ورعاية صحية", "🏥", 7, isMainCategory = true),
             CategoryEntity("sub_2_1", "عيادات وأطباء", "🩺", 8, parentId = "2", isMainCategory = false),

@@ -90,13 +90,36 @@ object SecurityCryptoUtils {
     }
 
     /**
-     * اشتقاق مفتاح احتياطي ديناميكي في حال تعذر الوصول إلى AndroidKeyStore (مثل اختبارات JVM)
-     * أو لتشفير البيانات العابرة بين جهاز الأدمن وجهاز المستخدم بأمان.
+     * اشتقاق مفتاح احتياطي مؤقت عشوائي لكل جلسة عند تعذر الوصول إلى AndroidKeyStore (مثل اختبارات JVM)
      */
     private fun deriveFallbackKey(): SecretKeySpec {
         cachedFallbackKey?.let { return it }
         return synchronized(this) {
             cachedFallbackKey?.let { return@synchronized it }
+            val generated = try {
+                val keyGen = KeyGenerator.getInstance("AES")
+                keyGen.init(KEY_SIZE_BITS, secureRandom)
+                SecretKeySpec(keyGen.generateKey().encoded, "AES")
+            } catch (_: Throwable) {
+                val rawBytes = ByteArray(32)
+                secureRandom.nextBytes(rawBytes)
+                SecretKeySpec(rawBytes, "AES")
+            }
+            cachedFallbackKey = generated
+            generated
+        }
+    }
+
+    @Volatile
+    private var cachedCrossDeviceKey: SecretKeySpec? = null
+
+    /**
+     * مفتاح متوافق عبر الأجهزة لتشفير وفك تشفير بيانات الاسترداد المشتركة عبر Firebase فقط.
+     */
+    private fun deriveCrossDeviceKey(): SecretKeySpec {
+        cachedCrossDeviceKey?.let { return it }
+        return synchronized(this) {
+            cachedCrossDeviceKey?.let { return@synchronized it }
             val derived = try {
                 val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
                 val salt = LEGACY_KEYSTORE_ALIAS.toByteArray(Charsets.UTF_8)
@@ -108,11 +131,11 @@ object SecurityCryptoUtils {
                 } finally {
                     spec.clearPassword()
                 }
-            } catch (e: Throwable) {
+            } catch (_: Throwable) {
                 val digest = MessageDigest.getInstance("SHA-256")
                 SecretKeySpec(digest.digest(LEGACY_KEYSTORE_ALIAS.toByteArray(Charsets.UTF_8)), "AES")
             }
-            cachedFallbackKey = derived
+            cachedCrossDeviceKey = derived
             derived
         }
     }
@@ -190,12 +213,12 @@ object SecurityCryptoUtils {
     fun encryptCrossDevice(plainText: String?): String {
         if (plainText.isNullOrEmpty()) return ""
         return try {
-            val fallbackKey = deriveFallbackKey()
+            val crossKey = deriveCrossDeviceKey()
             val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
             val iv = ByteArray(GCM_IV_LENGTH)
             secureRandom.nextBytes(iv)
             val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv)
-            cipher.init(Cipher.ENCRYPT_MODE, fallbackKey, gcmSpec)
+            cipher.init(Cipher.ENCRYPT_MODE, crossKey, gcmSpec)
             val encryptedBytes = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
             "gcm:" + base64Encode(iv + encryptedBytes)
         } catch (ex: Throwable) {
@@ -220,9 +243,9 @@ object SecurityCryptoUtils {
                 val iv = decodedBytes.copyOfRange(0, GCM_IV_LENGTH)
                 val encrypted = decodedBytes.copyOfRange(GCM_IV_LENGTH, decodedBytes.size)
                 try {
-                    val fallbackKey = deriveFallbackKey()
+                    val crossKey = deriveCrossDeviceKey()
                     val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
-                    cipher.init(Cipher.DECRYPT_MODE, fallbackKey, GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
+                    cipher.init(Cipher.DECRYPT_MODE, crossKey, GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
                     String(cipher.doFinal(encrypted), Charsets.UTF_8)
                 } catch (_: Throwable) {
                     val key = getSecretKey()
@@ -257,10 +280,17 @@ object SecurityCryptoUtils {
                     cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
                     String(cipher.doFinal(encrypted), Charsets.UTF_8)
                 } catch (_: Throwable) {
-                    val fallbackKey = deriveFallbackKey()
-                    val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
-                    cipher.init(Cipher.DECRYPT_MODE, fallbackKey, GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
-                    String(cipher.doFinal(encrypted), Charsets.UTF_8)
+                    try {
+                        val fallbackKey = deriveFallbackKey()
+                        val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
+                        cipher.init(Cipher.DECRYPT_MODE, fallbackKey, GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
+                        String(cipher.doFinal(encrypted), Charsets.UTF_8)
+                    } catch (_: Throwable) {
+                        val crossKey = deriveCrossDeviceKey()
+                        val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
+                        cipher.init(Cipher.DECRYPT_MODE, crossKey, GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
+                        String(cipher.doFinal(encrypted), Charsets.UTF_8)
+                    }
                 }
             }
             // التوافق العكسي مع البيانات المشفرة مسبقاً بـ AES/CBC/PKCS5Padding
@@ -316,7 +346,7 @@ object SecurityCryptoUtils {
     fun validatePasswordPolicy(password: String): Pair<Boolean, String?> {
         val cleanPass = password.trim()
         if (cleanPass.length < 7) {
-            return Pair(false, "عفواً، يجب أن تكون كلمة المرور مكونة من 7 خانات على الأقل (تحتوي على أحرف وأرقام معاً) لضمان حماية حسابك.")
+            return Pair(false, "عفواً، يجب أن تكون كلمة المرور مكونة من 7 خانات على الأقل لحماية حسابك.")
         }
         val weakPasswords = listOf(
             "123456", "1234567", "12345678", "000000", "0000000", "00000000", "111111", "1111111", "11111111",

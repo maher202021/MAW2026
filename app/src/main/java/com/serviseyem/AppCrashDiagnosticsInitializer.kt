@@ -18,6 +18,9 @@ internal object AppCrashDiagnosticsInitializer {
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
                 val logFile = File(filesDir, "crash_log.txt")
+                if (logFile.exists() && logFile.length() > 256 * 1024L) {
+                    logFile.delete()
+                }
                 logFile.appendText("CRASH at ${Date()}: ${throwable.stackTraceToString()}\n")
             } catch (_: Exception) {}
             Log.e("CRASH_DIAGNOSTIC", "UNCAUGHT EXCEPTION in thread ${thread.name}", throwable)

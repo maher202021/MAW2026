@@ -19,7 +19,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
@@ -517,9 +517,8 @@ class AssistantViewModel : ViewModel() {
         serverUrl: String? = null
     ): String? = withContext(Dispatchers.IO) {
         try {
-            // يمكن تعيين عنوان الخادم الخاص بالمستخدم أو خادم Ollama / Jais 900M
-            val targetUrl = serverUrl?.ifBlank { null }
-                ?: "http://10.0.2.2:11434/api/generate" // العنوان الافتراضي للمحاكي/الشبكة المحلية
+            val targetUrl = serverUrl?.trim()?.takeIf { it.startsWith("https://", ignoreCase = true) }
+                ?: return@withContext null
 
             val mediaType = "application/json; charset=utf-8".toMediaType()
             val requestBodyJson = JSONObject().apply {
@@ -530,7 +529,7 @@ class AssistantViewModel : ViewModel() {
 
             val request = Request.Builder()
                 .url(targetUrl)
-                .post(RequestBody.create(mediaType, requestBodyJson.toString()))
+                .post(requestBodyJson.toString().toRequestBody(mediaType))
                 .build()
 
             sharedHttpClient.newCall(request).execute().use { response ->
@@ -652,7 +651,7 @@ class AssistantViewModel : ViewModel() {
 
                 val request = Request.Builder()
                     .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey")
-                    .post(RequestBody.create(mediaType, finalRequestJsonObj.toString()))
+                    .post(finalRequestJsonObj.toString().toRequestBody(mediaType))
                     .build()
 
                 sharedHttpClient.newCall(request).execute().use { apiResponse ->

@@ -255,10 +255,13 @@ object LocaleManager {
         return customMap[fullKey] ?: customMap[key] ?: fallback
     }
 
+    private var translationsListener: com.google.firebase.firestore.ListenerRegistration? = null
+
     private fun listenToFirestoreTranslations() {
         try {
+            translationsListener?.remove()
             val db = FirebaseFirestore.getInstance()
-            db.collection("settings").document("app_translations")
+            translationsListener = db.collection("settings").document("app_translations")
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         error.printStackTrace()

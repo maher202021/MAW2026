@@ -49,7 +49,7 @@ fun AdminUserManager(
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("الكل") }
-    val filters = listOf("الكل", "عميل", "فني", "متجر", "محظور")
+    val filters = listOf("الكل", "عميل", "فني", "متجر", "مطعم", "طبي", "عقار", "وظيفة", "محظور")
 
     var resetPasswordTargetUser by remember { mutableStateOf<Map<String, Any>?>(null) }
     var newTempPasswordInput by remember { mutableStateOf("") }
@@ -59,16 +59,20 @@ fun AdminUserManager(
         rawUsersList.filter { userMap ->
             val name = userMap["name"] as? String ?: ""
             val phone = userMap["phone"] as? String ?: ""
-            val role = userMap["role"] as? String ?: "CLIENT"
+            val role = (userMap["role"] as? String ?: "CLIENT").uppercase()
             val isBlocked = userMap["isBlocked"] as? Boolean ?: false
 
             val matchesSearch = name.contains(searchQuery, ignoreCase = true) ||
                     phone.contains(searchQuery, ignoreCase = true)
 
             val matchesFilter = when (selectedFilter) {
-                "عميل" -> role == "CLIENT" && !isBlocked
-                "فني" -> role == "PROVIDER" && !isBlocked
-                "متجر" -> role == "STORE" && !isBlocked
+                "عميل" -> (role == "CLIENT" || role.isEmpty()) && !isBlocked
+                "فني" -> (role == "PROVIDER" || role == "TECHNICIAN") && !isBlocked
+                "متجر" -> (role == "STORE" || role == "STORE_OWNER") && !isBlocked
+                "مطعم" -> (role == "RESTAURANT" || role == "RESTAURANT_OWNER") && !isBlocked
+                "طبي" -> (role == "MEDICAL" || role == "MEDICAL_CENTER") && !isBlocked
+                "عقار" -> (role == "PROPERTY" || role == "PROPERTY_OWNER") && !isBlocked
+                "وظيفة" -> (role == "JOB" || role == "JOB_POSTER" || role == "JOB_SEEKER") && !isBlocked
                 "محظور" -> isBlocked
                 else -> true
             }
@@ -202,20 +206,12 @@ fun AdminUserManager(
             onPasswordChange = { newTempPasswordInput = it },
             onDismiss = { resetPasswordTargetUser = null },
             onSave = { userId, phone, name, pass ->
-                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                val cleanPhone = phone.replace("+", "").replace(" ", "").trim()
-                val hashedPass = com.serviseyem.utils.SecureHasher.hashPassword(pass)
-                val passData = mapOf("password" to hashedPass, "updatedAt" to System.currentTimeMillis())
-                db.collection("registered_users").document(userId).update(passData)
-                if (cleanPhone.isNotEmpty()) {
-                    db.collection("registered_users").document(cleanPhone).update(passData)
-                    db.collection("providers").document(cleanPhone).update(passData)
-                }
-                mainViewModel.addNotification(
-                    title = "🔑 تم تحديث كلمة المرور للحساب",
-                    message = "عزيزي $name، تم تعيين كلمة مرور جديدة لحسابك من قبل الإدارة، يرجى التواصل مع الإدارة للحصول عليها.",
-                    targetType = "USER",
-                    targetValue = phone
+                val cleanPhone = com.serviseyem.domain.usecases.ValidatePhoneUseCase.normalizePhone(phone).filter { it.isDigit() }
+                mainViewModel.settingsViewModel.adminResetAccountPassword(
+                    phone = cleanPhone.ifBlank { phone },
+                    newPassword = pass,
+                    notifyAction = "DIRECT_PASSWORD",
+                    customerName = name
                 )
                 resetPasswordTargetUser = null
                 generatedPasswordSuccess = Pair(name, pass)
@@ -445,10 +441,12 @@ fun PasswordResetDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (newPasswordInput.trim().length >= 4) {
-                        onSave(userId, phone, name, newPasswordInput.trim())
+                    val trimmedPass = newPasswordInput.trim()
+                    val (valid, errorMsg) = com.serviseyem.utils.SecurityCryptoUtils.validatePasswordPolicy(trimmedPass)
+                    if (valid) {
+                        onSave(userId, phone, name, trimmedPass)
                     } else {
-                        scope.launch { snackbarHostState.showSnackbar("⚠️ كلمة المرور يجب أن لا تقل عن 4 رموز") }
+                        scope.launch { snackbarHostState.showSnackbar(errorMsg ?: "⚠️ كلمة المرور يجب أن لا تقل عن 6 أحرف وتحتوي على أحرف وأرقام") }
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))

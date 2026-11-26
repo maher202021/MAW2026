@@ -167,10 +167,19 @@ class ChatTestRunner(private val context: Context) {
             // Step 5: In-chat notifications deduplication
             onProgress("🔔 خطوة 5: فحص إشعارات المحادثات ومنع التكرار تحت الإرسال السريع...")
             val notifRef = db.collection("notifications").document("test_notif_${System.currentTimeMillis()}")
-            notifRef.set(mapOf("title" to "رسالة جديدة", "body" to "لديك رسالة من الفني", "read" to false, "targetPhone" to clientPhone)).await()
+            notifRef.set(mapOf(
+                "id" to notifRef.id,
+                "title" to "رسالة جديدة",
+                "body" to "لديك رسالة من الفني",
+                "isRead" to false,
+                "timestamp" to System.currentTimeMillis(),
+                "type" to "CHAT",
+                "targetUserId" to clientPhone,
+                "targetPhone" to clientPhone
+            )).await()
             delay(500)
             val nDoc = notifRef.get().await()
-            if (nDoc.exists() && nDoc.getBoolean("read") == false) {
+            if (nDoc.exists() && nDoc.getBoolean("isRead") == false) {
                 step5.status = "SUCCESS"
                 step5.firestoreVerified = true
                 step5.notes = "تم إنشاء الإشعار وعدم تكراره بكفاءة عالية"
@@ -245,33 +254,40 @@ class ChatTestRunner(private val context: Context) {
     }
 
     suspend fun cleanAllTestData() {
-        if (!com.serviseyem.BuildConfig.DEBUG) return
         try {
             val batch = db.batch()
-
-            // Delete chat_channels matching our test client/provider phone
-            val chSnapshot = db.collection("chat_channels").whereEqualTo("customerPhone", clientPhone).get().await()
+            val chSnapshot = db.collection("chat_channels").whereEqualTo("customerPhone", clientPhone).limit(50).get().await()
             for (doc in chSnapshot.documents) {
-                // Delete submessages first
-                val msgsSnapshot = doc.reference.collection("messages").get().await()
+                val msgsSnapshot = doc.reference.collection("messages").limit(50).get().await()
                 for (mDoc in msgsSnapshot.documents) {
                     batch.delete(mDoc.reference)
                 }
                 batch.delete(doc.reference)
             }
-
-            // Explicit prefixed channel deletes
-            val chSnapshot2 = db.collection("chat_channels").get().await()
-            for (doc in chSnapshot2.documents) {
-                if (doc.id.startsWith("test_channel_") || doc.id.startsWith("support_channel_")) {
-                    val msgsSnapshot = doc.reference.collection("messages").get().await()
+            for (prefix in listOf("test_channel_", "support_channel_")) {
+                val snap = db.collection("chat_channels")
+                    .whereGreaterThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), prefix)
+                    .whereLessThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), "$prefix\uf8ff")
+                    .limit(50)
+                    .get()
+                    .await()
+                for (doc in snap.documents) {
+                    val msgsSnapshot = doc.reference.collection("messages").limit(50).get().await()
                     for (mDoc in msgsSnapshot.documents) {
                         batch.delete(mDoc.reference)
                     }
                     batch.delete(doc.reference)
                 }
             }
-
+            val notifSnap = db.collection("notifications")
+                .whereGreaterThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), "test_notif_")
+                .whereLessThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), "test_notif_\uf8ff")
+                .limit(50)
+                .get()
+                .await()
+            for (doc in notifSnap.documents) {
+                batch.delete(doc.reference)
+            }
             batch.commit().await()
         } catch (_: Exception) {}
     }

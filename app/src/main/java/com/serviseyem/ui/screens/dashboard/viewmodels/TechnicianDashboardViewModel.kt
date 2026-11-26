@@ -37,8 +37,11 @@ class TechnicianDashboardViewModel(
         _uiState.value = _uiState.value.copy(activeTab = tabIndex)
     }
 
+    private var loadJob: kotlinx.coroutines.Job? = null
+
     fun loadDashboardData() {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             
             supervisorScope {
@@ -176,6 +179,12 @@ class TechnicianDashboardViewModel(
     }
 
     fun dispose() {
-        viewModelScope.cancel()
+        loadJob?.cancel()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        loadJob?.cancel()
+        loadJob = null
     }
 }

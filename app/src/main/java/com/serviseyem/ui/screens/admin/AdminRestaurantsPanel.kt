@@ -47,7 +47,7 @@ fun AdminRestaurantsPanel(
     }
 
     val context = LocalContext.current
-    val stores by viewModel.stores.collectAsState()
+    val stores by viewModel.allStoresRaw.collectAsState()
     val restaurants = remember(stores) {
         stores.filter {
             it.sectionId == "restaurants" || it.categoryId.contains("rest", true) ||

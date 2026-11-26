@@ -79,26 +79,22 @@ class RegistrationTestRunner(private val context: Context) {
      * Cleans up all test data from Firestore to ensure a pristine test state.
      */
     suspend fun cleanAllTestData(onProgress: (String) -> Unit = {}) {
-        if (!com.serviseyem.BuildConfig.DEBUG) return
         onProgress("🧹 جاري تصفية وتطهير بيانات الاختبار القديمة من قاعدة البيانات...")
         try {
             val batch = db.batch()
 
             for (phone in testPhones) {
-                // Delete from join_requests where phone == phone
-                val jrSnapshot = db.collection("join_requests").whereEqualTo("phone", phone).get().await()
+                val jrSnapshot = db.collection("join_requests").whereEqualTo("phone", phone).limit(50).get().await()
                 for (doc in jrSnapshot.documents) {
                     batch.delete(doc.reference)
                 }
 
-                // Delete from pending_providers where phone == phone
-                val ppSnapshot = db.collection("pending_providers").whereEqualTo("phone", phone).get().await()
+                val ppSnapshot = db.collection("pending_providers").whereEqualTo("phone", phone).limit(50).get().await()
                 for (doc in ppSnapshot.documents) {
                     batch.delete(doc.reference)
                 }
 
-                // Delete from registered_users
-                val ruSnapshot1 = db.collection("registered_users").whereEqualTo("phone", phone).get().await()
+                val ruSnapshot1 = db.collection("registered_users").whereEqualTo("phone", phone).limit(50).get().await()
                 for (doc in ruSnapshot1.documents) {
                     batch.delete(doc.reference)
                 }
@@ -107,32 +103,27 @@ class RegistrationTestRunner(private val context: Context) {
                     batch.delete(ruSnapshot2.reference)
                 }
 
-                // Delete from users
                 val uSnapshot = db.collection("users").document(phone).get().await()
                 if (uSnapshot.exists()) {
                     batch.delete(uSnapshot.reference)
                 }
 
-                // Delete from providers
-                val pSnapshot = db.collection("providers").whereEqualTo("phone", phone).get().await()
+                val pSnapshot = db.collection("providers").whereEqualTo("phone", phone).limit(50).get().await()
                 for (doc in pSnapshot.documents) {
                     batch.delete(doc.reference)
                 }
 
-                // Delete from stores
-                val sSnapshot = db.collection("stores").whereEqualTo("phone", phone).get().await()
+                val sSnapshot = db.collection("stores").whereEqualTo("phone", phone).limit(50).get().await()
                 for (doc in sSnapshot.documents) {
                     batch.delete(doc.reference)
                 }
 
-                // Delete from properties
-                val propSnapshot = db.collection("properties").whereEqualTo("phone", phone).get().await()
+                val propSnapshot = db.collection("properties").whereEqualTo("phone", phone).limit(50).get().await()
                 for (doc in propSnapshot.documents) {
                     batch.delete(doc.reference)
                 }
 
-                // Delete from jobs
-                val jSnapshot = db.collection("jobs").whereEqualTo("phone", phone).get().await()
+                val jSnapshot = db.collection("jobs").whereEqualTo("phone", phone).limit(50).get().await()
                 for (doc in jSnapshot.documents) {
                     batch.delete(doc.reference)
                 }

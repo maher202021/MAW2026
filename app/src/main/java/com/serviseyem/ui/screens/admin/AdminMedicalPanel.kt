@@ -38,7 +38,7 @@ fun AdminMedicalPanel(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val allStores by viewModel.stores.collectAsState()
+    val allStores by viewModel.allStoresRaw.collectAsState()
 
     val medicalStores = remember(allStores) {
         allStores.filter {

@@ -52,7 +52,15 @@ class AdminCrudOperations(private val db: FirebaseFirestore) {
             "password_resets",
             "fcm_tokens",
             "chat_channels",
-            "messages"
+            "messages",
+            "doctors",
+            "medical",
+            "restaurants",
+            "galleries",
+            "inventory",
+            "appointments",
+            "medical_appointments",
+            "admin_secrets"
         )
     }
 

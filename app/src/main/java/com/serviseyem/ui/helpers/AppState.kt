@@ -105,8 +105,14 @@ class AppState @Inject constructor() {
     internal val _properties = MutableStateFlow<List<PropertyEntity>>(com.serviseyem.data.helpers.DefaultDemoData.getDemoProperties())
     val properties: StateFlow<List<PropertyEntity>> = _properties.asStateFlow()
 
+    internal val _allPropertiesRaw = MutableStateFlow<List<PropertyEntity>>(emptyList())
+    val allPropertiesRaw: StateFlow<List<PropertyEntity>> = _allPropertiesRaw.asStateFlow()
+
     internal val _providers = MutableStateFlow<List<ProviderEntity>>(com.serviseyem.data.helpers.DefaultDemoData.getDemoProviders())
     val providers: StateFlow<List<ProviderEntity>> = _providers.asStateFlow()
+
+    internal val _allProvidersRaw = MutableStateFlow<List<ProviderEntity>>(emptyList())
+    val allProvidersRaw: StateFlow<List<ProviderEntity>> = _allProvidersRaw.asStateFlow()
 
     internal val _ratings = MutableStateFlow<List<RatingEntity>>(emptyList())
     val ratings: StateFlow<List<RatingEntity>> = _ratings.asStateFlow()
@@ -128,6 +134,9 @@ class AppState @Inject constructor() {
 
     internal val _stores = MutableStateFlow<List<StoreEntity>>(com.serviseyem.data.helpers.DefaultDemoData.getDemoStores())
     val stores: StateFlow<List<StoreEntity>> = _stores.asStateFlow()
+
+    internal val _allStoresRaw = MutableStateFlow<List<StoreEntity>>(emptyList())
+    val allStoresRaw: StateFlow<List<StoreEntity>> = _allStoresRaw.asStateFlow()
 
     internal val _supervisors = MutableStateFlow<List<SupervisorEntity>>(emptyList())
     val supervisors: StateFlow<List<SupervisorEntity>> = _supervisors.asStateFlow()

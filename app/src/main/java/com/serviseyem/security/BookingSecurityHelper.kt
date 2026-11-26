@@ -189,6 +189,17 @@ object BookingSecurityHelper {
     }
 
     /**
+     * Returns remaining PIN attempts (0..3) using the encrypted security vault.
+     */
+    fun getRemainingAttempts(context: Context, bookingId: String): Int {
+        val keyId = bookingId.trim()
+        if (keyId.isEmpty()) return MAX_ATTEMPTS
+        if (isBookingLocked(context, keyId)) return 0
+        val currentAttempts = getPrefs(context).getInt(KEY_ATTEMPTS_PREFIX + keyId, 0)
+        return (MAX_ATTEMPTS - currentAttempts).coerceIn(0, MAX_ATTEMPTS)
+    }
+
+    /**
      * Verifies raw input password against target (handles PBKDF2, salted/unsalted SHA-256, and legacy plain text).
      */
     fun verifyPassword(rawInput: String, targetPasswordOrHash: String): Boolean {

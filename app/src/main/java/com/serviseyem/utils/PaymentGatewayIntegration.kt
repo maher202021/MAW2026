@@ -88,12 +88,36 @@ class PaymentGatewayIntegration(private val context: Context? = null) {
     private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
     private val moshi: Moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
+    private fun getGatewayVaultPrefs(ctx: Context): SharedPreferences {
+        return try {
+            val masterKey = androidx.security.crypto.MasterKey.Builder(ctx)
+                .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            val encryptedPrefs = androidx.security.crypto.EncryptedSharedPreferences.create(
+                ctx,
+                "yemen_gateway_encrypted_vault",
+                masterKey,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+            val legacyPrefs = ctx.getSharedPreferences("yemen_gateway_secure_vault", Context.MODE_PRIVATE)
+            val legacyJson = legacyPrefs.getString("gateways_list_v1", null)
+            if (!legacyJson.isNullOrBlank() && encryptedPrefs.getString("gateways_list_v1", null).isNullOrBlank()) {
+                encryptedPrefs.edit().putString("gateways_list_v1", legacyJson).apply()
+                legacyPrefs.edit().clear().apply()
+            }
+            encryptedPrefs
+        } catch (_: Throwable) {
+            ctx.getSharedPreferences("yemen_gateway_secure_vault", Context.MODE_PRIVATE)
+        }
+    }
+
     /**
-     * 🔐 Retrieve gateway configurations safely from SharedPreferences
+     * 🔐 Retrieve gateway configurations safely from EncryptedSharedPreferences
      */
     fun getGateways(ctx: Context? = context): List<GatewayConfig> {
         val safeCtx = ctx ?: return emptyList()
-        val sharedPrefs = safeCtx.getSharedPreferences("yemen_gateway_secure_vault", Context.MODE_PRIVATE)
+        val sharedPrefs = getGatewayVaultPrefs(safeCtx)
         val json = sharedPrefs.getString("gateways_list_v1", null) ?: return getDefaultGateways()
         return try {
             val type = Types.newParameterizedType(List::class.java, GatewayConfig::class.java)
@@ -143,7 +167,7 @@ class PaymentGatewayIntegration(private val context: Context? = null) {
     }
 
     private fun saveGatewaysList(ctx: Context, list: List<GatewayConfig>) {
-        val sharedPrefs = ctx.getSharedPreferences("yemen_gateway_secure_vault", Context.MODE_PRIVATE)
+        val sharedPrefs = getGatewayVaultPrefs(ctx)
         try {
             val type = Types.newParameterizedType(List::class.java, GatewayConfig::class.java)
             val adapter = moshi.adapter<List<GatewayConfig>>(type)

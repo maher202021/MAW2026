@@ -103,7 +103,7 @@
     <string name="auth_terms_link">Terms &amp; Conditions</string>
     <string name="auth_privacy_link">Privacy Policy</string>
     <string name="auth_error_invalid_phone">Invalid phone number</string>
-    <string name="auth_error_invalid_password">Password must be at least 6 characters</string>
+    <string name="auth_error_invalid_password">Password must be at least 7 characters</string>
     <string name="auth_error_password_mismatch">Passwords don\'t match</string>
     <string name="auth_error_empty_name">Please enter your full name</string>
 

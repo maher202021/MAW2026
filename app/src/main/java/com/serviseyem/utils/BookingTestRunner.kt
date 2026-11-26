@@ -36,10 +36,6 @@ class BookingTestRunner(private val context: Context) {
         onProgress: (String) -> Unit,
         onComplete: (BookingFullReport) -> Unit
     ) {
-        if (!com.serviseyem.BuildConfig.DEBUG) {
-            onComplete(BookingFullReport(timestamp = DateFormatter.formatCustom(System.currentTimeMillis(), "yyyy-MM-dd HH:mm"), totalSteps = 0, passed = 0, failed = 0, steps = emptyList()))
-            return
-        }
         val stepsList = mutableListOf<BookingStepReport>()
         val timestamp = DateFormatter.formatCustom(System.currentTimeMillis(), "yyyy-MM-dd HH:mm")
 
@@ -277,30 +273,25 @@ class BookingTestRunner(private val context: Context) {
     }
 
     suspend fun cleanAllTestData() {
-        if (!com.serviseyem.BuildConfig.DEBUG) return
         try {
             val batch = db.batch()
-
-            // Delete bookings matching testClientPhone
-            val bkSnapshot = db.collection("bookings").whereIn("customerPhone", listOf(testClientPhone, "777100100")).get().await()
+            val bkSnapshot = db.collection("bookings").whereIn("customerPhone", listOf(testClientPhone, "777100100")).limit(50).get().await()
             for (doc in bkSnapshot.documents) {
                 batch.delete(doc.reference)
             }
-
-            // Delete cancel and lock test docs explicitly
-            val bkSnapshot2 = db.collection("bookings").get().await()
+            val bkSnapshot2 = db.collection("bookings")
+                .whereGreaterThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), "test_booking_")
+                .whereLessThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), "test_booking_\uf8ff")
+                .limit(50)
+                .get()
+                .await()
             for (doc in bkSnapshot2.documents) {
-                if (doc.id.startsWith("test_booking_")) {
-                    batch.delete(doc.reference)
-                }
+                batch.delete(doc.reference)
             }
-
-            // Delete notifications created during test
-            val notifSnapshot = db.collection("notifications").whereEqualTo("targetValue", testClientPhone).get().await()
+            val notifSnapshot = db.collection("notifications").whereEqualTo("targetValue", testClientPhone).limit(50).get().await()
             for (doc in notifSnapshot.documents) {
                 batch.delete(doc.reference)
             }
-
             batch.commit().await()
         } catch (_: Exception) {}
     }

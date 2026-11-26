@@ -21,19 +21,8 @@ object FirebaseModule {
     private fun ensureFirebaseInitialized(context: Context) {
         if (FirebaseApp.getApps(context).isEmpty()) {
             try {
-                val options = com.google.firebase.FirebaseOptions.Builder()
-                    .setApplicationId("1:954106721012:android:5fa5e385532b08d5c0e4a1")
-                    .setApiKey("AIzaSyBq2SEhBADFGVF4sDyV3sC_t2HqQ1m8lC0")
-                    .setProjectId("serviseyem")
-                    .setGcmSenderId("954106721012")
-                    .setStorageBucket("serviseyem.firebasestorage.app")
-                    .build()
-                FirebaseApp.initializeApp(context, options)
-            } catch (_: Throwable) {
-                try {
-                    FirebaseApp.initializeApp(context)
-                } catch (_: Throwable) {}
-            }
+                FirebaseApp.initializeApp(context)
+            } catch (_: Throwable) {}
         }
     }
 
@@ -43,9 +32,7 @@ object FirebaseModule {
         try {
             ensureFirebaseInitialized(context)
         } catch (_: Throwable) {}
-        val firestore = FirebaseFirestore.getInstance()
-        // Firestore persistence is disabled to rely purely on cloud sync.
-        return firestore
+        return FirebaseFirestore.getInstance()
     }
 
     @Provides

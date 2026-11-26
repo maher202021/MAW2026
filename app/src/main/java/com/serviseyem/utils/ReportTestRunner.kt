@@ -185,24 +185,21 @@ class ReportTestRunner(private val context: Context) {
     }
 
     suspend fun cleanAllTestData() {
-        if (!com.serviseyem.BuildConfig.DEBUG) return
         try {
             val batch = db.batch()
-
-            // Delete reports matching testReporterName
-            val snap = db.collection("reports").whereEqualTo("reporterName", testReporterName).get().await()
+            val snap = db.collection("reports").whereEqualTo("reporterName", testReporterName).limit(50).get().await()
             for (doc in snap.documents) {
                 batch.delete(doc.reference)
             }
-
-            // Delete all test ones explicitly
-            val snap2 = db.collection("reports").get().await()
+            val snap2 = db.collection("reports")
+                .whereGreaterThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), "report_test_")
+                .whereLessThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), "report_test_\uf8ff")
+                .limit(50)
+                .get()
+                .await()
             for (doc in snap2.documents) {
-                if (doc.id.startsWith("report_test_")) {
-                    batch.delete(doc.reference)
-                }
+                batch.delete(doc.reference)
             }
-
             batch.commit().await()
         } catch (_: Exception) {}
     }

@@ -15,9 +15,12 @@ class DashboardExtensionsRepositoryImpl : IDashboardExtensionsRepository {
         } else {
             firestore.collection("special_offers")
         }
-        val listener = query.addSnapshotListener { snap, _ ->
+        val listener = query.limit(100).addSnapshotListener { snap, _ ->
             if (snap != null) {
-                trySend(snap.documents.mapNotNull { it.toObject(SpecialOfferEntity::class.java)?.copy(id = it.id) })
+                trySend(snap.documents.mapNotNull { doc ->
+                    val isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true
+                    if (isDeleted) null else doc.toObject(SpecialOfferEntity::class.java)?.copy(id = doc.id)
+                })
             } else {
                 trySend(emptyList())
             }
@@ -40,9 +43,10 @@ class DashboardExtensionsRepositoryImpl : IDashboardExtensionsRepository {
     override fun deleteSpecialOffer(offerId: String) {
         if (offerId.isBlank()) return
         try {
-            firestore.collection("special_offers")
-                .document(offerId)
-                .delete()
+            val docRef = firestore.collection("special_offers").document(offerId)
+            docRef.delete().addOnFailureListener {
+                docRef.update(mapOf("isDeleted" to true, "deleted" to true, "isEnabled" to false))
+            }
         } catch (e: Exception) {
             android.util.Log.e("DashboardExtRepo", "Failed to delete offer", e)
         }
@@ -65,9 +69,11 @@ class DashboardExtensionsRepositoryImpl : IDashboardExtensionsRepository {
         } else {
             firestore.collection("coupons")
         }
-        val listener = query.addSnapshotListener { snap, _ ->
+        val listener = query.limit(100).addSnapshotListener { snap, _ ->
             if (snap != null) {
                 val list = snap.documents.mapNotNull { doc ->
+                    val isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true
+                    if (isDeleted) return@mapNotNull null
                     val base = doc.toObject(SpecialOfferEntity::class.java)
                     if (base != null) {
                         val code = base.couponCode.ifBlank { doc.getString("code") ?: "" }
@@ -104,9 +110,10 @@ class DashboardExtensionsRepositoryImpl : IDashboardExtensionsRepository {
     override fun deleteCoupon(couponId: String) {
         if (couponId.isBlank()) return
         try {
-            firestore.collection("coupons")
-                .document(couponId)
-                .delete()
+            val docRef = firestore.collection("coupons").document(couponId)
+            docRef.delete().addOnFailureListener {
+                docRef.update(mapOf("isDeleted" to true, "deleted" to true, "isEnabled" to false, "isActive" to false))
+            }
         } catch (e: Exception) {
             android.util.Log.e("DashboardExtRepo", "Failed to delete coupon", e)
         }
@@ -129,9 +136,12 @@ class DashboardExtensionsRepositoryImpl : IDashboardExtensionsRepository {
         } else {
             firestore.collection("inventory")
         }
-        val listener = query.addSnapshotListener { snap, _ ->
+        val listener = query.limit(100).addSnapshotListener { snap, _ ->
             if (snap != null) {
-                trySend(snap.documents.mapNotNull { it.toObject(InventoryItem::class.java)?.copy(id = it.id) })
+                trySend(snap.documents.mapNotNull { doc ->
+                    val isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true
+                    if (isDeleted) null else doc.toObject(InventoryItem::class.java)?.copy(id = doc.id)
+                })
             } else {
                 trySend(emptyList())
             }
@@ -154,9 +164,10 @@ class DashboardExtensionsRepositoryImpl : IDashboardExtensionsRepository {
     override fun deleteInventoryItem(itemId: String) {
         if (itemId.isBlank()) return
         try {
-            firestore.collection("inventory")
-                .document(itemId)
-                .delete()
+            val docRef = firestore.collection("inventory").document(itemId)
+            docRef.delete().addOnFailureListener {
+                docRef.update(mapOf("isDeleted" to true, "deleted" to true, "inStock" to false))
+            }
         } catch (e: Exception) {
             android.util.Log.e("DashboardExtRepo", "Failed to delete inventory", e)
         }
@@ -179,9 +190,12 @@ class DashboardExtensionsRepositoryImpl : IDashboardExtensionsRepository {
         } else {
             firestore.collection("loyalty_programs")
         }
-        val listener = query.addSnapshotListener { snap, _ ->
+        val listener = query.limit(100).addSnapshotListener { snap, _ ->
             if (snap != null) {
-                trySend(snap.documents.mapNotNull { it.toObject(LoyaltyProgram::class.java)?.copy(id = it.id) })
+                trySend(snap.documents.mapNotNull { doc ->
+                    val isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true
+                    if (isDeleted) null else doc.toObject(LoyaltyProgram::class.java)?.copy(id = doc.id)
+                })
             } else {
                 trySend(emptyList())
             }
@@ -204,9 +218,10 @@ class DashboardExtensionsRepositoryImpl : IDashboardExtensionsRepository {
     override fun deleteLoyaltyProgram(programId: String) {
         if (programId.isBlank()) return
         try {
-            firestore.collection("loyalty_programs")
-                .document(programId)
-                .delete()
+            val docRef = firestore.collection("loyalty_programs").document(programId)
+            docRef.delete().addOnFailureListener {
+                docRef.update(mapOf("isDeleted" to true, "deleted" to true, "isEnabled" to false))
+            }
         } catch (e: Exception) {
             android.util.Log.e("DashboardExtRepo", "Failed to delete loyalty program", e)
         }
@@ -229,9 +244,12 @@ class DashboardExtensionsRepositoryImpl : IDashboardExtensionsRepository {
         } else {
             firestore.collection("staff")
         }
-        val listener = query.addSnapshotListener { snap, _ ->
+        val listener = query.limit(100).addSnapshotListener { snap, _ ->
             if (snap != null) {
-                trySend(snap.documents.mapNotNull { it.toObject(StaffMember::class.java)?.copy(id = it.id) })
+                trySend(snap.documents.mapNotNull { doc ->
+                    val isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true
+                    if (isDeleted) null else doc.toObject(StaffMember::class.java)?.copy(id = doc.id)
+                })
             } else {
                 trySend(emptyList())
             }
@@ -243,9 +261,10 @@ class DashboardExtensionsRepositoryImpl : IDashboardExtensionsRepository {
     override fun deleteStaff(staffId: String) {
         if (staffId.isBlank()) return
         try {
-            firestore.collection("staff")
-                .document(staffId)
-                .delete()
+            val docRef = firestore.collection("staff").document(staffId)
+            docRef.delete().addOnFailureListener {
+                docRef.update(mapOf("isDeleted" to true, "deleted" to true))
+            }
         } catch (e: Exception) {
             android.util.Log.e("DashboardExtRepo", "Failed to delete staff", e)
         }

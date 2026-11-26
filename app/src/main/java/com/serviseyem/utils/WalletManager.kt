@@ -47,7 +47,27 @@ class WalletManager(private val context: Context? = null) {
     private val moshi: Moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
     private val sharedPrefs: SharedPreferences? by lazy {
-        context?.getSharedPreferences("yemen_wallet_secure_cache", Context.MODE_PRIVATE)
+        val appCtx = context?.applicationContext ?: return@lazy null
+        try {
+            val masterKey = androidx.security.crypto.MasterKey.Builder(appCtx)
+                .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            val enc = androidx.security.crypto.EncryptedSharedPreferences.create(
+                appCtx,
+                "yemen_wallet_encrypted_cache",
+                masterKey,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+            // Migrate/wipe any legacy unencrypted cache file
+            try {
+                appCtx.getSharedPreferences("yemen_wallet_secure_cache", Context.MODE_PRIVATE)
+                    .edit().clear().apply()
+            } catch (_: Exception) {}
+            enc
+        } catch (_: Throwable) {
+            appCtx.getSharedPreferences("yemen_wallet_secure_cache", Context.MODE_PRIVATE)
+        }
     }
 
     // In-memory / reactive state cache
@@ -80,11 +100,12 @@ class WalletManager(private val context: Context? = null) {
 
     private fun saveTransactionsToCache(list: List<Transaction>) {
         try {
+            val bounded = if (list.size > 100) list.takeLast(100) else list
             val type = Types.newParameterizedType(List::class.java, Transaction::class.java)
             val adapter = moshi.adapter<List<Transaction>>(type)
-            val json = adapter.toJson(list)
+            val json = adapter.toJson(bounded)
             sharedPrefs?.edit()?.putString("cached_txs_json", json)?.apply()
-        } catch (ignored: Exception) {}
+        } catch (_: Exception) {}
     }
 
     /**
@@ -447,9 +468,19 @@ class WalletManager(private val context: Context? = null) {
     fun freezeWallet(walletId: String, reason: String = ""): Result<Boolean> {
         return try {
             val wallet = getOrCreateWallet(walletId)
-            val updated = wallet.copy(status = "FROZEN", updatedAt = System.currentTimeMillis())
+            val now = System.currentTimeMillis()
+            val updated = wallet.copy(status = "FROZEN", updatedAt = now)
             localWallets[wallet.id] = updated
             localWallets[wallet.userId] = updated
+            val payload = mapOf(
+                "id" to wallet.id,
+                "userId" to wallet.userId,
+                "status" to "FROZEN",
+                "freezeReason" to reason,
+                "updatedAt" to now
+            )
+            firestore.collection("wallets").document(wallet.id)
+                .set(payload, com.google.firebase.firestore.SetOptions.merge())
             Result.success(true)
         } catch (e: Exception) {
             Result.failure(e)
@@ -459,9 +490,19 @@ class WalletManager(private val context: Context? = null) {
     fun unfreezeWallet(walletId: String): Result<Boolean> {
         return try {
             val wallet = getOrCreateWallet(walletId)
-            val updated = wallet.copy(status = "ACTIVE", updatedAt = System.currentTimeMillis())
+            val now = System.currentTimeMillis()
+            val updated = wallet.copy(status = "ACTIVE", updatedAt = now)
             localWallets[wallet.id] = updated
             localWallets[wallet.userId] = updated
+            val payload = mapOf(
+                "id" to wallet.id,
+                "userId" to wallet.userId,
+                "status" to "ACTIVE",
+                "freezeReason" to "",
+                "updatedAt" to now
+            )
+            firestore.collection("wallets").document(wallet.id)
+                .set(payload, com.google.firebase.firestore.SetOptions.merge())
             Result.success(true)
         } catch (e: Exception) {
             Result.failure(e)

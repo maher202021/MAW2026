@@ -153,17 +153,13 @@ class FCMService : FirebaseMessagingService() {
         super.onNewToken(token)
         if (token.isBlank()) return
         
-        // 🔒 الخطوة 1: حفظ التوكن في التخزين المشفر فوراً (H-03: Encrypted token storage) مع حفظ النسخة الاحتياطية المتوافقة
+        // 🔒 الخطوة 1: حفظ التوكن في التخزين المشفر فقط (EncryptedSharedPreferences via SecureStorage)
         try {
             val secureStorage = com.serviseyem.utils.SecureStorage(this)
             secureStorage.saveSecureString("fcm_token_backup", token)
         } catch (e: Exception) {
-            android.util.Log.w("FCMService", "SecureStorage token save fallback: ${e.message}")
+            android.util.Log.w("FCMService", "SecureStorage token save failed: ${e.message}")
         }
-        try {
-            val sp = getSharedPreferences("yemen_service_prefs", Context.MODE_PRIVATE)
-            sp.edit().putString("fcm_token_backup", token).apply()
-        } catch (_: Exception) {}
         
         // 🔄 الخطوة 2: مزامنة مع Firestore باستخدام serviceScope المدار لمنع تسريب الخيوط
         serviceScope.launch {

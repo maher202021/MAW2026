@@ -1349,6 +1349,11 @@ fun adminResetAccountPassword(phone: String, newPassword: String, notifyAction: 
             mainViewModel.triggerNotification("❌ يرجى التأكد من رقم الهاتف وكلمة المرور الجديدة")
             return
         }
+        val (policyValid, policyError) = com.serviseyem.utils.SecurityCryptoUtils.validatePasswordPolicy(cleanNewPass)
+        if (!policyValid) {
+            mainViewModel.triggerNotification("❌ ${policyError ?: "كلمة المرور ضعيفة جداً"}")
+            return
+        }
         val hashedPassword = com.serviseyem.utils.SecureHasher.hashPassword(cleanNewPass)
         val encryptedNewPass = com.serviseyem.utils.SecurityCryptoUtils.encryptCrossDevice(cleanNewPass)
         val passUpdate = mapOf("password" to "", "passwordHash" to hashedPassword)
@@ -1460,7 +1465,7 @@ fun requestPasswordRecoveryGeneral(accountName: String, phone: String, accountTy
         if (com.serviseyem.utils.AdminSecurityManager.hasOwnerPermission(currentRole) && mainViewModel.verifyAdminOrOwnerPassword(password)) {
             val collections = listOf("categories", "providers", "pending_providers", "banners", "settings", "reports", "bookings", "notifications", "chat_channels", "cities", "stores", "medical", "restaurants", com.serviseyem.utils.AppConstants.COL_JOBS, "job_applications", "properties", "products", "reviews")
             collections.forEach { col ->
-                db.collection(col).get().addOnSuccessListener { snapshot ->
+                db.collection(col).limit(400).get().addOnSuccessListener { snapshot ->
                     val docs = snapshot.documents
                     docs.chunked(400).forEach { chunk ->
                         val batch = db.batch()
@@ -1481,7 +1486,7 @@ fun requestPasswordRecoveryGeneral(accountName: String, phone: String, accountTy
         val currentRole = getAdminViewModel?.invoke()?.adminRole?.value.orEmpty()
         if (com.serviseyem.utils.AdminSecurityManager.hasOwnerPermission(currentRole) && mainViewModel.verifyAdminOrOwnerPassword(password)) {
             selectedCollections.forEach { col ->
-                db.collection(col).get().addOnSuccessListener { snapshot ->
+                db.collection(col).limit(400).get().addOnSuccessListener { snapshot ->
                     val docs = snapshot.documents
                     docs.chunked(400).forEach { chunk ->
                         val batch = db.batch()
@@ -1512,7 +1517,7 @@ fun requestPasswordRecoveryGeneral(accountName: String, phone: String, accountTy
                 }
 
                 for (col in listOf("notifications", "chat_channels", "reports", "bookings", "providers")) {
-                    db.collection(col).whereEqualTo("isMock", true).get().addOnSuccessListener { snapshot ->
+                    db.collection(col).whereEqualTo("isMock", true).limit(400).get().addOnSuccessListener { snapshot ->
                         val docs = snapshot?.documents?.filter { isMockDoc(it) } ?: emptyList()
                         docs.chunked(400).forEach { chunk ->
                             val batch = db.batch()
@@ -1520,7 +1525,7 @@ fun requestPasswordRecoveryGeneral(accountName: String, phone: String, accountTy
                             batch.commit()
                         }
                     }
-                    db.collection(col).whereEqualTo("isTest", true).get().addOnSuccessListener { snapshot ->
+                    db.collection(col).whereEqualTo("isTest", true).limit(400).get().addOnSuccessListener { snapshot ->
                         val docs = snapshot?.documents?.filter { isMockDoc(it) } ?: emptyList()
                         docs.chunked(400).forEach { chunk ->
                             val batch = db.batch()
@@ -1541,7 +1546,7 @@ fun requestPasswordRecoveryGeneral(accountName: String, phone: String, accountTy
         viewModelScope.launch {
             try {
                 val cutoffTime = System.currentTimeMillis() - (daysToKeep * 24L * 60 * 60 * 1000)
-                db.collection("notifications").whereLessThan("timestamp", cutoffTime).get()
+                db.collection("notifications").whereLessThan("timestamp", cutoffTime).limit(400).get()
                     .addOnSuccessListener { snapshot ->
                         val docs = snapshot?.documents ?: emptyList()
                         docs.chunked(400).forEach { chunk ->

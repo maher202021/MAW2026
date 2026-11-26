@@ -197,8 +197,8 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                                 coverImage = doc.getString("coverImage") ?: "",
                                 profileImage = doc.getString("profileImage") ?: "",
                                 previewPrice = doc.getDouble("previewPrice") ?: 1500.0,
-                                latitude = doc.getDouble("latitude") ?: doc.getString("latitude")?.toDoubleOrNull() ?: 15.3694,
-                                longitude = doc.getDouble("longitude") ?: doc.getString("longitude")?.toDoubleOrNull() ?: 44.1910,
+                                latitude = doc.getDouble("latitude") ?: doc.getString("latitude")?.toDoubleOrNull() ?: 0.0,
+                                longitude = doc.getDouble("longitude") ?: doc.getString("longitude")?.toDoubleOrNull() ?: 0.0,
                                 customCategoryName = doc.getString("customCategoryName") ?: "",
                                 profession = doc.getString("profession") ?: "",
                                 specialization = doc.getString("specialization") ?: "",
@@ -214,8 +214,10 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                     }
                 }
 
-                val activeList = allList.filter { !it.isDeleted && !it.isBlocked && (it.subscriptionStatus == "APPROVED" || it.subscriptionStatus == "ACTIVE" || it.subscriptionStatus.isBlank()) }
+                val rawProviders = allList.filter { !it.isDeleted }
+                val activeList = rawProviders.filter { !it.isBlocked && (it.subscriptionStatus == "APPROVED" || it.subscriptionStatus == "ACTIVE" || it.subscriptionStatus.isBlank()) }
                 val deletedList = allList.filter { it.isDeleted }
+                appState._allProvidersRaw.value = rawProviders
                 appState._providers.value = activeList
                 appState._deletedProviders.value = deletedList
             }
@@ -268,8 +270,8 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                                 numReviews = (doc.getLong("numReviews") ?: 0L).toInt(),
                                 isActive = doc.getBoolean("isActive") ?: doc.getBoolean("active") ?: true,
                                 isPinned = doc.getBoolean("isPinned") == true || doc.getBoolean("pinned") == true,
-                                latitude = doc.getDouble("latitude") ?: doc.getString("latitude")?.toDoubleOrNull() ?: 15.3694,
-                                longitude = doc.getDouble("longitude") ?: doc.getString("longitude")?.toDoubleOrNull() ?: 44.1910,
+                                latitude = doc.getDouble("latitude") ?: doc.getString("latitude")?.toDoubleOrNull() ?: 0.0,
+                                longitude = doc.getDouble("longitude") ?: doc.getString("longitude")?.toDoubleOrNull() ?: 0.0,
                                 isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true,
                                 isApproved = doc.getBoolean("isApproved") ?: doc.getBoolean("approved") ?: false,
                                 isVip = doc.getBoolean("isVip") == true || doc.getBoolean("vip") == true,
@@ -286,7 +288,9 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                         }
                     }
                 }
-                val activeStores = fetched.filter { !it.isDeleted && it.isApproved && it.isActive && !it.isBlocked }
+                val rawStores = fetched.filter { !it.isDeleted }
+                val activeStores = rawStores.filter { it.isApproved && it.isActive && !it.isBlocked }
+                appState._allStoresRaw.value = rawStores
                 appState._stores.value = activeStores
             }
         }
@@ -337,8 +341,8 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                                 numReviews = (doc.getLong("numReviews") ?: 0L).toInt(),
                                 isActive = doc.getBoolean("isActive") ?: doc.getBoolean("active") ?: true,
                                 isPinned = doc.getBoolean("isPinned") == true || doc.getBoolean("pinned") == true,
-                                latitude = doc.getDouble("latitude") ?: doc.getString("latitude")?.toDoubleOrNull() ?: 15.3694,
-                                longitude = doc.getDouble("longitude") ?: doc.getString("longitude")?.toDoubleOrNull() ?: 44.1910,
+                                latitude = doc.getDouble("latitude") ?: doc.getString("latitude")?.toDoubleOrNull() ?: 0.0,
+                                longitude = doc.getDouble("longitude") ?: doc.getString("longitude")?.toDoubleOrNull() ?: 0.0,
                                 isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true,
                                 isApproved = doc.getBoolean("isApproved") ?: doc.getBoolean("approved") ?: false,
                                 isVip = doc.getBoolean("isVip") == true || doc.getBoolean("vip") == true,
@@ -352,7 +356,9 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                         }
                     }
                 }
-                val activeProps = fetched.filter { !it.isDeleted && it.isApproved && it.isActive && !it.isBlocked }
+                val rawProps = fetched.filter { !it.isDeleted }
+                val activeProps = rawProps.filter { it.isApproved && it.isActive && !it.isBlocked }
+                appState._allPropertiesRaw.value = rawProps
                 appState._properties.value = activeProps
             }
         }

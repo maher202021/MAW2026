@@ -537,9 +537,9 @@ open class AuthViewModel @Inject constructor() : BaseViewModel() {
                         setUserSessionDetails(context, userName, finalPhone, userCity)
                         val sp = context.getSharedPreferences("yemen_service_prefs", Context.MODE_PRIVATE)
                         sp.edit().apply {
-                            putBoolean("is_account_logged_in", true)
-                            putString("user_account_type", "CLIENT")
-                            putString("logged_account_id", targetDoc.id)
+                            remove("is_account_logged_in")
+                            remove("user_account_type")
+                            remove("logged_account_id")
                             apply()
                         }
                         runCatching {

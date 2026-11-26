@@ -232,8 +232,29 @@ tasks.register("copyApkToRoot") {
     }
 }
 
+tasks.register("copyReleaseApkToRoot") {
+    doLast {
+        val srcFile = file("${layout.buildDirectory.get().asFile}/outputs/apk/release/app-release.apk")
+        val destFile = file("${project.rootDir}/app-release.apk")
+        val buildOutputsDir = file("${project.rootDir}/.build-outputs")
+        buildOutputsDir.mkdirs()
+        val buildOutputsApk = file("${project.rootDir}/.build-outputs/app-release.apk")
+        file("${project.rootDir}/app-debug.apk").takeIf { it.exists() }?.delete()
+        file("${project.rootDir}/.build-outputs/app-debug.apk").takeIf { it.exists() }?.delete()
+        file("${project.rootDir}/app-release-unsigned.apk").takeIf { it.exists() }?.delete()
+        if (srcFile.exists() && srcFile.length() > 10_000_000L) {
+            srcFile.copyTo(destFile, overwrite = true)
+            srcFile.copyTo(buildOutputsApk, overwrite = true)
+            println("Release APK copied successfully to ${destFile.absolutePath} (Size: ${destFile.length()} bytes)")
+        } else {
+            throw GradleException("Final release APK missing or incomplete: ${srcFile.absolutePath} (${srcFile.length()} bytes)")
+        }
+    }
+}
+
 afterEvaluate {
     tasks.findByName("assembleDebug")?.finalizedBy("copyApkToRoot")
+    tasks.findByName("assembleRelease")?.finalizedBy("copyReleaseApkToRoot")
 }
 
 

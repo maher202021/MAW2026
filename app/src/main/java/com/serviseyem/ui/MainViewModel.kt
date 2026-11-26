@@ -107,6 +107,8 @@ class MainViewModel @Inject constructor(
     val categories get() = homeViewModel.categories
     val _providers get() = homeViewModel._providers
     val providers get() = homeViewModel.providers
+    val _allProvidersRaw get() = homeViewModel._allProvidersRaw
+    val allProvidersRaw get() = homeViewModel.allProvidersRaw
     val _filteredProviders get() = homeViewModel._filteredProviders
     val filteredProviders get() = homeViewModel.filteredProviders
     val _filteredStores get() = homeViewModel._filteredStores
@@ -178,10 +180,14 @@ class MainViewModel @Inject constructor(
     val customProfileTabs get() = adminViewModel.customProfileTabs
     val _stores get() = adminViewModel._stores
     val stores get() = adminViewModel.stores
+    val _allStoresRaw get() = adminViewModel._allStoresRaw
+    val allStoresRaw get() = adminViewModel.allStoresRaw
     val _products get() = adminViewModel._products
     val products get() = adminViewModel.products
     val _properties get() = adminViewModel._properties
     val properties get() = adminViewModel.properties
+    val _allPropertiesRaw get() = adminViewModel._allPropertiesRaw
+    val allPropertiesRaw get() = adminViewModel.allPropertiesRaw
     val _jobs get() = adminViewModel._jobs
     val jobs get() = adminViewModel.jobs
     val _jobApplications get() = adminViewModel._jobApplications
@@ -452,7 +458,11 @@ class MainViewModel @Inject constructor(
             _isRefreshing.value = true
             _uiErrorMessage.value = null
             try {
-                setupRealtimeFirestoreListeners()
+                if (realtimeSyncHelper?.firestoreListeners?.isNotEmpty() == true) {
+                    realtimeSyncHelper?.loadOnDemandInitialData(appState)
+                } else {
+                    setupRealtimeFirestoreListeners()
+                }
             } catch (e: Exception) {
                 _uiErrorMessage.value = "تعذر تحديث البيانات: ${e.localizedMessage}"
             } finally {
@@ -472,7 +482,13 @@ class MainViewModel @Inject constructor(
             val online = capabilities?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
             _isOnline.value = online
             if (online) {
-                setupRealtimeFirestoreListeners()
+                if (realtimeSyncHelper?.firestoreListeners?.isEmpty() == true) {
+                    setupRealtimeFirestoreListeners()
+                } else {
+                    viewModelScope.launch {
+                        realtimeSyncHelper?.loadOnDemandInitialData(appState)
+                    }
+                }
             }
         }
     }

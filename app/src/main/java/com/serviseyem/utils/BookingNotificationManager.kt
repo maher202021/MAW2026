@@ -12,6 +12,8 @@ import com.serviseyem.data.BookingEntity
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -25,7 +27,7 @@ class BookingNotificationManager(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
 
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -63,6 +65,10 @@ class BookingNotificationManager(
      */
     private fun shouldDeliverNotification(key: String): Boolean {
         val now = System.currentTimeMillis()
+        if (recentNotificationTimestamps.size > 200) {
+            val cutoff = now - DEDUPLICATION_WINDOW_MS
+            recentNotificationTimestamps.entries.removeIf { it.value < cutoff }
+        }
         val lastTime = recentNotificationTimestamps[key] ?: 0L
         if (now - lastTime < DEDUPLICATION_WINDOW_MS) {
             Log.d(TAG, "Notification skipped due to deduplication: $key")
@@ -269,5 +275,10 @@ class BookingNotificationManager(
             "PAYMENT" -> notifyPaymentStatusChanged(booking)
             else -> showLocalNotification("تنبيه الحجز", "تم تحديث بيانات الحجز #${booking.bookingNumber}")
         }
+    }
+
+    fun clear() {
+        recentNotificationTimestamps.clear()
+        scope.cancel()
     }
 }

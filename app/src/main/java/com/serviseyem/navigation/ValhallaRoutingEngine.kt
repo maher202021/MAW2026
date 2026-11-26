@@ -315,37 +315,49 @@ internal object ValhallaRoutingEngine {
      * فك تشفير مسار Valhalla Polyline6 الدقيق
      */
     fun decodePolyline6(encoded: String): List<RoutePoint> {
-        val poly = ArrayList<RoutePoint>()
-        var index = 0
-        val len = encoded.length
-        var lat = 0
-        var lng = 0
+        if (encoded.isBlank()) return emptyList()
+        return try {
+            val poly = ArrayList<RoutePoint>()
+            var index = 0
+            val len = encoded.length
+            var lat = 0
+            var lng = 0
 
-        while (index < len) {
-            var b: Int
-            var shift = 0
-            var result = 0
-            do {
-                b = encoded[index++].code - 63
-                result = result or ((b and 0x1f) shl shift)
-                shift += 5
-            } while (b >= 0x20)
-            val dlat = if ((result and 1) != 0) (result shr 1).inv() else (result shr 1)
-            lat += dlat
+            while (index < len) {
+                var b: Int
+                var shift = 0
+                var result = 0
+                do {
+                    if (index >= len || shift > 30) return emptyList()
+                    b = encoded[index++].code - 63
+                    if (b < 0 || b > 63) return emptyList()
+                    result = result or ((b and 0x1f) shl shift)
+                    shift += 5
+                } while (b >= 0x20)
+                val dlat = if ((result and 1) != 0) (result shr 1).inv() else (result shr 1)
+                lat += dlat
 
-            shift = 0
-            result = 0
-            do {
-                b = encoded[index++].code - 63
-                result = result or ((b and 0x1f) shl shift)
-                shift += 5
-            } while (b >= 0x20)
-            val dlng = if ((result and 1) != 0) (result shr 1).inv() else (result shr 1)
-            lng += dlng
+                shift = 0
+                result = 0
+                do {
+                    if (index >= len || shift > 30) return emptyList()
+                    b = encoded[index++].code - 63
+                    if (b < 0 || b > 63) return emptyList()
+                    result = result or ((b and 0x1f) shl shift)
+                    shift += 5
+                } while (b >= 0x20)
+                val dlng = if ((result and 1) != 0) (result shr 1).inv() else (result shr 1)
+                lng += dlng
 
-            poly.add(RoutePoint(lat / 1e6, lng / 1e6))
+                val latDeg = lat / 1e6
+                val lngDeg = lng / 1e6
+                if (latDeg !in -90.0..90.0 || lngDeg !in -180.0..180.0) return emptyList()
+                poly.add(RoutePoint(latDeg, lngDeg))
+            }
+            poly
+        } catch (_: Exception) {
+            emptyList()
         }
-        return poly
     }
 
     fun mapValhallaManeuverType(type: Int): ManeuverType {

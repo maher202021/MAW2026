@@ -342,9 +342,9 @@ fun PasswordResetWaitingScreen(
                                         }
 
                                         sp.edit()
-                                            .putBoolean("is_account_logged_in", true)
-                                            .putString("user_account_type", resolvedType)
-                                            .putString("logged_account_id", resolvedAccountId)
+                                            .remove("is_account_logged_in")
+                                            .remove("user_account_type")
+                                            .remove("logged_account_id")
                                             .remove("password_recovery_waiting_phone")
                                             .apply()
 

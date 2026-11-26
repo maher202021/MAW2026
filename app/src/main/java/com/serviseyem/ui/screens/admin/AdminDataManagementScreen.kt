@@ -50,10 +50,10 @@ fun AdminDataManagementScreenContent(
 ) {
     val context = LocalContext.current
 
-    val stores by viewModel.stores.collectAsState()
-    val properties by viewModel.properties.collectAsState()
+    val stores by viewModel.allStoresRaw.collectAsState()
+    val properties by viewModel.allPropertiesRaw.collectAsState()
     val jobs by viewModel.jobs.collectAsState()
-    val providers by viewModel.providers.collectAsState()
+    val providers by viewModel.allProvidersRaw.collectAsState()
 
     var selectedSection by remember { mutableStateOf("المحلات والمتاجر") }
     val sectionTabs = listOf(

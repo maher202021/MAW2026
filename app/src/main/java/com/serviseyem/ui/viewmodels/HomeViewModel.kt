@@ -28,6 +28,15 @@ open class HomeViewModel @Inject constructor(
     internal val _providers get() = appState._providers
     val providers: StateFlow<List<ProviderEntity>> = _providers.asStateFlow()
 
+    internal val _allProvidersRaw get() = appState._allProvidersRaw
+    val allProvidersRaw: StateFlow<List<ProviderEntity>> = _allProvidersRaw.asStateFlow()
+
+    internal val _allStoresRaw get() = appState._allStoresRaw
+    val allStoresRaw: StateFlow<List<StoreEntity>> = _allStoresRaw.asStateFlow()
+
+    internal val _allPropertiesRaw get() = appState._allPropertiesRaw
+    val allPropertiesRaw: StateFlow<List<PropertyEntity>> = _allPropertiesRaw.asStateFlow()
+
     internal val _filteredProviders = MutableStateFlow<List<ProviderEntity>>(emptyList())
     val filteredProviders: StateFlow<List<ProviderEntity>> = _filteredProviders.asStateFlow()
 

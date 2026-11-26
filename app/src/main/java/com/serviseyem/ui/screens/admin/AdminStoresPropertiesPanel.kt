@@ -41,8 +41,8 @@ fun AdminStoresPropertiesPanel(
 ) {
     val context = LocalContext.current
 
-    val stores by viewModel.stores.collectAsState()
-    val properties by viewModel.properties.collectAsState()
+    val stores by viewModel.allStoresRaw.collectAsState()
+    val properties by viewModel.allPropertiesRaw.collectAsState()
 
     var selectedSection by remember(initialSector) { mutableStateOf(if (initialSector == "PROPERTIES") "العقارات" else "المتاجر") }
     var searchQuery by remember { mutableStateOf("") }

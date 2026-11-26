@@ -56,7 +56,11 @@ class SyncWorker(
             // 2. معالجة طابور وضع عدم الاتصال (Offline Queue) والانتظار الفعلي حتى اكتمال الإرسال
             val queueSuccess = offlineQueue.processQueueSuspend()
 
-            // 3. تنظيف الكاش المحلي والرسائل القديمة (>30 يوماً) لتوفير الذاكرة وسعة الجهاز
+            // 3. تنظيف الكاش المحلي وكاش بلاطات الخرائط القديمة لتوفير الذاكرة وسعة الجهاز
+            try {
+                com.serviseyem.data.LocalAppCacheManager(applicationContext).pruneStaleCache()
+                com.serviseyem.utils.OfflineTileInterceptor.pruneCacheIfNeeded(applicationContext)
+            } catch (_: Exception) {}
 
             if (queueSuccess) {
                 Result.success()

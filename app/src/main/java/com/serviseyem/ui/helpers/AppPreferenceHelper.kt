@@ -79,6 +79,23 @@ class AppPreferenceHelper {
         return context.getSharedPreferences(PREFS_YEMEN_SERVICE, Context.MODE_PRIVATE)
     }
 
+    private fun getSecureYemenServicePrefs(context: Context): SharedPreferences {
+        return try {
+            val masterKey = androidx.security.crypto.MasterKey.Builder(context)
+                .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            androidx.security.crypto.EncryptedSharedPreferences.create(
+                context,
+                "yemen_service_secure_prefs",
+                masterKey,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (_: Throwable) {
+            getYemenServicePrefs(context)
+        }
+    }
+
     private fun getAppPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_APP, Context.MODE_PRIVATE)
     }
@@ -127,11 +144,26 @@ class AppPreferenceHelper {
 
     // --- Account Login Status ---
     fun isAccountLoggedIn(context: Context): Boolean {
-        return getYemenServicePrefs(context).getBoolean(KEY_IS_ACCOUNT_LOGGED_IN, false)
+        val secure = getSecureYemenServicePrefs(context)
+        if (secure.contains(KEY_IS_ACCOUNT_LOGGED_IN)) {
+            return secure.getBoolean(KEY_IS_ACCOUNT_LOGGED_IN, false)
+        }
+        val legacy = getYemenServicePrefs(context)
+        val legacyLoggedIn = legacy.getBoolean(KEY_IS_ACCOUNT_LOGGED_IN, false)
+        if (legacyLoggedIn) {
+            secure.edit().putBoolean(KEY_IS_ACCOUNT_LOGGED_IN, true).apply()
+            legacy.edit().remove(KEY_IS_ACCOUNT_LOGGED_IN).apply()
+        }
+        return legacyLoggedIn
     }
 
     fun setAccountLoggedIn(context: Context, isLoggedIn: Boolean) {
-        getYemenServicePrefs(context).edit().putBoolean(KEY_IS_ACCOUNT_LOGGED_IN, isLoggedIn).apply()
+        getSecureYemenServicePrefs(context).edit().putBoolean(KEY_IS_ACCOUNT_LOGGED_IN, isLoggedIn).apply()
+        getYemenServicePrefs(context).edit()
+            .remove(KEY_IS_ACCOUNT_LOGGED_IN)
+            .remove("user_account_type")
+            .remove("logged_account_id")
+            .apply()
     }
 
     // --- Notifications Read Status ---

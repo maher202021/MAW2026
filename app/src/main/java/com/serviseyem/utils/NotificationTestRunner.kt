@@ -216,25 +216,23 @@ class NotificationTestRunner(private val context: Context) {
     }
 
     suspend fun cleanAllTestData() {
-        if (!com.serviseyem.BuildConfig.DEBUG) return
         try {
             val batch = db.batch()
-
-            // Delete notifications matching our testClientPhone
-            val snapshot = db.collection("notifications").whereEqualTo("targetValue", testUserPhone).get().await()
+            val snapshot = db.collection("notifications").whereEqualTo("targetValue", testUserPhone).limit(50).get().await()
             for (doc in snapshot.documents) {
                 batch.delete(doc.reference)
             }
-
-            // Delete all test ones explicitly
-            val snapshot2 = db.collection("notifications").get().await()
-            for (doc in snapshot2.documents) {
-                val id = doc.id
-                if (id.startsWith("notif_test_") || id.startsWith("notif_flood_")) {
+            for (prefix in listOf("notif_test_", "notif_flood_")) {
+                val snap = db.collection("notifications")
+                    .whereGreaterThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), prefix)
+                    .whereLessThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), "$prefix\uf8ff")
+                    .limit(50)
+                    .get()
+                    .await()
+                for (doc in snap.documents) {
                     batch.delete(doc.reference)
                 }
             }
-
             batch.commit().await()
         } catch (_: Exception) {}
     }

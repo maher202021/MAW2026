@@ -36,11 +36,6 @@ class InstantRequestTestRunner(private val context: Context) {
         onProgress: (String) -> Unit,
         onComplete: (InstantRequestFullReport) -> Unit
     ) {
-        if (!com.serviseyem.BuildConfig.DEBUG) {
-            val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
-            onComplete(InstantRequestFullReport(timestamp = timestamp, totalSteps = 0, passed = 0, failed = 0, steps = emptyList()))
-            return
-        }
         val stepsList = mutableListOf<InstantRequestStepReport>()
         val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
 
@@ -270,32 +265,29 @@ class InstantRequestTestRunner(private val context: Context) {
     }
 
     suspend fun cleanAllTestData() {
-        if (!com.serviseyem.BuildConfig.DEBUG) return
         try {
             val batch = db.batch()
-
-            // Delete requests matching testUserId
-            val snapshot = db.collection("instant_requests").whereEqualTo("userId", testUserId).get().await()
+            val snapshot = db.collection("instant_requests").whereEqualTo("userId", testUserId).limit(50).get().await()
             for (doc in snapshot.documents) {
                 batch.delete(doc.reference)
             }
-
-            // Delete generated request_offers
-            val snapshot2 = db.collection("request_offers").get().await()
+            val snapshot2 = db.collection("request_offers")
+                .whereIn("technicianPhone", listOf("777001001", "777002002", "777003003"))
+                .limit(50)
+                .get()
+                .await()
             for (doc in snapshot2.documents) {
-                if (doc.getString("technicianPhone")?.startsWith("77700") == true || doc.id.startsWith("offer_")) {
-                    batch.delete(doc.reference)
-                }
+                batch.delete(doc.reference)
             }
-
-            // Explicit clean prefix
-            val snapshot3 = db.collection("instant_requests").get().await()
+            val snapshot3 = db.collection("instant_requests")
+                .whereGreaterThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), "test_instant_req_")
+                .whereLessThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), "test_instant_req_\uf8ff")
+                .limit(50)
+                .get()
+                .await()
             for (doc in snapshot3.documents) {
-                if (doc.id.startsWith("test_instant_req_")) {
-                    batch.delete(doc.reference)
-                }
+                batch.delete(doc.reference)
             }
-
             batch.commit().await()
         } catch (_: Exception) {}
     }

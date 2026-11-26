@@ -169,6 +169,40 @@ object OfflineTileInterceptor {
     private fun tileCacheDir(context: Context): File =
         File(context.applicationContext.cacheDir, "tile_cache_v$CACHE_VERSION").apply { mkdirs() }
 
+    /**
+     * يحذف بلاطات الخرائط المنتهية الصلاحية (> 7 أيام) أو الأقدم إذا تجاوز الكاش الحد الأقصى (120MB افتراضياً).
+     */
+    fun pruneCacheIfNeeded(context: Context, maxBytes: Long = 120L * 1024L * 1024L) {
+        try {
+            val root = File(context.applicationContext.cacheDir, "tile_cache_v$CACHE_VERSION")
+            if (!root.exists()) return
+            val now = System.currentTimeMillis()
+            val files = root.walkTopDown().filter { it.isFile && it.name.endsWith(".tile") }.toMutableList()
+            var totalSize = 0L
+            val remaining = mutableListOf<File>()
+            for (f in files) {
+                val age = now - f.lastModified()
+                if (age > TILE_TTL_MS || f.length() < 64L) {
+                    runCatching { f.delete() }
+                } else {
+                    totalSize += f.length()
+                    remaining.add(f)
+                }
+            }
+            if (totalSize > maxBytes) {
+                remaining.sortBy { it.lastModified() }
+                for (f in remaining) {
+                    if (totalSize <= maxBytes) break
+                    val len = f.length()
+                    if (runCatching { f.delete() }.getOrDefault(false)) {
+                        totalSize -= len
+                    }
+                }
+            }
+        } catch (_: Exception) {
+        }
+    }
+
     private fun isCacheable(host: String, contentType: String?, bytes: ByteArray): Boolean {
         val h = host.lowercase()
         if (h.contains("carto") || h.contains("cartocdn")) return false

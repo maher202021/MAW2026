@@ -250,28 +250,25 @@ class PaymentTestRunner(private val context: Context) {
     }
 
     suspend fun cleanAllTestData() {
-        if (!com.serviseyem.BuildConfig.DEBUG) return
         try {
             val batch = db.batch()
-
-            // Delete wallets for our test IDs
             batch.delete(db.collection("wallets").document(testUserId))
             batch.delete(db.collection("wallets").document(testProviderId))
-
-            // Delete transactions related to our test users
-            val txsSnapshot1 = db.collection("transactions").whereEqualTo("userId", testUserId).get().await()
+            val txsSnapshot1 = db.collection("transactions").whereEqualTo("userId", testUserId).limit(50).get().await()
             for (doc in txsSnapshot1.documents) {
                 batch.delete(doc.reference)
             }
-
-            // Delete transaction docs matching prefix
-            val txsSnapshot2 = db.collection("transactions").get().await()
-            for (doc in txsSnapshot2.documents) {
-                if (doc.id.startsWith("tx_deposit_") || doc.id.startsWith("tx_withdraw_") || doc.id.startsWith("tx_transfer_") || doc.id.startsWith("tx_pay_")) {
+            for (prefix in listOf("tx_deposit_", "tx_withdraw_", "tx_transfer_", "tx_pay_")) {
+                val snap = db.collection("transactions")
+                    .whereGreaterThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), prefix)
+                    .whereLessThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), "$prefix\uf8ff")
+                    .limit(50)
+                    .get()
+                    .await()
+                for (doc in snap.documents) {
                     batch.delete(doc.reference)
                 }
             }
-
             batch.commit().await()
         } catch (_: Exception) {}
     }

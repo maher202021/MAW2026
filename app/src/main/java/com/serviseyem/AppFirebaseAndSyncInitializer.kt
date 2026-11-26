@@ -3,7 +3,6 @@ package com.serviseyem
 import android.content.Context
 import android.util.Log
 import com.google.firebase.FirebaseApp
-import com.google.firebase.FirebaseOptions
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
@@ -21,25 +20,11 @@ internal object AppFirebaseAndSyncInitializer {
         // ===================== الخطوة 1: تهيئة Firebase وحساب Google بأمان =====================
         try {
             if (FirebaseApp.getApps(context).isEmpty()) {
-                try {
-                    val options = FirebaseOptions.Builder()
-                        .setApplicationId("1:954106721012:android:5fa5e385532b08d5c0e4a1")
-                        .setApiKey("AIzaSyBq2SEhBADFGVF4sDyV3sC_t2HqQ1m8lC0")
-                        .setProjectId("serviseyem")
-                        .setGcmSenderId("954106721012")
-                        .setStorageBucket("serviseyem.firebasestorage.app")
-                        .build()
-                    FirebaseApp.initializeApp(context, options)
-                } catch (_: Throwable) {
-                    FirebaseApp.initializeApp(context)
-                }
+                FirebaseApp.initializeApp(context)
             }
             Log.d("MyApplication", "✅ Firebase initialized successfully")
         } catch (e: Throwable) {
             Log.e("MyApplication", "❌ Firebase initialization failed: ${e.message}")
-            try {
-                FirebaseApp.initializeApp(context)
-            } catch (_: Throwable) {}
         }
 
         // ===================== تهيئة Firestore الموحدة =====================

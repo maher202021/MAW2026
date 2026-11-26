@@ -439,16 +439,19 @@ class AdminViewModel @Inject constructor(
     suspend fun isAdminSessionValid(): Boolean {
         return try {
             val session = secureStorage.getAdminSession() ?: return false
-            
-            // إذا كان هناك جلسة محفوظة، نعتبرها صالحة مؤقتاً للوصول للوحة
+            val maxSessionAgeMs = 30L * 24 * 60 * 60 * 1000L
+            val ageMs = System.currentTimeMillis() - session.loginTime
+            if (session.uid.isBlank() || session.email.isBlank() || session.loginTime <= 0L || ageMs > maxSessionAgeMs) {
+                secureStorage.clearAdminSession()
+                return false
+            }
+
             if (session.role == "OWNER" || session.role == "ADMIN" || session.role == "SUPERVISOR") {
-                // التحقق الإضافي عبر Auth إذا كان متاحاً
                 val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
                 if (user != null) {
-                    val tokenResult = user.getIdToken(false).await()
-                    val isAdmin = (tokenResult.claims["isAdmin"] as? Boolean == true) || 
-                                 (tokenResult.claims["isSuperAdmin"] as? Boolean == true)
-                    // لا نرفض الجلسة إذا لم يكن هناك Claim ولكن الجلسة المحلية موجودة (كحالة طوارئ)
+                    try {
+                        user.getIdToken(false).await()
+                    } catch (_: Exception) {}
                 }
                 _adminRole.value = session.role
                 _supervisorPermissions.value = session.permissions
@@ -637,10 +640,20 @@ class AdminViewModel @Inject constructor(
     val customProfileTabs: StateFlow<List<com.serviseyem.data.CustomProfileTabEntity>> = _customProfileTabs.asStateFlow()
     internal val _stores get() = appState._stores
     val stores: StateFlow<List<com.serviseyem.data.StoreEntity>> = _stores.asStateFlow()
+    internal val _allStoresRaw get() = appState._allStoresRaw
+    val allStoresRaw: StateFlow<List<com.serviseyem.data.StoreEntity>> = _allStoresRaw.asStateFlow()
+
     internal val _products get() = appState._products
     val products: StateFlow<List<com.serviseyem.data.ProductEntity>> = _products.asStateFlow()
+
     internal val _properties get() = appState._properties
     val properties: StateFlow<List<com.serviseyem.data.PropertyEntity>> = _properties.asStateFlow()
+    internal val _allPropertiesRaw get() = appState._allPropertiesRaw
+    val allPropertiesRaw: StateFlow<List<com.serviseyem.data.PropertyEntity>> = _allPropertiesRaw.asStateFlow()
+
+    internal val _allProvidersRaw get() = appState._allProvidersRaw
+    val allProvidersRaw: StateFlow<List<com.serviseyem.data.ProviderEntity>> = _allProvidersRaw.asStateFlow()
+
     internal val _jobs get() = appState._jobs
     val jobs: StateFlow<List<com.serviseyem.data.JobEntity>> = _jobs.asStateFlow()
     internal val _jobApplications get() = appState._jobApplications
@@ -1557,6 +1570,12 @@ fun setStorePaymentEnabled(storeId: String, isEnabled: Boolean) {
     }
 
 fun toggleStoreBlocked(storeId: String, isBlocked: Boolean) {
+        _stores.value = _stores.value.map {
+            if (it.id == storeId) it.copy(isBlocked = isBlocked) else it
+        }
+        _allStoresRaw.value = _allStoresRaw.value.map {
+            if (it.id == storeId) it.copy(isBlocked = isBlocked) else it
+        }
         db.collection("stores").document(storeId).update("isBlocked", isBlocked)
             .addOnSuccessListener {
                 mainViewModel.triggerNotification(if (isBlocked) "🚫 تم حظر المتجر" else "✅ تم إلغاء حظر المتجر")
@@ -1867,6 +1886,12 @@ fun setPropertyPaymentEnabled(propertyId: String, isEnabled: Boolean) {
     }
 
 fun togglePropertyBlocked(propertyId: String, isBlocked: Boolean) {
+        _properties.value = _properties.value.map {
+            if (it.id == propertyId) it.copy(isBlocked = isBlocked) else it
+        }
+        _allPropertiesRaw.value = _allPropertiesRaw.value.map {
+            if (it.id == propertyId) it.copy(isBlocked = isBlocked) else it
+        }
         db.collection("properties").document(propertyId).update("isBlocked", isBlocked)
             .addOnSuccessListener {
                 mainViewModel.triggerNotification(if (isBlocked) "🚫 تم حظر العقار" else "✅ تم إلغاء حظر العقار")
@@ -3181,7 +3206,7 @@ fun checkAndGetDuplicateAccountType(phone: String, excludeId: String): String? {
         }
 
         // 1. Check active providers
-        val dupProvider = mainViewModel.homeViewModel._providers.value.any { !it.isDeleted && samePhone(it.phone) && it.id != excludeId }
+        val dupProvider = _allProvidersRaw.value.any { !it.isDeleted && samePhone(it.phone) && it.id != excludeId }
         if (dupProvider) return "مقدم خدمة نشط (فني)"
 
         // 2. Check pending requests
@@ -3189,11 +3214,11 @@ fun checkAndGetDuplicateAccountType(phone: String, excludeId: String): String? {
         if (dupPendingProvider) return "طلب انضمام قيد المراجعة"
 
         // 3. Check stores / restaurants / medical
-        val dupStore = _stores.value.any { !it.isDeleted && samePhone(it.phone) && it.id != excludeId }
+        val dupStore = _allStoresRaw.value.any { !it.isDeleted && samePhone(it.phone) && it.id != excludeId }
         if (dupStore) return "محل أو مركز مسجل"
 
         // 4. Check properties
-        val dupProp = _properties.value.any { !it.isDeleted && samePhone(it.phone) && it.id != excludeId }
+        val dupProp = _allPropertiesRaw.value.any { !it.isDeleted && samePhone(it.phone) && it.id != excludeId }
         if (dupProp) return "إعلان عقاري مدرج"
 
         // 5. Check jobs
@@ -3482,7 +3507,13 @@ fun exportJobApplicantsCsv(context: android.content.Context) {
     }
 
     fun blockUser(userId: String, onResult: ((Boolean) -> Unit)? = null) {
+        _registeredUsersList.value = _registeredUsersList.value.map { u ->
+            if (u["id"]?.toString() == userId || u["phone"]?.toString() == userId) {
+                u.toMutableMap().apply { put("isBlocked", true) }
+            } else u
+        }
         db.collection("users").document(userId).update("isBlocked", true)
+        db.collection("registered_users").document(userId).update("isBlocked", true)
             .addOnSuccessListener {
                 recordAuditLog("BLOCK_USER", "حظر المستخدم $userId")
                 mainViewModel.triggerNotification("🚫 تم حظر المستخدم بنجاح.")
@@ -3494,7 +3525,13 @@ fun exportJobApplicantsCsv(context: android.content.Context) {
     }
 
     fun unblockUser(userId: String, onResult: ((Boolean) -> Unit)? = null) {
+        _registeredUsersList.value = _registeredUsersList.value.map { u ->
+            if (u["id"]?.toString() == userId || u["phone"]?.toString() == userId) {
+                u.toMutableMap().apply { put("isBlocked", false) }
+            } else u
+        }
         db.collection("users").document(userId).update("isBlocked", false)
+        db.collection("registered_users").document(userId).update("isBlocked", false)
             .addOnSuccessListener {
                 recordAuditLog("UNBLOCK_USER", "إلغاء حظر المستخدم $userId")
                 mainViewModel.triggerNotification("✅ تم إلغاء حظر المستخدم.")
@@ -3506,7 +3543,11 @@ fun exportJobApplicantsCsv(context: android.content.Context) {
     }
 
     fun deleteUser(userId: String, onResult: ((Boolean) -> Unit)? = null) {
+        _registeredUsersList.value = _registeredUsersList.value.filter { u ->
+            u["id"]?.toString() != userId && u["phone"]?.toString() != userId
+        }
         db.collection("users").document(userId).delete()
+        db.collection("registered_users").document(userId).delete()
             .addOnSuccessListener {
                 recordAuditLog("DELETE_USER", "حذف المستخدم $userId")
                 mainViewModel.triggerNotification("🗑️ تم حذف حساب المستخدم بنجاح.")

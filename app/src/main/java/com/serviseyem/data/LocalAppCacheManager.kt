@@ -112,7 +112,18 @@ class LocalAppCacheManager @Inject constructor(
                 put("createdAt", action.createdAt)
             }
             jsonArray.put(obj)
-            prefs.edit().putString("KEY_OFFLINE_QUEUE", jsonArray.toString()).apply()
+            val maxQueueSize = 100
+            val boundedArray = if (jsonArray.length() > maxQueueSize) {
+                val trimmed = JSONArray()
+                val startIdx = jsonArray.length() - maxQueueSize
+                for (i in startIdx until jsonArray.length()) {
+                    trimmed.put(jsonArray.get(i))
+                }
+                trimmed
+            } else {
+                jsonArray
+            }
+            prefs.edit().putString("KEY_OFFLINE_QUEUE", boundedArray.toString()).apply()
         } catch (e: Exception) {
             // Safe fallback
         }

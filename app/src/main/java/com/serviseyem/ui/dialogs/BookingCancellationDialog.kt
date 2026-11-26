@@ -51,9 +51,7 @@ fun BookingCancellationDialog(
     
     val isLockedInitially = remember(booking.id) { com.serviseyem.security.BookingSecurityHelper.isBookingLocked(context, booking.id) }
     var attemptsLeft by remember(booking.id) {
-        val prefs = context.getSharedPreferences("booking_security_vault", android.content.Context.MODE_PRIVATE)
-        val currentAttempts = prefs.getInt("attempts_" + booking.id, 0)
-        mutableIntStateOf((3 - currentAttempts).coerceAtLeast(0))
+        mutableIntStateOf(com.serviseyem.security.BookingSecurityHelper.getRemainingAttempts(context, booking.id))
     }
 
     var remainingSeconds by remember { mutableLongStateOf(0L) }

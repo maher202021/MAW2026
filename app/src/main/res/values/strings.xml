@@ -106,7 +106,7 @@
     <string name="auth_terms_link">الشروط والأحكام</string>
     <string name="auth_privacy_link">سياسة الخصوصية</string>
     <string name="auth_error_invalid_phone">رقم هاتف غير صحيح</string>
-    <string name="auth_error_invalid_password">يجب أن تكون كلمة المرور 6 خانات على الأقل</string>
+    <string name="auth_error_invalid_password">يجب أن تكون كلمة المرور 7 خانات على الأقل</string>
     <string name="auth_error_password_mismatch">كلمتا المرور غير متطابقتين</string>
     <string name="auth_error_empty_name">يرجى إدخال اسمك الكامل</string>
 

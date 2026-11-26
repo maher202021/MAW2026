@@ -239,9 +239,9 @@ fun RestoreAccountDialog(
                                         }
 
                                         sp.edit()
-                                            .putBoolean("is_account_logged_in", true)
-                                            .putString("user_account_type", resolvedAccountType)
-                                            .putString("logged_account_id", resolvedAccountId)
+                                            .remove("is_account_logged_in")
+                                            .remove("user_account_type")
+                                            .remove("logged_account_id")
                                             .apply()
 
                                         secureSp?.edit()

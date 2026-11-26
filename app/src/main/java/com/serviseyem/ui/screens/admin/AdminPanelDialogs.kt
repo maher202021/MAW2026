@@ -1577,7 +1577,7 @@ internal fun AdminPanelDialogs(
             }
         }
 
-        var newPasswordInput by remember(notif.id) { mutableStateOf("123456") }
+        var newPasswordInput by remember(notif.id) { mutableStateOf("") }
         var notifyActionChoice by remember(notif.id) { mutableStateOf("DIRECT_PASSWORD") }
 
         AlertDialog(
@@ -1628,10 +1628,12 @@ internal fun AdminPanelDialogs(
             confirmButton = {
                 Button(
                     onClick = {
-                        if (phoneExtract.isNotEmpty() && newPasswordInput.isNotEmpty()) {
+                        val cleanPass = newPasswordInput.trim()
+                        val (policyValid, policyError) = com.serviseyem.utils.SecurityCryptoUtils.validatePasswordPolicy(cleanPass)
+                        if (phoneExtract.isNotEmpty() && policyValid) {
                             viewModel.adminResetAccountPassword(
                                 phone = phoneExtract,
-                                newPassword = newPasswordInput.trim(),
+                                newPassword = cleanPass,
                                 notifyAction = notifyActionChoice,
                                 customerName = nameExtract
                             )
@@ -1647,8 +1649,10 @@ internal fun AdminPanelDialogs(
                                 Toast.makeText(context, "✅ تم إعادة تعيين كلمة المرور وإرسال الإشعار بنجاح!", Toast.LENGTH_LONG).show()
                             }
                             state.selectedRecoveryNotif = null
+                        } else if (phoneExtract.isEmpty()) {
+                            Toast.makeText(context, "الرجاء التأكد من رقم الهاتف", Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(context, "الرجاء التأكد من رقم الهاتف وكلمة المرور", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, policyError ?: "كلمة المرور ضعيفة جداً", Toast.LENGTH_LONG).show()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent)

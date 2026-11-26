@@ -118,7 +118,7 @@ class RegistrationHelper(
                     val queryVariants = phoneVariants.take(10)
                     val jrSnap = runCatching {
                         com.google.android.gms.tasks.Tasks.await(
-                            db.collection("join_requests").whereIn("phone", queryVariants).get()
+                            db.collection("join_requests").whereIn("phone", queryVariants).limit(10).get()
                         )
                     }.getOrNull()
                     val hasActiveJoin = jrSnap?.documents?.any { doc ->
@@ -131,7 +131,7 @@ class RegistrationHelper(
 
                     val pendSnap = runCatching {
                         com.google.android.gms.tasks.Tasks.await(
-                            db.collection("pending_providers").whereIn("phone", queryVariants).get()
+                            db.collection("pending_providers").whereIn("phone", queryVariants).limit(10).get()
                         )
                     }.getOrNull()
                     val hasActivePending = pendSnap?.documents?.any { doc ->

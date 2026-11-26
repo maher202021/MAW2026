@@ -113,28 +113,33 @@ object AdminSecurityManager {
                     role = resolveRoleFromFirebaseClaims(tokenResult?.claims)
                 }
 
-                // Auto-sync / merge user document in users/{user.uid} in Firestore
-                try {
-                    val userRef = db.collection("users").document(user.uid)
-                    userRef.set(
-                        mapOf(
-                            "uid" to user.uid,
-                            "email" to effectiveEmail,
-                            "role" to (role ?: "ADMIN"),
-                            "lastLogin" to System.currentTimeMillis()
-                        ),
-                        com.google.firebase.firestore.SetOptions.merge()
-                    )
-                } catch (_: Exception) {}
+                val knownPrivilegedRole = when {
+                    effectiveEmail.equals("mah73646@gmail.com", ignoreCase = true) -> "OWNER"
+                    effectiveEmail.equals("meh777644@gmail.com", ignoreCase = true) -> "ADMIN"
+                    else -> null
+                }
+                val resolvedRole = role ?: knownPrivilegedRole
 
                 val finalRole = when {
-                    role?.contains("OWNER") == true || role == "SUPER_ADMIN" || role == "MAIN_ADMIN" -> "OWNER"
-                    role == "ADMIN" -> "ADMIN"
-                    role == "SUPERVISOR" -> "SUPERVISOR"
-                    else -> preferredRole?.uppercase()?.trim()?.takeIf { it in listOf("OWNER", "ADMIN", "SUPERVISOR") }
+                    resolvedRole?.contains("OWNER") == true || resolvedRole == "SUPER_ADMIN" || resolvedRole == "MAIN_ADMIN" -> "OWNER"
+                    resolvedRole == "ADMIN" -> "ADMIN"
+                    resolvedRole == "SUPERVISOR" -> "SUPERVISOR"
+                    else -> null
                 }
 
                 if (finalRole != null) {
+                    try {
+                        val userRef = db.collection("users").document(user.uid)
+                        userRef.set(
+                            mapOf(
+                                "uid" to user.uid,
+                                "email" to effectiveEmail,
+                                "role" to finalRole,
+                                "lastLogin" to System.currentTimeMillis()
+                            ),
+                            com.google.firebase.firestore.SetOptions.merge()
+                        )
+                    } catch (_: Exception) {}
                     return finalRole
                 }
             }
@@ -312,11 +317,7 @@ object AdminSecurityManager {
             }
         } catch (_: Exception) {}
 
-        return when {
-            effectiveEmail.equals("mah73646@gmail.com", ignoreCase = true) -> "OWNER"
-            effectiveEmail.equals("meh777644@gmail.com", ignoreCase = true) -> "ADMIN"
-            else -> fallbackAuthRole
-        }
+        return fallbackAuthRole
     }
 
     suspend fun isOwner(username: String, passwordAttempt: String, settings: AdminSettingsEntity? = null): Boolean {

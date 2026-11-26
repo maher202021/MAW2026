@@ -499,9 +499,9 @@ fun MainViewModel.restoreUserAccountByPhoneAndPassword(
 
                 val sp = context.getSharedPreferences("yemen_service_prefs", Context.MODE_PRIVATE)
                 sp.edit().apply {
-                    putBoolean("is_account_logged_in", true)
-                    putString("user_account_type", match.type)
-                    putString("logged_account_id", restoredEntityId)
+                    remove("is_account_logged_in")
+                    remove("user_account_type")
+                    remove("logged_account_id")
                     putString("user_id", com.serviseyem.utils.SecurityCryptoUtils.encrypt(restoredEntityId))
                     apply()
                 }

@@ -53,6 +53,7 @@ object DataManager {
     fun getRatingReviews(shopId: String): Flow<List<RatingEntity>> = callbackFlow {
         val listener = firestore.collection(AppConstants.COL_RATINGS)
             .whereEqualTo("targetId", shopId)
+            .limit(100)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(emptyList())
@@ -60,7 +61,8 @@ object DataManager {
                 }
                 if (snapshot != null) {
                     val reviewsList = snapshot.documents.mapNotNull { doc ->
-                        mapDocumentToRatingEntity(doc)
+                        val isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true
+                        if (isDeleted) null else mapDocumentToRatingEntity(doc)
                     }.sortedByDescending { it.timestamp }
                     trySend(reviewsList)
                 }

@@ -105,6 +105,7 @@ class FavoritesRepositoryImpl(
         val listener: ListenerRegistration = firestore.collection("users")
             .document(cleanUserId)
             .collection("favorites")
+            .limit(100)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
                     trySend(emptyList())
@@ -204,7 +205,9 @@ class ProductsRepositoryImpl(
         val byOwnerMap = java.util.concurrent.ConcurrentHashMap<String, ProductItemEntity>()
         val byStoreMap = java.util.concurrent.ConcurrentHashMap<String, ProductItemEntity>()
 
-        fun parseDoc(doc: com.google.firebase.firestore.DocumentSnapshot): ProductItemEntity {
+        fun parseDoc(doc: com.google.firebase.firestore.DocumentSnapshot): ProductItemEntity? {
+            val isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true
+            if (isDeleted) return null
             return ProductItemEntity(
                 id = doc.id,
                 ownerId = doc.getString("ownerId")?.takeIf { it.isNotBlank() }
@@ -229,20 +232,28 @@ class ProductsRepositoryImpl(
 
         val ownerListener: ListenerRegistration = firestore.collection(AppConstants.COL_PRODUCTS)
             .whereEqualTo("ownerId", cleanOwnerId)
+            .limit(100)
             .addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     byOwnerMap.clear()
-                    snapshot.documents.forEach { doc -> byOwnerMap[doc.id] = parseDoc(doc) }
+                    snapshot.documents.forEach { doc -> 
+                        val item = parseDoc(doc)
+                        if (item != null) byOwnerMap[doc.id] = item
+                    }
                     emitMerged()
                 }
             }
 
         val storeListener: ListenerRegistration = firestore.collection(AppConstants.COL_PRODUCTS)
             .whereEqualTo("storeId", cleanOwnerId)
+            .limit(100)
             .addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     byStoreMap.clear()
-                    snapshot.documents.forEach { doc -> byStoreMap[doc.id] = parseDoc(doc) }
+                    snapshot.documents.forEach { doc ->
+                        val item = parseDoc(doc)
+                        if (item != null) byStoreMap[doc.id] = item
+                    }
                     emitMerged()
                 }
             }
@@ -256,6 +267,7 @@ class ProductsRepositoryImpl(
     override fun getAllAvailableProducts(): Flow<List<ProductItemEntity>> = callbackFlow {
         val listener: ListenerRegistration = firestore.collection(AppConstants.COL_PRODUCTS)
             .whereEqualTo("isAvailable", true)
+            .limit(100)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
                     trySend(emptyList())
@@ -263,6 +275,8 @@ class ProductsRepositoryImpl(
                 }
 
                 val items = snapshot.documents.mapNotNull { doc ->
+                    val isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true
+                    if (isDeleted) return@mapNotNull null
                     ProductItemEntity(
                         id = doc.id,
                         ownerId = doc.getString("ownerId") ?: "",
@@ -341,7 +355,13 @@ class ProductsRepositoryImpl(
             if (cleanId.isBlank()) {
                 return Result.failure(IllegalArgumentException("معرف المنتج غير صالح"))
             }
-            firestore.collection(AppConstants.COL_PRODUCTS).document(cleanId).delete().await()
+            try {
+                firestore.collection(AppConstants.COL_PRODUCTS).document(cleanId).delete().await()
+            } catch (_: Exception) {
+                firestore.collection(AppConstants.COL_PRODUCTS).document(cleanId)
+                    .update(mapOf("isDeleted" to true, "deleted" to true, "isAvailable" to false))
+                    .await()
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -367,6 +387,7 @@ class RatingsRepositoryImpl(
 
         val listener: ListenerRegistration = firestore.collection(AppConstants.COL_RATINGS)
             .whereEqualTo("targetId", cleanTargetId)
+            .limit(100)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
                     trySend(emptyList())
@@ -374,6 +395,8 @@ class RatingsRepositoryImpl(
                 }
 
                 val list = snapshot.documents.mapNotNull { doc ->
+                    val isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true
+                    if (isDeleted) return@mapNotNull null
                     val entity = try {
                         doc.toObject(com.serviseyem.data.RatingEntity::class.java)?.copy(id = doc.id)
                     } catch (_: Exception) {
@@ -481,6 +504,7 @@ class GalleryRepositoryImpl(
 
         val listener: ListenerRegistration = firestore.collection("galleries")
             .whereEqualTo("ownerId", cleanOwnerId)
+            .limit(60)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
                     trySend(emptyList())
@@ -488,6 +512,8 @@ class GalleryRepositoryImpl(
                 }
 
                 val list = snapshot.documents.mapNotNull { doc ->
+                    val isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true
+                    if (isDeleted) return@mapNotNull null
                     @Suppress("UNCHECKED_CAST")
                     GalleryAlbumEntity(
                         id = doc.id,
@@ -527,7 +553,13 @@ class GalleryRepositoryImpl(
             if (cleanId.isBlank()) {
                 return Result.failure(IllegalArgumentException("معرف الألبوم غير صالح"))
             }
-            firestore.collection("galleries").document(cleanId).delete().await()
+            try {
+                firestore.collection("galleries").document(cleanId).delete().await()
+            } catch (_: Exception) {
+                firestore.collection("galleries").document(cleanId)
+                    .update(mapOf("isDeleted" to true, "deleted" to true))
+                    .await()
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

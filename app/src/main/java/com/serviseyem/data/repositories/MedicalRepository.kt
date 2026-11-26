@@ -46,12 +46,15 @@ class MedicalRepository @Inject constructor(
 
         val listener = firestore.collection("doctors")
             .whereEqualTo("ownerId", ownerId)
+            .limit(100)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
                     trySend(getCachedDoctors(ownerId))
                     return@addSnapshotListener
                 }
                 val list = snapshot.documents.mapNotNull { doc ->
+                    val isDeleted = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true
+                    if (isDeleted) return@mapNotNull null
                     DoctorItem(
                         id = doc.id,
                         name = doc.getString("name") ?: "",
@@ -86,7 +89,13 @@ class MedicalRepository @Inject constructor(
     suspend fun deleteDoctor(id: String): Result<Unit> {
         if (id.isBlank()) return Result.failure(IllegalArgumentException("Doctor ID is blank"))
         return try {
-            firestore.collection("doctors").document(id).delete().await()
+            try {
+                firestore.collection("doctors").document(id).delete().await()
+            } catch (_: Exception) {
+                firestore.collection("doctors").document(id)
+                    .update(mapOf("isDeleted" to true, "deleted" to true))
+                    .await()
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

@@ -237,27 +237,24 @@ class ReviewTestRunner(private val context: Context) {
     }
 
     suspend fun cleanAllTestData() {
-        if (!com.serviseyem.BuildConfig.DEBUG) return
         try {
             val batch = db.batch()
-
-            // Delete ratings matching targetId = testProviderId
-            val snap = db.collection("ratings").whereEqualTo("targetId", testProviderId).get().await()
+            val snap = db.collection("ratings").whereEqualTo("targetId", testProviderId).limit(50).get().await()
             for (doc in snap.documents) {
                 batch.delete(doc.reference)
             }
-
-            // Delete generated reviews / multi reviews
-            val snap2 = db.collection("ratings").get().await()
-            for (doc in snap2.documents) {
-                if (doc.id.startsWith("rating_test_") || doc.id.startsWith("rating_multidim_")) {
+            for (prefix in listOf("rating_test_", "rating_multidim_")) {
+                val snap2 = db.collection("ratings")
+                    .whereGreaterThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), prefix)
+                    .whereLessThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), "$prefix\uf8ff")
+                    .limit(50)
+                    .get()
+                    .await()
+                for (doc in snap2.documents) {
                     batch.delete(doc.reference)
                 }
             }
-
-            // Delete provider doc
             batch.delete(db.collection("providers").document(testProviderId))
-
             batch.commit().await()
         } catch (_: Exception) {}
     }
