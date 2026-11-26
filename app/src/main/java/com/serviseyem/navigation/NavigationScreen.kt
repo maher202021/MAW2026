@@ -94,6 +94,8 @@ fun NavigationScreen(
     var pickedNavPoint by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var statusBannerText by remember { mutableStateOf<String?>(null) }
     var hasAnnouncedArrival by remember { mutableStateOf(false) }
+    var is3DModeActive by remember { mutableStateOf(true) }
+    var showReportHazardDialog by remember { mutableStateOf(false) }
 
     val providersList = viewModel?.providers?.collectAsState()?.value ?: emptyList()
     val storesList = viewModel?.stores?.collectAsState()?.value ?: emptyList()
@@ -303,9 +305,10 @@ fun NavigationScreen(
                 )
                 if (offRoute) {
                     offRouteConsecutiveSeconds++
-                    if (offRouteConsecutiveSeconds >= 5 && !isRerouting) {
+                    if (offRouteConsecutiveSeconds >= 3 && !isRerouting) {
                         isRerouting = true
                         currentInstruction = "جارٍ إعادة حساب المسار..."
+                        com.serviseyem.utils.HapticFeedbackHelper.warning(context)
                         navigationVoice.announceReroute()
                         recalculateRoute(announce = false)
                         offRouteConsecutiveSeconds = 0
@@ -595,7 +598,19 @@ fun NavigationScreen(
 
         NavigationFloatingWidgets(
             speedKmh = locationFix.speedKmh.toInt(),
+            is3DMode = is3DModeActive,
+            onToggle3D = {
+                is3DModeActive = !is3DModeActive
+                com.serviseyem.utils.HapticFeedbackHelper.tick(context)
+                val script = "if (window.set3DNavigationMode) { window.set3DNavigationMode($is3DModeActive); }"
+                webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
+            },
+            onReportHazardClick = {
+                com.serviseyem.utils.HapticFeedbackHelper.click(context)
+                showReportHazardDialog = true
+            },
             onRecenterClick = {
+                com.serviseyem.utils.HapticFeedbackHelper.click(context)
                 if (hasValidStartGps) {
                     val script = "if (window.centerOnUser) { window.centerOnUser(${locationFix.latitude}, ${locationFix.longitude}); }"
                     webViewRef?.post { webViewRef?.evaluateJavascript(script, null) }
@@ -658,6 +673,40 @@ fun NavigationScreen(
                     .padding(horizontal = 14.dp, vertical = 12.dp)
             )
         }
+    }
+
+    if (showReportHazardDialog) {
+        com.serviseyem.ui.dialogs.ReportHazardDialog(
+            latitude = if (hasValidStartGps) locationFix.latitude else targetLat,
+            longitude = if (hasValidStartGps) locationFix.longitude else targetLng,
+            onDismiss = { showReportHazardDialog = false },
+            onHazardReported = {
+                coroutineScope.launch {
+                    val hazards = com.serviseyem.utils.RoadHazardManager.getActiveHazards(context)
+                    if (hazards.isNotEmpty()) {
+                        val arr = org.json.JSONArray()
+                        hazards.forEach { h ->
+                            arr.put(org.json.JSONObject().apply {
+                                put("lat", h.latitude)
+                                put("lng", h.longitude)
+                                put("title", h.typeLabelArabic)
+                                put("desc", h.description)
+                                put("icon", when (h.type) {
+                                    "ROAD_BLOCK" -> "🚫"
+                                    "FLOOD" -> "🌊"
+                                    "ACCIDENT" -> "💥"
+                                    "TRAFFIC" -> "🚗"
+                                    else -> "⚠️"
+                                })
+                            })
+                        }
+                        webViewRef?.post {
+                            webViewRef?.evaluateJavascript("if (window.renderRoadHazards) { window.renderRoadHazards(${arr.toString()}); }", null)
+                        }
+                    }
+                }
+            }
+        )
     }
 
     NavigationDialogsHost(

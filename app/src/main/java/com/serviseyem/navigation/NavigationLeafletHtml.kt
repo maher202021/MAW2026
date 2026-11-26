@@ -218,6 +218,23 @@ internal fun buildNavigationLeafletHtml(
                 }
             };
 
+            var is3DMode = false;
+            window.set3DNavigationMode = function(enabled) {
+                is3DMode = !!enabled;
+                var mapEl = document.getElementById('map');
+                if (mapEl) {
+                    if (is3DMode) {
+                        mapEl.style.perspective = '1000px';
+                        mapEl.style.transform = 'rotateX(36deg)';
+                        mapEl.style.transformOrigin = 'bottom center';
+                        mapEl.style.transition = 'transform 0.4s ease';
+                    } else {
+                        mapEl.style.perspective = 'none';
+                        mapEl.style.transform = 'none';
+                    }
+                }
+            };
+
             window.updateUserPosition = function(lat, lng, heading) {
                 if (!isValidGps(lat, lng)) return;
                 if (!userMarker) {
@@ -228,6 +245,29 @@ internal fun buildNavigationLeafletHtml(
                 var arrow = userMarker.getElement() && userMarker.getElement().querySelector('.user-nav-arrow');
                 if (arrow && isFinite(heading)) {
                     arrow.style.transform = 'rotate(' + heading + 'deg)';
+                }
+                if (is3DMode && isValidGps(lat, lng)) {
+                    map.panTo([lat, lng], { animate: true, duration: 0.4 });
+                }
+            };
+
+            var hazardMarkersLayer = L.layerGroup().addTo(map);
+            window.renderRoadHazards = function(hazards) {
+                hazardMarkersLayer.clearLayers();
+                if (!hazards || !hazards.length) return;
+                for (var i = 0; i < hazards.length; i++) {
+                    var h = hazards[i];
+                    if (!isValidGps(h.lat, h.lng)) continue;
+                    var badgeIcon = L.divIcon({
+                        className: '',
+                        html: '<div style="background:rgba(15,23,42,0.92);border:2px solid #EF4444;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(239,68,68,0.6);font-size:16px;">' +
+                              (h.icon || '⚠️') + '</div>',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16]
+                    });
+                    var m = L.marker([h.lat, h.lng], { icon: badgeIcon });
+                    m.bindPopup('<b>' + (h.title || 'تنبيه طريق') + '</b><br><small>' + (h.desc || '') + '</small>');
+                    hazardMarkersLayer.addLayer(m);
                 }
             };
 

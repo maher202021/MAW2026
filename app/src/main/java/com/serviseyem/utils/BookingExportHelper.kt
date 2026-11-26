@@ -139,6 +139,134 @@ object BookingExportHelper {
     }
 
     /**
+     * تصدير سند حجز إلكتروني رسمي مفصل لحجز واحد بصيغة PDF أنيقة ومختومة رقمياً
+     */
+    fun exportSingleBookingInvoicePdf(context: Context, booking: BookingEntity): Result<File> {
+        return try {
+            val exportDir = File(context.cacheDir, "exports")
+            if (!exportDir.exists()) exportDir.mkdirs()
+
+            val code = booking.bookingCode.ifBlank { booking.id.take(8) }
+            val file = File(exportDir, "Invoice_${code}.pdf")
+
+            val document = PdfDocument()
+            val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4
+            val page = document.startPage(pageInfo)
+            val canvas = page.canvas
+
+            val titlePaint = Paint().apply {
+                color = Color.rgb(15, 23, 42) // Dark Navy
+                textSize = 20f
+                isFakeBoldText = true
+            }
+
+            val subtitlePaint = Paint().apply {
+                color = Color.rgb(2, 132, 199) // Sky Blue
+                textSize = 13f
+                isFakeBoldText = true
+            }
+
+            val labelPaint = Paint().apply {
+                color = Color.rgb(71, 85, 105)
+                textSize = 11f
+                isFakeBoldText = true
+            }
+
+            val valuePaint = Paint().apply {
+                color = Color.rgb(15, 23, 42)
+                textSize = 12f
+            }
+
+            val borderPaint = Paint().apply {
+                color = Color.rgb(203, 213, 225)
+                style = Paint.Style.STROKE
+                strokeWidth = 1.5f
+            }
+
+            val headerBgPaint = Paint().apply {
+                color = Color.rgb(241, 245, 249)
+                style = Paint.Style.FILL
+            }
+
+            // Draw Header Box
+            canvas.drawRect(35f, 35f, 560f, 105f, headerBgPaint)
+            canvas.drawRect(35f, 35f, 560f, 105f, borderPaint)
+            canvas.drawText("دليل خدمات اليمن - سند حجز إلكتروني رسمي 🇾🇪", 50f, 65f, titlePaint)
+            canvas.drawText("المنصة الذكية الأولى للخدمات الميدانية والملاحة في الجمهورية اليمنية", 50f, 88f, subtitlePaint)
+
+            // Invoice Meta
+            var yPos = 135f
+            canvas.drawText("رقم السند المعتمد: #$code", 40f, yPos, labelPaint)
+            val dateStr = DateFormatter.formatDateTime(System.currentTimeMillis())
+            canvas.drawText("تاريخ الإصدار: $dateStr", 350f, yPos, labelPaint)
+
+            yPos += 20f
+            canvas.drawLine(35f, yPos, 560f, yPos, borderPaint)
+
+            // Details Table
+            yPos += 30f
+            val details = listOf(
+                "اسم الخدمة المطلوبة" to booking.serviceName,
+                "العميل المستفيد" to "${booking.effectiveCustomerName} (${booking.effectiveCustomerPhone})",
+                "مزود الخدمة المعتمد" to booking.providerName,
+                "الموقع والمدينة" to listOf(booking.userCity, booking.effectiveCustomerArea).filter { it.isNotBlank() }.joinToString(" - ").ifBlank { "اليمن" },
+                "تاريخ وموعد الخدمة" to "${booking.effectiveDate} - ${booking.effectiveTime}",
+                "المبلغ المقدر" to "${booking.price} ${booking.currency.ifBlank { "YER" }}",
+                "حالة الحجز الحالية" to booking.status,
+                "رمز التحقق والأمان (PIN)" to booking.effectivePin.ifBlank { "----" }
+            )
+
+            details.forEach { (label, value) ->
+                canvas.drawText(label, 50f, yPos, labelPaint)
+                canvas.drawText(value, 220f, yPos, valuePaint)
+                yPos += 14f
+                canvas.drawLine(45f, yPos, 550f, yPos, Paint().apply { color = Color.rgb(241, 245, 249); strokeWidth = 1f })
+                yPos += 22f
+            }
+
+            // Official Verification Stamp Box
+            yPos += 20f
+            val stampBoxPaint = Paint().apply {
+                color = Color.rgb(236, 253, 245)
+                style = Paint.Style.FILL
+            }
+            val stampBorderPaint = Paint().apply {
+                color = Color.rgb(16, 185, 129)
+                style = Paint.Style.STROKE
+                strokeWidth = 1.5f
+            }
+            canvas.drawRoundRect(40f, yPos, 555f, yPos + 65f, 12f, 12f, stampBoxPaint)
+            canvas.drawRoundRect(40f, yPos, 555f, yPos + 65f, 12f, 12f, stampBorderPaint)
+
+            val stampTextPaint = Paint().apply {
+                color = Color.rgb(6, 95, 70)
+                textSize = 12f
+                isFakeBoldText = true
+            }
+            canvas.drawText("✓ سند رسمي موثق ومحمٍ رقمياً عبر منصة دليل خدمات اليمن", 55f, yPos + 28f, stampTextPaint)
+            canvas.drawText("يرجى إبراز هذا السند أو رمز التحقق لمقدم الخدمة عند إتمام الزيارة.", 55f, yPos + 48f, Paint().apply { color = Color.rgb(4, 120, 87); textSize = 10f })
+
+            document.finishPage(page)
+            val outputStream = FileOutputStream(file)
+            document.writeTo(outputStream)
+            outputStream.flush()
+            outputStream.close()
+            document.close()
+
+            Result.success(file)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun shareSingleBookingInvoice(context: Context, booking: BookingEntity) {
+        val result = exportSingleBookingInvoicePdf(context, booking)
+        result.onSuccess { file ->
+            shareExportedFile(context, file, "سند حجز رسمي #${booking.bookingCode.ifBlank { booking.id }}")
+        }
+    }
+
+    /**
      * تصدير الحجوزات إلى ملف Excel بصيغة جدولية أنيقة (XLS)
      */
     fun exportBookingsToExcel(context: Context, bookings: List<BookingEntity>): Result<File> {

@@ -366,13 +366,52 @@ internal fun NavigationTopHudColumn(
 @Composable
 internal fun NavigationFloatingWidgets(
     speedKmh: Int,
+    is3DMode: Boolean = true,
+    onToggle3D: () -> Unit = {},
+    onReportHazardClick: () -> Unit = {},
     onRecenterClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // 3D / 2D Perspective Toggle Button
+        Surface(
+            shape = CircleShape,
+            color = Color(0xFF0F172A).copy(alpha = 0.94f),
+            border = BorderStroke(1.5.dp, if (is3DMode) Color(0xFF00E5FF) else Color(0xFF64748B)),
+            modifier = Modifier
+                .size(46.dp)
+                .clickable { onToggle3D() }
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = if (is3DMode) "3D" else "2D",
+                    color = if (is3DMode) Color(0xFF00E5FF) else Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 13.sp
+                )
+            }
+        }
+
+        // Road Hazard Report Button (⚠️ تنبيه طريق)
+        IconButton(
+            onClick = onReportHazardClick,
+            modifier = Modifier
+                .size(46.dp)
+                .background(Color(0xFF7F1D1D).copy(alpha = 0.94f), CircleShape)
+                .clip(CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = "إبلاغ عن تنبيه أو عائق في الطريق",
+                tint = Color(0xFFFCD34D),
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
         Surface(
             shape = CircleShape,
             color = Color(0xFF0F172A).copy(alpha = 0.9f),
